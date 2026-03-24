@@ -14,7 +14,141 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      coach_details: {
+        Row: {
+          coach_role: string | null
+          created_at: string | null
+          current_club: string | null
+          id: string
+          team: string | null
+          user_id: string
+        }
+        Insert: {
+          coach_role?: string | null
+          created_at?: string | null
+          current_club?: string | null
+          id?: string
+          team?: string | null
+          user_id: string
+        }
+        Update: {
+          coach_role?: string | null
+          created_at?: string | null
+          current_club?: string | null
+          id?: string
+          team?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      parent_invites: {
+        Row: {
+          created_at: string | null
+          id: string
+          invite_token: string
+          parent_email: string
+          player_user_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          invite_token?: string
+          parent_email: string
+          player_user_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          invite_token?: string
+          parent_email?: string
+          player_user_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      player_details: {
+        Row: {
+          age_group: string | null
+          created_at: string | null
+          current_club: string | null
+          date_of_birth: string | null
+          id: string
+          position: string | null
+          shirt_number: number | null
+          user_id: string
+        }
+        Insert: {
+          age_group?: string | null
+          created_at?: string | null
+          current_club?: string | null
+          date_of_birth?: string | null
+          id?: string
+          position?: string | null
+          shirt_number?: number | null
+          user_id: string
+        }
+        Update: {
+          age_group?: string | null
+          created_at?: string | null
+          current_club?: string | null
+          date_of_birth?: string | null
+          id?: string
+          position?: string | null
+          shirt_number?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      player_parent_links: {
+        Row: {
+          created_at: string | null
+          id: string
+          parent_user_id: string
+          player_user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          parent_user_id: string
+          player_user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          parent_user_id?: string
+          player_user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          full_name: string
+          id: string
+          nationality: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          full_name: string
+          id?: string
+          nationality?: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          nationality?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +157,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: "player" | "coach" | "parent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +284,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["player", "coach", "parent"],
+    },
   },
 } as const
