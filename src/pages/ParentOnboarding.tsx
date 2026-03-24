@@ -41,9 +41,12 @@ const ParentOnboarding = () => {
   if (!token || !invite) {
     return (
       <div className="app-container flex flex-col items-center justify-center px-6 py-12 min-h-screen">
+        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
+          <span className="text-3xl">⚠️</span>
+        </div>
         <h1 className="text-2xl font-heading text-foreground mb-4">Invalid Invite</h1>
         <p className="text-muted-foreground text-center text-sm mb-6">
-          This invite link is invalid or has already been used.
+          This invite link is invalid or has expired. Ask your child to send you a new invite.
         </p>
         <a href="/" className="text-primary text-sm font-semibold">← Back to home</a>
       </div>
