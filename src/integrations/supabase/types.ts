@@ -154,7 +154,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_parent_invite_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          created_at: string
+          id: string
+          invite_token: string
+          parent_email: string
+          player_user_id: string
+          status: string
+        }[]
+      }
     }
     Enums: {
       user_role: "player" | "coach" | "parent"
