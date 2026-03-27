@@ -7,7 +7,8 @@ import { toast } from 'sonner';
 import { POSITIONS } from '@/lib/constants';
 import {
   MATCH_AGE_GROUPS, COMPETITIONS, VENUES, CARDS, BODY_CONDITIONS, SELF_RATINGS,
-  AGE_GROUP_MAX_MINUTES, computeRating, type MatchInputs,
+  AGE_GROUP_MAX_MINUTES, POSITION_QUESTIONS, MID_ROLE_QUESTIONS,
+  computeRating, type MatchInputs,
 } from '@/lib/rating';
 
 const MatchLog = () => {
@@ -27,22 +28,38 @@ const MatchLog = () => {
   const [selfRating, setSelfRating] = useState('');
   const [goals, setGoals] = useState<number | ''>('');
   const [assists, setAssists] = useState<number | ''>('');
+  const [positionInputs, setPositionInputs] = useState<Record<string, string | number | ''>>({});
+
+  const midRole = position === 'Midfielder' ? (positionInputs['midrole'] as string || '') : '';
+  const midRoleKey = midRole === 'Defensive' ? 'cdm' : midRole === 'Box-to-box' ? 'cm' : midRole === 'Attacking' ? 'cam' : '';
+
+  const setPosInput = (id: string, val: string | number | '') => {
+    setPositionInputs(prev => ({ ...prev, [id]: val }));
+  };
+
+  // When position changes, reset position-specific inputs
+  const handlePositionChange = (p: string) => {
+    setPosition(p);
+    setPositionInputs({});
+  };
 
   const inputs: MatchInputs = {
     position, competition, venue, teamScore, opponentScore,
     ageGroup, minutesPlayed, cardReceived, bodyCondition, selfRating,
-    goals, assists,
+    goals, assists, positionInputs, midRole: midRoleKey,
   };
 
   const rating = useMemo(() => computeRating(inputs), [
     position, competition, venue, teamScore, opponentScore,
-    ageGroup, minutesPlayed, cardReceived, bodyCondition, selfRating, goals, assists,
+    ageGroup, minutesPlayed, cardReceived, bodyCondition, selfRating,
+    goals, assists, positionInputs, midRoleKey,
   ]);
 
   const maxMinutes = ageGroup ? AGE_GROUP_MAX_MINUTES[ageGroup] || 90 : 90;
   const scoresFilled = teamScore !== '' && opponentScore !== '';
   const maxGoalContributions = scoresFilled ? Number(teamScore) : 0;
   const canSave = position && competition && venue && scoresFilled && ageGroup && minutesPlayed !== '';
+  const showGoalsAssists = position !== 'Goalkeeper';
 
   const handleSave = async () => {
     if (!user || !canSave) return;
@@ -65,6 +82,10 @@ const MatchLog = () => {
       setSaving(false);
     }
   };
+
+  // Get position-specific questions
+  const posQuestions = position ? POSITION_QUESTIONS[position] || [] : [];
+  const midSubQuestions = midRoleKey ? MID_ROLE_QUESTIONS[midRoleKey] || [] : [];
 
   return (
     <div className="app-container px-[18px] py-6 pb-8">
@@ -90,7 +111,7 @@ const MatchLog = () => {
         <Section label="Position">
           <div className="grid grid-cols-2 gap-1.5">
             {POSITIONS.map(p => (
-              <SelectCard key={p} selected={position === p} onClick={() => setPosition(p)} label={p} />
+              <SelectCard key={p} selected={position === p} onClick={() => handlePositionChange(p)} label={p} />
             ))}
           </div>
         </Section>
@@ -118,20 +139,16 @@ const MatchLog = () => {
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <div>
               <label className="text-[10px] text-muted-foreground uppercase mb-1 block font-bold tracking-wider">Your team</label>
-              <input
-                type="number" min={0} value={teamScore}
+              <input type="number" min={0} value={teamScore}
                 onChange={e => setTeamScore(e.target.value === '' ? '' : parseInt(e.target.value))}
-                className="w-full bg-card border border-white/5 rounded-[10px] p-3 text-center font-heading text-3xl text-foreground outline-none focus:border-primary"
-              />
+                className="w-full bg-card border border-white/5 rounded-[10px] p-3 text-center font-heading text-3xl text-foreground outline-none focus:border-primary" />
             </div>
             <span className="font-heading text-2xl text-muted-foreground mt-5">–</span>
             <div>
               <label className="text-[10px] text-muted-foreground uppercase mb-1 block font-bold tracking-wider">Opponent</label>
-              <input
-                type="number" min={0} value={opponentScore}
+              <input type="number" min={0} value={opponentScore}
                 onChange={e => setOpponentScore(e.target.value === '' ? '' : parseInt(e.target.value))}
-                className="w-full bg-card border border-white/5 rounded-[10px] p-3 text-center font-heading text-3xl text-foreground outline-none focus:border-primary"
-              />
+                className="w-full bg-card border border-white/5 rounded-[10px] p-3 text-center font-heading text-3xl text-foreground outline-none focus:border-primary" />
             </div>
           </div>
         </Section>
@@ -147,25 +164,17 @@ const MatchLog = () => {
 
         {/* Minutes Played */}
         <Section label={`Minutes Played (max ${maxMinutes})`}>
-          <Input
-            type="number" min={0} max={maxMinutes} value={minutesPlayed}
-            onChange={e => {
-              const v = e.target.value === '' ? '' : Math.min(parseInt(e.target.value), maxMinutes);
-              setMinutesPlayed(v);
-            }}
-            className="bg-card border-white/5"
-            placeholder={`0–${maxMinutes}`}
-          />
+          <Input type="number" min={0} max={maxMinutes} value={minutesPlayed}
+            onChange={e => { const v = e.target.value === '' ? '' : Math.min(parseInt(e.target.value), maxMinutes); setMinutesPlayed(v); }}
+            className="bg-card border-white/5" placeholder={`0–${maxMinutes}`} />
         </Section>
 
-        {/* Card Received */}
+        {/* Card */}
         <Section label="Card Received">
           <div className="grid grid-cols-3 gap-1.5">
             {CARDS.map(c => (
-              <SelectCard
-                key={c} selected={cardReceived === c} onClick={() => setCardReceived(c)} label={c}
-                className={c === 'Yellow' && cardReceived === c ? '!border-gold !text-gold' : c === 'Red' && cardReceived === c ? '!border-destructive !text-destructive' : ''}
-              />
+              <SelectCard key={c} selected={cardReceived === c} onClick={() => setCardReceived(c)} label={c}
+                className={c === 'Yellow' && cardReceived === c ? '!border-gold !text-gold' : c === 'Red' && cardReceived === c ? '!border-destructive !text-destructive' : ''} />
             ))}
           </div>
         </Section>
@@ -188,25 +197,86 @@ const MatchLog = () => {
           </div>
         </Section>
 
-        {/* Goals & Assists */}
-        <Section label="Goals & Assists">
-          <div className="grid grid-cols-3 gap-2">
-            <StatInput label="Goals" value={goals} disabled={!scoresFilled} max={maxGoalContributions}
-              onChange={v => { if (v !== '' && assists !== '' && v + Number(assists) > maxGoalContributions) return; setGoals(v); }} />
-            <StatInput label="Assists" value={assists} disabled={!scoresFilled} max={maxGoalContributions}
-              onChange={v => { if (v !== '' && goals !== '' && Number(goals) + v > maxGoalContributions) return; setAssists(v); }} />
-          </div>
-          {!scoresFilled && (
-            <p className="text-[10px] text-muted-foreground mt-2">Enter both scores to unlock goals & assists</p>
-          )}
-        </Section>
+        {/* Goals & Assists — not for GK */}
+        {showGoalsAssists && (
+          <Section label="Goals & Assists">
+            <div className="grid grid-cols-3 gap-2">
+              <StatInput label="Goals" value={goals} disabled={!scoresFilled} max={maxGoalContributions}
+                onChange={v => { if (v !== '' && assists !== '' && v + Number(assists) > maxGoalContributions) return; setGoals(v); }} />
+              <StatInput label="Assists" value={assists} disabled={!scoresFilled} max={maxGoalContributions}
+                onChange={v => { if (v !== '' && goals !== '' && Number(goals) + v > maxGoalContributions) return; setAssists(v); }} />
+            </div>
+            {!scoresFilled && <p className="text-[10px] text-muted-foreground mt-2">Enter both scores to unlock goals & assists</p>}
+          </Section>
+        )}
 
-        <button
-          onClick={handleSave}
-          disabled={!canSave || saving}
+        {/* GK: Penalties Faced/Saved */}
+        {position === 'Goalkeeper' && (
+          <Section label="Penalties">
+            <div className="grid grid-cols-2 gap-2">
+              <StatInput label="Pen. Faced" value={positionInputs['penFaced'] as number | '' ?? ''} disabled={false} max={20}
+                onChange={v => {
+                  setPosInput('penFaced', v);
+                  if (v !== '' && positionInputs['penSaved'] !== '' && Number(positionInputs['penSaved']) > Number(v)) {
+                    setPosInput('penSaved', v);
+                  }
+                }} />
+              <StatInput label="Pen. Saved" value={positionInputs['penSaved'] as number | '' ?? ''} disabled={false}
+                max={positionInputs['penFaced'] !== '' ? Number(positionInputs['penFaced']) : 20}
+                onChange={v => setPosInput('penSaved', v)} />
+            </div>
+          </Section>
+        )}
+
+        {/* Position-specific questions */}
+        {position && posQuestions.length > 0 && (
+          <>
+            <div className="border-t border-white/5 pt-4">
+              <p className="text-[13px] font-bold text-primary mb-3 tracking-wide">📋 {position} Questions</p>
+            </div>
+            {posQuestions.map(q => {
+              if (q.id === 'midrole') {
+                return (
+                  <Section key={q.id} label={q.label}>
+                    <div className={`grid gap-1.5`} style={{ gridTemplateColumns: `repeat(${q.cols || q.options.length}, 1fr)` }}>
+                      {q.options.map(opt => (
+                        <SelectCard key={opt} selected={positionInputs[q.id] === opt} onClick={() => setPosInput(q.id, opt)} label={opt} />
+                      ))}
+                    </div>
+                  </Section>
+                );
+              }
+              return (
+                <Section key={q.id} label={q.label}>
+                  <div className={`grid gap-1.5`} style={{ gridTemplateColumns: `repeat(${q.cols || q.options.length}, 1fr)` }}>
+                    {q.options.map(opt => (
+                      <SelectCard key={opt} selected={positionInputs[q.id] === opt} onClick={() => setPosInput(q.id, opt)} label={opt} />
+                    ))}
+                  </div>
+                </Section>
+              );
+            })}
+          </>
+        )}
+
+        {/* Midfielder sub-role questions */}
+        {position === 'Midfielder' && midRoleKey && midSubQuestions.length > 0 && (
+          <>
+            {midSubQuestions.map(q => (
+              <Section key={q.id} label={q.label}>
+                <div className={`grid gap-1.5`} style={{ gridTemplateColumns: `repeat(${q.cols || q.options.length}, 1fr)` }}>
+                  {q.options.map(opt => (
+                    <SelectCard key={opt} selected={positionInputs[q.id] === opt} onClick={() => setPosInput(q.id, opt)} label={opt} />
+                  ))}
+                </div>
+              </Section>
+            ))}
+          </>
+        )}
+
+        <button onClick={handleSave} disabled={!canSave || saving}
           className="w-full rounded-[10px] py-4 text-white font-heading text-[15px] font-bold tracking-wide transition-all active:scale-[0.98] disabled:opacity-40"
-          style={{ background: 'linear-gradient(135deg, hsl(224 85% 35%) 0%, hsl(224 85% 53%) 100%)' }}
-        >
+          style={{ background: 'linear-gradient(135deg, hsl(224 85% 35%) 0%, hsl(224 85% 53%) 100%)' }}>
           {saving ? 'Saving...' : 'Save & Calculate Rating →'}
         </button>
       </div>
@@ -222,12 +292,10 @@ const Section = ({ label, children }: { label: string; children: React.ReactNode
 );
 
 const SelectCard = ({ selected, onClick, label, className = '' }: { selected: boolean; onClick: () => void; label: string; className?: string }) => (
-  <button
-    onClick={onClick}
+  <button onClick={onClick}
     className={`border rounded-lg px-2 py-2.5 text-[11px] font-bold transition-colors whitespace-pre-line
       ${selected ? 'border-primary bg-primary/15 text-primary' : 'border-white/5 bg-[hsl(222,40%,8%)] text-muted-foreground hover:border-primary/30'}
-      ${className}`}
-  >
+      ${className}`}>
     {label}
   </button>
 );
@@ -238,11 +306,9 @@ const StatInput = ({ label, value, disabled, max, onChange }: {
 }) => (
   <div className={`bg-card border border-white/5 rounded-[10px] p-3 text-center ${disabled ? 'opacity-40' : ''}`}>
     <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-1.5">{label}</p>
-    <input
-      type="number" min={0} max={max} value={value} disabled={disabled}
+    <input type="number" min={0} max={max} value={value} disabled={disabled}
       onChange={e => onChange(e.target.value === '' ? '' : parseInt(e.target.value))}
-      className="bg-transparent border-none outline-none w-full text-center font-heading text-2xl text-foreground"
-    />
+      className="bg-transparent border-none outline-none w-full text-center font-heading text-2xl text-foreground" />
   </div>
 );
 
