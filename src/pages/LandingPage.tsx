@@ -1,19 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, ClipboardList, Heart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
-
-type Role = 'player' | 'coach' | 'parent';
-
-const roles: { role: Role; label: string; desc: string; icon: React.ElementType }[] = [
-  { role: 'player', label: 'Player', desc: 'Track your career, stats and development', icon: Users },
-  { role: 'coach', label: 'Coach', desc: 'Manage your squad and rate performances', icon: ClipboardList },
-  { role: 'parent', label: 'Parent', desc: 'Follow your child\'s football journey', icon: Heart },
-];
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -26,7 +16,7 @@ const LandingPage = () => {
     }
   }, [loading, user, navigate]);
 
-  const handleRoleSelect = (role: Role) => {
+  const handleRoleSelect = (role: string) => {
     if (role === 'parent') {
       navigate('/parent-info');
     } else {
@@ -35,47 +25,47 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="app-container flex flex-col items-center px-6 py-12">
+    <div className="app-container flex flex-col items-center justify-center min-h-screen px-6 py-10">
       {/* Logo */}
-      <div className="mb-2 mt-8">
-        <h1 className="text-5xl font-heading font-extrabold tracking-wider text-primary">
-          TRAK
-        </h1>
-        <p className="text-center text-sm text-muted-foreground tracking-widest uppercase">
-          Football
-        </p>
+      <div className="mb-8 text-center">
+        <span className="font-heading text-7xl font-black tracking-tight text-foreground block leading-none">TRAK</span>
+        <span className="text-primary italic text-lg tracking-[0.12em] font-body block mt-1">football</span>
+        <p className="text-muted-foreground text-sm mt-3 tracking-wide">Own your career.</p>
       </div>
-
-      <p className="text-muted-foreground text-center mt-4 mb-10 text-sm max-w-[280px]">
-        Your career. Your data. Your journey.
-      </p>
 
       {!loginMode ? (
         <>
-          <h2 className="text-lg font-heading mb-6 text-foreground">I am a...</h2>
+          <h2 className="font-heading text-[15px] font-bold tracking-[0.14em] uppercase text-muted-foreground mb-5">
+            Choose your account
+          </h2>
 
-          <div className="flex flex-col gap-4 w-full">
-            {roles.map(({ role, label, desc, icon: Icon }, i) => (
-              <button
-                key={role}
-                onClick={() => handleRoleSelect(role)}
-                className="flex items-center gap-4 p-4 rounded-lg bg-card border border-border hover:border-primary transition-all duration-200 text-left group"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Icon className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-heading text-lg text-foreground">{label}</p>
-                  <p className="text-xs text-muted-foreground">{desc}</p>
-                </div>
-              </button>
-            ))}
+          <div className="flex flex-col gap-2.5 w-full">
+            <RoleCard
+              emoji="⚽"
+              name="Player"
+              desc="Track your career, log matches, earn medals and set goals"
+              colorClass="bg-primary/20"
+              onClick={() => handleRoleSelect('player')}
+            />
+            <RoleCard
+              emoji="📋"
+              name="Coach"
+              desc="Manage your squad, track attendance and assess players"
+              colorClass="bg-gold/15"
+              onClick={() => handleRoleSelect('coach')}
+            />
+            <RoleCard
+              emoji="👨‍👩‍👦"
+              name="Parent"
+              desc="Follow your child's development, see both ratings and progress"
+              colorClass="bg-training-blue/15"
+              onClick={() => handleRoleSelect('parent')}
+            />
           </div>
 
           <button
             onClick={() => setLoginMode(true)}
-            className="mt-10 text-sm text-muted-foreground hover:text-primary transition-colors"
+            className="mt-8 text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             Already have an account? <span className="text-primary font-semibold">Sign in</span>
           </button>
@@ -86,6 +76,24 @@ const LandingPage = () => {
     </div>
   );
 };
+
+const RoleCard = ({ emoji, name, desc, colorClass, onClick }: {
+  emoji: string; name: string; desc: string; colorClass: string; onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className="w-full bg-card border border-white/5 rounded-2xl p-[18px] flex items-center gap-4 text-left transition-all active:scale-[0.98] hover:border-primary/30"
+  >
+    <div className={`w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-2xl flex-shrink-0 ${colorClass}`}>
+      {emoji}
+    </div>
+    <div className="flex-1">
+      <p className="font-heading text-[22px] font-black tracking-wide text-foreground">{name}</p>
+      <p className="text-xs text-muted-foreground leading-snug">{desc}</p>
+    </div>
+    <span className="text-lg text-muted-foreground">→</span>
+  </button>
+);
 
 const LoginForm = ({ onBack }: { onBack: () => void }) => {
   const { signIn } = useAuth();
@@ -108,24 +116,10 @@ const LoginForm = ({ onBack }: { onBack: () => void }) => {
 
   return (
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
-      <h2 className="text-lg font-heading mb-2 text-foreground">Sign In</h2>
-      <Input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-        className="bg-card"
-      />
-      <Input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-        className="bg-card"
-      />
-      <Button type="submit" disabled={loading} className="w-full">
+      <h2 className="text-lg font-heading mb-2 text-foreground">SIGN IN</h2>
+      <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-card border-white/5" />
+      <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-card border-white/5" />
+      <Button type="submit" disabled={loading} className="w-full" style={{ background: 'linear-gradient(135deg, hsl(224 85% 35%) 0%, hsl(224 85% 53%) 100%)' }}>
         {loading ? 'Signing in...' : 'Sign In'}
       </Button>
       <button type="button" onClick={onBack} className="text-sm text-muted-foreground hover:text-primary">
