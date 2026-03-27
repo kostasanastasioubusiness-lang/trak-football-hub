@@ -135,28 +135,20 @@ const PlayerOnboarding = () => {
       const monthIndex = MONTHS.indexOf(dobMonth) + 1;
       const dob = `${dobYear}-${String(monthIndex).padStart(2, '0')}-${String(dobDay).padStart(2, '0')}`;
 
-      await supabase.from('profiles').insert({
-        user_id: user.id,
-        role: 'player' as any,
+      // Store onboarding data in localStorage — will be written to Supabase after email confirmation
+      localStorage.setItem('trak_pending_profile', JSON.stringify({
+        role: 'player',
         full_name: name,
         nationality,
-      });
-
-      await supabase.from('player_details').insert({
-        user_id: user.id,
-        date_of_birth: dob,
-        position,
-        current_club: club,
-        age_group: ageGroup,
-        shirt_number: shirtNumber ? parseInt(shirtNumber) : null,
-      });
-
-      if (parentEmail) {
-        await supabase.from('parent_invites').insert({
-          player_user_id: user.id,
-          parent_email: parentEmail,
-        });
-      }
+        player_details: {
+          date_of_birth: dob,
+          position,
+          current_club: club,
+          age_group: ageGroup,
+          shirt_number: shirtNumber ? parseInt(shirtNumber) : null,
+        },
+        parent_email: parentEmail || null,
+      }));
 
       setFirstName(name.split(' ')[0]);
       setStep(4);
@@ -285,19 +277,17 @@ const CoachOnboarding = () => {
       const { user, error } = await signUp(email, password);
       if (error || !user) throw error || new Error('Signup failed');
 
-      await supabase.from('profiles').insert({
-        user_id: user.id,
-        role: 'coach' as any,
+      // Store onboarding data in localStorage — will be written to Supabase after email confirmation
+      localStorage.setItem('trak_pending_profile', JSON.stringify({
+        role: 'coach',
         full_name: name,
         nationality,
-      });
-
-      await supabase.from('coach_details').insert({
-        user_id: user.id,
-        current_club: club,
-        team,
-        coach_role: coachRole,
-      });
+        coach_details: {
+          current_club: club,
+          team,
+          coach_role: coachRole,
+        },
+      }));
 
       const parts = name.trim().split(' ');
       setLastName(parts[parts.length - 1]);
