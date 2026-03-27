@@ -12,6 +12,12 @@ import Dashboard from "./pages/Dashboard";
 import LogChooser from "./pages/LogChooser";
 import MatchLog from "./pages/MatchLog";
 import NotFound from "./pages/NotFound";
+import CoachSquad from "./components/coach/CoachSquad";
+import CoachSessions from "./components/coach/CoachSessions";
+import CoachSessionDetail from "./components/coach/CoachSessionDetail";
+import CoachAssess from "./components/coach/CoachAssess";
+import CoachPlayerProfile from "./components/coach/CoachPlayerProfile";
+import CoachProgress from "./components/coach/CoachProgress";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +36,13 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/log" element={<LogChooser />} />
             <Route path="/log/match" element={<MatchLog />} />
+            {/* Coach routes */}
+            <Route path="/coach/squad" element={<CoachSquad />} />
+            <Route path="/coach/sessions" element={<CoachSessions />} />
+            <Route path="/coach/session/:id" element={<CoachSessionDetail />} />
+            <Route path="/coach/assess" element={<CoachAssess />} />
+            <Route path="/coach/player/:id" element={<CoachPlayerProfile />} />
+            <Route path="/coach/progress" element={<CoachProgress />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
