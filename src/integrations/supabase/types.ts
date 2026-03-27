@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      coach_assessments: {
+        Row: {
+          appearance: string | null
+          attitude: number
+          coach_rating: number | null
+          coach_user_id: string
+          coachability: number
+          created_at: string | null
+          flag: string | null
+          id: string
+          physical: number
+          private_note: string | null
+          session_id: string | null
+          squad_player_id: string
+          tactical: number
+          technical: number
+          work_rate: number
+        }
+        Insert: {
+          appearance?: string | null
+          attitude?: number
+          coach_rating?: number | null
+          coach_user_id: string
+          coachability?: number
+          created_at?: string | null
+          flag?: string | null
+          id?: string
+          physical?: number
+          private_note?: string | null
+          session_id?: string | null
+          squad_player_id: string
+          tactical?: number
+          technical?: number
+          work_rate?: number
+        }
+        Update: {
+          appearance?: string | null
+          attitude?: number
+          coach_rating?: number | null
+          coach_user_id?: string
+          coachability?: number
+          created_at?: string | null
+          flag?: string | null
+          id?: string
+          physical?: number
+          private_note?: string | null
+          session_id?: string | null
+          squad_player_id?: string
+          tactical?: number
+          technical?: number
+          work_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_assessments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "coach_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_assessments_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_details: {
         Row: {
           coach_role: string | null
@@ -38,6 +107,45 @@ export type Database = {
           id?: string
           team?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      coach_sessions: {
+        Row: {
+          coach_user_id: string
+          competition: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          session_date: string | null
+          session_type: string
+          title: string
+          training_type: string | null
+          venue: string | null
+        }
+        Insert: {
+          coach_user_id: string
+          competition?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          session_date?: string | null
+          session_type?: string
+          title: string
+          training_type?: string | null
+          venue?: string | null
+        }
+        Update: {
+          coach_user_id?: string
+          competition?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          session_date?: string | null
+          session_type?: string
+          title?: string
+          training_type?: string | null
+          venue?: string | null
         }
         Relationships: []
       }
@@ -97,6 +205,41 @@ export type Database = {
           venue?: string
         }
         Relationships: []
+      }
+      meeting_requests: {
+        Row: {
+          coach_user_id: string
+          created_at: string | null
+          id: string
+          reason: string | null
+          squad_player_id: string
+          status: string
+        }
+        Insert: {
+          coach_user_id: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          squad_player_id: string
+          status?: string
+        }
+        Update: {
+          coach_user_id?: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          squad_player_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_requests_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       parent_invites: {
         Row: {
@@ -203,6 +346,81 @@ export type Database = {
           nationality?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      session_attendance: {
+        Row: {
+          created_at: string | null
+          id: string
+          minutes_played: number | null
+          session_id: string
+          squad_player_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          minutes_played?: number | null
+          session_id: string
+          squad_player_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          minutes_played?: number | null
+          session_id?: string
+          squad_player_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_attendance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "coach_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_attendance_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      squad_players: {
+        Row: {
+          age: number | null
+          coach_user_id: string
+          created_at: string | null
+          id: string
+          linked_player_id: string | null
+          player_name: string
+          position: string | null
+          shirt_number: number | null
+        }
+        Insert: {
+          age?: number | null
+          coach_user_id: string
+          created_at?: string | null
+          id?: string
+          linked_player_id?: string | null
+          player_name: string
+          position?: string | null
+          shirt_number?: number | null
+        }
+        Update: {
+          age?: number | null
+          coach_user_id?: string
+          created_at?: string | null
+          id?: string
+          linked_player_id?: string | null
+          player_name?: string
+          position?: string | null
+          shirt_number?: number | null
         }
         Relationships: []
       }
