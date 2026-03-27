@@ -20,7 +20,10 @@ const Dashboard = () => {
     return (
       <div className="app-container flex flex-col items-center justify-center min-h-screen text-foreground gap-4">
         <p className="text-muted-foreground text-sm">No profile found. Please complete onboarding.</p>
-        <Button onClick={() => navigate('/onboarding')} variant="default" size="sm">Go to Onboarding</Button>
+        <div className="flex gap-2">
+          <Button onClick={() => navigate('/onboarding/player')} variant="default" size="sm">Player Onboarding</Button>
+          <Button onClick={() => navigate('/onboarding/coach')} variant="default" size="sm">Coach Onboarding</Button>
+        </div>
         <Button onClick={signOut} variant="ghost" size="sm" className="text-xs text-muted-foreground">Sign Out</Button>
       </div>
     );
