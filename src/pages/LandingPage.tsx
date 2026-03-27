@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, ClipboardList, Heart } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 type Role = 'player' | 'coach' | 'parent';
 
@@ -13,6 +18,13 @@ const roles: { role: Role; label: string; desc: string; icon: React.ElementType 
 const LandingPage = () => {
   const navigate = useNavigate();
   const [loginMode, setLoginMode] = useState(false);
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [loading, user, navigate]);
 
   const handleRoleSelect = (role: Role) => {
     if (role === 'parent') {
@@ -74,11 +86,6 @@ const LandingPage = () => {
     </div>
   );
 };
-
-import { useAuth } from '@/contexts/AuthContext';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
 
 const LoginForm = ({ onBack }: { onBack: () => void }) => {
   const { signIn } = useAuth();
