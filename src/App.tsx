@@ -9,6 +9,8 @@ import OnboardingPage from "./pages/OnboardingPage";
 import ParentInfoPage from "./pages/ParentInfoPage";
 import ParentOnboarding from "./pages/ParentOnboarding";
 import Dashboard from "./pages/Dashboard";
+import LogChooser from "./pages/LogChooser";
+import MatchLog from "./pages/MatchLog";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +28,8 @@ const App = () => (
             <Route path="/parent-info" element={<ParentInfoPage />} />
             <Route path="/parent-invite" element={<ParentOnboarding />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/log" element={<LogChooser />} />
+            <Route path="/log/match" element={<MatchLog />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
