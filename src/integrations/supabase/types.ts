@@ -41,6 +41,63 @@ export type Database = {
         }
         Relationships: []
       }
+      matches: {
+        Row: {
+          age_group: string
+          assists: number
+          body_condition: string | null
+          card_received: string | null
+          competition: string
+          computed_rating: number
+          created_at: string | null
+          goals: number
+          id: string
+          minutes_played: number
+          opponent_score: number
+          position: string
+          self_rating: string | null
+          team_score: number
+          user_id: string
+          venue: string
+        }
+        Insert: {
+          age_group: string
+          assists?: number
+          body_condition?: string | null
+          card_received?: string | null
+          competition: string
+          computed_rating?: number
+          created_at?: string | null
+          goals?: number
+          id?: string
+          minutes_played?: number
+          opponent_score?: number
+          position: string
+          self_rating?: string | null
+          team_score?: number
+          user_id: string
+          venue: string
+        }
+        Update: {
+          age_group?: string
+          assists?: number
+          body_condition?: string | null
+          card_received?: string | null
+          competition?: string
+          computed_rating?: number
+          created_at?: string | null
+          goals?: number
+          id?: string
+          minutes_played?: number
+          opponent_score?: number
+          position?: string
+          self_rating?: string | null
+          team_score?: number
+          user_id?: string
+          venue?: string
+        }
+        Relationships: []
+      }
       parent_invites: {
         Row: {
           created_at: string | null
@@ -145,6 +202,39 @@ export type Database = {
           id?: string
           nationality?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wellness_logs: {
+        Row: {
+          created_at: string | null
+          energy: string | null
+          id: string
+          logged_date: string
+          mood: string | null
+          notes: string | null
+          sleep_quality: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          energy?: string | null
+          id?: string
+          logged_date?: string
+          mood?: string | null
+          notes?: string | null
+          sleep_quality?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          energy?: string | null
+          id?: string
+          logged_date?: string
+          mood?: string | null
+          notes?: string | null
+          sleep_quality?: string | null
           user_id?: string
         }
         Relationships: []
