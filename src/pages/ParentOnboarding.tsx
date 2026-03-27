@@ -24,10 +24,7 @@ const ParentOnboarding = () => {
   useEffect(() => {
     if (!token) { setLoading(false); return; }
     supabase
-      .from('parent_invites')
-      .select('*')
-      .eq('invite_token', token)
-      .eq('status', 'pending')
+      .rpc('get_parent_invite_by_token', { p_token: token })
       .maybeSingle()
       .then(({ data }) => {
         setInvite(data);
