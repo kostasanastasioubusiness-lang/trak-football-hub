@@ -1,12 +1,13 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import PlayerHome from '@/components/player/PlayerHome';
 
 const Dashboard = () => {
   const { user, profile, loading, signOut } = useAuth();
   const navigate = useNavigate();
+  const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate('/');
@@ -15,28 +16,43 @@ const Dashboard = () => {
     }
   }, [loading, user, profile, navigate]);
 
+  useEffect(() => {
+    if (!loading) {
+      setTimedOut(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setTimedOut(true), 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [loading]);
+
+  useEffect(() => {
+    if (loading || !user || profile) return;
+
+    const role = (user.user_metadata as any)?.trak_onboarding?.role;
+    if (role === 'player' || role === 'coach') {
+      navigate(`/onboarding/${role}`, { replace: true });
+    }
+  }, [loading, user, profile, navigate]);
+
+  if (loading && timedOut) {
+    return (
+      <div className="app-container flex flex-col items-center justify-center min-h-screen text-foreground gap-4 px-6">
+        <p className="text-sm text-muted-foreground text-center">We couldn't load your profile in time. Please try again.</p>
+        <Button onClick={() => window.location.reload()} variant="default" size="sm">Retry</Button>
+        <Button onClick={signOut} variant="ghost" size="sm" className="text-xs text-muted-foreground">Sign Out</Button>
+      </div>
+    );
+  }
+
   if (loading) return <div className="app-container flex items-center justify-center min-h-screen text-foreground">Loading...</div>;
 
   // No profile exists and no pending data — user needs to complete onboarding
   if (!profile) {
-    const hasPending = !!localStorage.getItem('trak_pending_profile');
-    if (hasPending) {
-      // Pending data exists but write failed — retry on next refresh
-      return (
-        <div className="app-container flex flex-col items-center justify-center min-h-screen text-foreground gap-4">
-          <p className="text-muted-foreground text-sm">Setting up your profile...</p>
-          <Button onClick={() => window.location.reload()} variant="default" size="sm">Retry</Button>
-          <Button onClick={signOut} variant="ghost" size="sm" className="text-xs text-muted-foreground">Sign Out</Button>
-        </div>
-      );
-    }
     return (
-      <div className="app-container flex flex-col items-center justify-center min-h-screen text-foreground gap-4">
-        <p className="text-muted-foreground text-sm">Profile setup incomplete. Please complete registration.</p>
-        <div className="flex gap-2">
-          <Button onClick={() => navigate('/onboarding/player')} variant="default" size="sm">Player Registration</Button>
-          <Button onClick={() => navigate('/onboarding/coach')} variant="default" size="sm">Coach Registration</Button>
-        </div>
+      <div className="app-container flex flex-col items-center justify-center min-h-screen text-foreground gap-4 px-6">
+        <p className="text-muted-foreground text-sm text-center">Profile setup couldn't be completed automatically.</p>
+        <Button onClick={() => window.location.reload()} variant="default" size="sm">Retry</Button>
         <Button onClick={signOut} variant="ghost" size="sm" className="text-xs text-muted-foreground">Sign Out</Button>
       </div>
     );

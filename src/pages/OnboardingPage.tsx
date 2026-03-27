@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -82,10 +82,8 @@ const OnboardingPage = () => {
 
 const PlayerOnboarding = () => {
   const { signUp } = useAuth();
-  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [firstName, setFirstName] = useState('');
 
   // Step 1
   const [name, setName] = useState('');
@@ -129,15 +127,11 @@ const PlayerOnboarding = () => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const { user, error } = await signUp(email, password);
-      if (error || !user) throw error || new Error('Signup failed');
-
       const monthIndex = MONTHS.indexOf(dobMonth) + 1;
       const dob = `${dobYear}-${String(monthIndex).padStart(2, '0')}-${String(dobDay).padStart(2, '0')}`;
 
-      // Store onboarding data in localStorage — will be written to Supabase after email confirmation
-      localStorage.setItem('trak_pending_profile', JSON.stringify({
-        role: 'player',
+      const pendingProfile = {
+        role: 'player' as const,
         full_name: name,
         nationality,
         player_details: {
@@ -145,12 +139,16 @@ const PlayerOnboarding = () => {
           position,
           current_club: club,
           age_group: ageGroup,
-          shirt_number: shirtNumber ? parseInt(shirtNumber) : null,
+          shirt_number: shirtNumber ? parseInt(shirtNumber, 10) : null,
         },
         parent_email: parentEmail || null,
-      }));
+      };
 
-      setFirstName(name.split(' ')[0]);
+      const { user, error } = await signUp(email, password, pendingProfile);
+      if (error || !user) throw error || new Error('Signup failed');
+
+      // Keep local backup for users who confirm in the same browser session
+      localStorage.setItem('trak_pending_profile', JSON.stringify(pendingProfile));
       setStep(4);
     } catch (err: any) {
       toast.error(err.message || 'Registration failed');
@@ -240,10 +238,8 @@ const PlayerOnboarding = () => {
 
 const CoachOnboarding = () => {
   const { signUp } = useAuth();
-  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [lastName, setLastName] = useState('');
 
   const [name, setName] = useState('');
   const [nationality, setNationality] = useState('');
@@ -274,12 +270,8 @@ const CoachOnboarding = () => {
     }
     setLoading(true);
     try {
-      const { user, error } = await signUp(email, password);
-      if (error || !user) throw error || new Error('Signup failed');
-
-      // Store onboarding data in localStorage — will be written to Supabase after email confirmation
-      localStorage.setItem('trak_pending_profile', JSON.stringify({
-        role: 'coach',
+      const pendingProfile = {
+        role: 'coach' as const,
         full_name: name,
         nationality,
         coach_details: {
@@ -287,10 +279,13 @@ const CoachOnboarding = () => {
           team,
           coach_role: coachRole,
         },
-      }));
+      };
 
-      const parts = name.trim().split(' ');
-      setLastName(parts[parts.length - 1]);
+      const { user, error } = await signUp(email, password, pendingProfile);
+      if (error || !user) throw error || new Error('Signup failed');
+
+      // Keep local backup for users who confirm in the same browser session
+      localStorage.setItem('trak_pending_profile', JSON.stringify(pendingProfile));
       setStep(3);
     } catch (err: any) {
       toast.error(err.message || 'Registration failed');
