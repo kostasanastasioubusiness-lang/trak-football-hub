@@ -9,7 +9,7 @@ import {
   EUROPEAN_COUNTRIES, POSITIONS, AGE_GROUPS, COACH_ROLES,
   DAYS, MONTHS, YEARS
 } from '@/lib/constants';
-import { Trophy, Target, ClipboardList, Star } from 'lucide-react';
+import { Mail, RefreshCw } from 'lucide-react';
 
 type Role = 'player' | 'coach';
 
@@ -193,26 +193,7 @@ const PlayerOnboarding = () => {
       )}
 
       {step === 4 && (
-        <div className="flex flex-col items-center text-center py-6">
-          <div className="w-20 h-20 rounded-full bg-primary/15 flex items-center justify-center mb-6">
-            <span className="text-4xl">⚽</span>
-          </div>
-          <h2 className="text-2xl font-heading text-foreground mb-2">
-            You're all set, {firstName}!
-          </h2>
-          <p className="text-sm text-muted-foreground mb-8">Your Trak account is ready. Start tracking your career.</p>
-          <div className="flex flex-col gap-3 w-full">
-            <Button onClick={() => navigate('/dashboard')} className="w-full gap-2">
-              <Trophy className="w-4 h-4" /> Log a Match
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/dashboard')} className="w-full gap-2">
-              <Target className="w-4 h-4" /> Set a Goal
-            </Button>
-          </div>
-          <button onClick={() => navigate('/dashboard')} className="mt-6 text-sm text-muted-foreground hover:text-primary transition-colors">
-            Go to Dashboard →
-          </button>
-        </div>
+        <EmailConfirmationScreen email={email} />
       )}
     </div>
   );
@@ -321,26 +302,7 @@ const CoachOnboarding = () => {
       )}
 
       {step === 3 && (
-        <div className="flex flex-col items-center text-center py-6">
-          <div className="w-20 h-20 rounded-full bg-coach-orange/15 flex items-center justify-center mb-6">
-            <span className="text-4xl">📋</span>
-          </div>
-          <h2 className="text-2xl font-heading text-foreground mb-2">
-            Ready to go, Coach {lastName}!
-          </h2>
-          <p className="text-sm text-muted-foreground mb-8">Your coaching hub is set up. Let's get to work.</p>
-          <div className="flex flex-col gap-3 w-full">
-            <Button onClick={() => navigate('/dashboard')} className="w-full gap-2">
-              <ClipboardList className="w-4 h-4" /> Log Session
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/dashboard')} className="w-full gap-2">
-              <Star className="w-4 h-4" /> Assess Player
-            </Button>
-          </div>
-          <button onClick={() => navigate('/dashboard')} className="mt-6 text-sm text-muted-foreground hover:text-primary transition-colors">
-            Go to Dashboard →
-          </button>
-        </div>
+        <EmailConfirmationScreen email={email} />
       )}
     </div>
   );
