@@ -13,6 +13,53 @@ import { Mail, RefreshCw } from 'lucide-react';
 
 type Role = 'player' | 'coach';
 
+const EmailConfirmationScreen = ({ email }: { email: string }) => {
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw error;
+      setResent(true);
+      toast.success('Confirmation email resent!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to resend email');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center text-center py-6">
+      <div className="w-20 h-20 rounded-full bg-primary/15 flex items-center justify-center mb-6">
+        <Mail className="w-10 h-10 text-primary" />
+      </div>
+      <h2 className="text-2xl font-heading text-foreground mb-2">Check your email</h2>
+      <p className="text-sm text-muted-foreground mb-2">
+        We sent a confirmation link to
+      </p>
+      <p className="text-sm font-semibold text-foreground mb-6">{email}</p>
+      <p className="text-xs text-muted-foreground mb-8">
+        Click the link to activate your account and get started.
+      </p>
+      <Button
+        variant="outline"
+        onClick={handleResend}
+        disabled={resending || resent}
+        className="w-full gap-2"
+      >
+        <RefreshCw className={`w-4 h-4 ${resending ? 'animate-spin' : ''}`} />
+        {resent ? 'Email resent' : resending ? 'Resending...' : 'Resend confirmation email'}
+      </Button>
+      <a href="/" className="mt-6 text-sm text-muted-foreground hover:text-primary transition-colors">
+        ← Back to home
+      </a>
+    </div>
+  );
+};
+
 const OnboardingPage = () => {
   const { role } = useParams<{ role: string }>();
   const validRole = (role === 'player' || role === 'coach') ? role as Role : null;

@@ -9,7 +9,10 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!loading && !user) navigate('/');
-  }, [loading, user, navigate]);
+    if (!loading && user && !user.email_confirmed_at && profile?.role !== 'parent') {
+      navigate('/');
+    }
+  }, [loading, user, profile, navigate]);
 
   if (loading) return <div className="app-container flex items-center justify-center min-h-screen text-foreground">Loading...</div>;
   if (!profile) return <div className="app-container flex items-center justify-center min-h-screen text-foreground">Loading profile...</div>;
