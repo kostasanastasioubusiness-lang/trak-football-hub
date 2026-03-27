@@ -16,7 +16,15 @@ const Dashboard = () => {
   }, [loading, user, profile, navigate]);
 
   if (loading) return <div className="app-container flex items-center justify-center min-h-screen text-foreground">Loading...</div>;
-  if (!profile) return <div className="app-container flex items-center justify-center min-h-screen text-foreground">Loading profile...</div>;
+  if (!profile) {
+    return (
+      <div className="app-container flex flex-col items-center justify-center min-h-screen text-foreground gap-4">
+        <p className="text-muted-foreground text-sm">No profile found. Please complete onboarding.</p>
+        <Button onClick={() => navigate('/onboarding')} variant="default" size="sm">Go to Onboarding</Button>
+        <Button onClick={signOut} variant="ghost" size="sm" className="text-xs text-muted-foreground">Sign Out</Button>
+      </div>
+    );
+  }
 
   if (profile.role === 'player') return <PlayerHome />;
 
