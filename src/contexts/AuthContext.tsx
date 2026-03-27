@@ -30,22 +30,91 @@ export const useAuth = () => {
   return ctx;
 };
 
+/** Write pending onboarding data from localStorage to Supabase */
+async function writePendingProfile(userId: string): Promise<Profile | null> {
+  const raw = localStorage.getItem('trak_pending_profile');
+  if (!raw) return null;
+
+  try {
+    const data = JSON.parse(raw);
+
+    const { error: profileError } = await supabase.from('profiles').insert({
+      user_id: userId,
+      role: data.role as any,
+      full_name: data.full_name,
+      nationality: data.nationality || null,
+    });
+    if (profileError) throw profileError;
+
+    if (data.role === 'player' && data.player_details) {
+      const pd = data.player_details;
+      await supabase.from('player_details').insert({
+        user_id: userId,
+        date_of_birth: pd.date_of_birth,
+        position: pd.position,
+        current_club: pd.current_club,
+        age_group: pd.age_group,
+        shirt_number: pd.shirt_number,
+      });
+
+      if (data.parent_email) {
+        await supabase.from('parent_invites').insert({
+          player_user_id: userId,
+          parent_email: data.parent_email,
+        });
+      }
+    }
+
+    if (data.role === 'coach' && data.coach_details) {
+      const cd = data.coach_details;
+      await supabase.from('coach_details').insert({
+        user_id: userId,
+        current_club: cd.current_club,
+        team: cd.team,
+        coach_role: cd.coach_role,
+      });
+    }
+
+    localStorage.removeItem('trak_pending_profile');
+
+    // Fetch the newly created profile
+    const { data: newProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    return newProfile as Profile | null;
+  } catch (err) {
+    console.error('Failed to write pending profile:', err);
+    return null;
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchOrCreateProfile = async (userId: string) => {
+    // Try to fetch existing profile
     const { data } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
-    setProfile(data as Profile | null);
+
+    if (data) {
+      setProfile(data as Profile);
+      return;
+    }
+
+    // No profile — try writing pending data from localStorage
+    const created = await writePendingProfile(userId);
+    setProfile(created);
   };
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    if (user) await fetchOrCreateProfile(user.id);
   };
 
   useEffect(() => {
@@ -53,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        setTimeout(() => fetchProfile(currentUser.id), 0);
+        setTimeout(() => fetchOrCreateProfile(currentUser.id), 0);
       } else {
         setProfile(null);
       }
@@ -64,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        fetchProfile(currentUser.id);
+        fetchOrCreateProfile(currentUser.id);
       }
       setLoading(false);
     });

@@ -16,13 +16,26 @@ const Dashboard = () => {
   }, [loading, user, profile, navigate]);
 
   if (loading) return <div className="app-container flex items-center justify-center min-h-screen text-foreground">Loading...</div>;
+
+  // No profile exists and no pending data — user needs to complete onboarding
   if (!profile) {
+    const hasPending = !!localStorage.getItem('trak_pending_profile');
+    if (hasPending) {
+      // Pending data exists but write failed — retry on next refresh
+      return (
+        <div className="app-container flex flex-col items-center justify-center min-h-screen text-foreground gap-4">
+          <p className="text-muted-foreground text-sm">Setting up your profile...</p>
+          <Button onClick={() => window.location.reload()} variant="default" size="sm">Retry</Button>
+          <Button onClick={signOut} variant="ghost" size="sm" className="text-xs text-muted-foreground">Sign Out</Button>
+        </div>
+      );
+    }
     return (
       <div className="app-container flex flex-col items-center justify-center min-h-screen text-foreground gap-4">
-        <p className="text-muted-foreground text-sm">No profile found. Please complete onboarding.</p>
+        <p className="text-muted-foreground text-sm">Profile setup incomplete. Please complete registration.</p>
         <div className="flex gap-2">
-          <Button onClick={() => navigate('/onboarding/player')} variant="default" size="sm">Player Onboarding</Button>
-          <Button onClick={() => navigate('/onboarding/coach')} variant="default" size="sm">Coach Onboarding</Button>
+          <Button onClick={() => navigate('/onboarding/player')} variant="default" size="sm">Player Registration</Button>
+          <Button onClick={() => navigate('/onboarding/coach')} variant="default" size="sm">Coach Registration</Button>
         </div>
         <Button onClick={signOut} variant="ghost" size="sm" className="text-xs text-muted-foreground">Sign Out</Button>
       </div>
@@ -31,7 +44,6 @@ const Dashboard = () => {
 
   if (profile.role === 'player') return <PlayerHome />;
 
-  // Coach and Parent dashboards remain as placeholders
   const roleConfig: Record<string, { title: string; color: string; emoji: string }> = {
     coach: { title: 'Coach Dashboard', color: 'text-coach-orange', emoji: '📋' },
     parent: { title: 'Parent Dashboard', color: 'text-gold', emoji: '👨‍👩‍👦' },
