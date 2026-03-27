@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { POSITIONS } from '@/lib/constants';
@@ -43,7 +42,6 @@ const MatchLog = () => {
   const maxMinutes = ageGroup ? AGE_GROUP_MAX_MINUTES[ageGroup] || 90 : 90;
   const scoresFilled = teamScore !== '' && opponentScore !== '';
   const maxGoalContributions = scoresFilled ? Number(teamScore) : 0;
-
   const canSave = position && competition && venue && scoresFilled && ageGroup && minutesPlayed !== '';
 
   const handleSave = async () => {
@@ -51,20 +49,12 @@ const MatchLog = () => {
     setSaving(true);
     try {
       const { error } = await supabase.from('matches').insert({
-        user_id: user.id,
-        position,
-        competition,
-        venue,
-        team_score: Number(teamScore),
-        opponent_score: Number(opponentScore),
-        age_group: ageGroup,
-        minutes_played: Number(minutesPlayed),
-        card_received: cardReceived,
-        body_condition: bodyCondition || null,
-        self_rating: selfRating || null,
-        goals: goals !== '' ? Number(goals) : 0,
-        assists: assists !== '' ? Number(assists) : 0,
-        computed_rating: rating ?? 6.5,
+        user_id: user.id, position, competition, venue,
+        team_score: Number(teamScore), opponent_score: Number(opponentScore),
+        age_group: ageGroup, minutes_played: Number(minutesPlayed),
+        card_received: cardReceived, body_condition: bodyCondition || null,
+        self_rating: selfRating || null, goals: goals !== '' ? Number(goals) : 0,
+        assists: assists !== '' ? Number(assists) : 0, computed_rating: rating ?? 6.5,
       });
       if (error) throw error;
       toast.success('Match logged!');
@@ -77,26 +67,28 @@ const MatchLog = () => {
   };
 
   return (
-    <div className="app-container px-4 py-6 pb-8">
-      <button onClick={() => navigate('/log')} className="text-sm text-muted-foreground hover:text-primary mb-4 inline-block">
-        ← Back
-      </button>
+    <div className="app-container px-[18px] py-6 pb-8">
+      <div className="flex items-center gap-3 mb-5">
+        <button onClick={() => navigate('/log')} className="w-[34px] h-[34px] bg-secondary border border-white/5 rounded-[10px] flex items-center justify-center text-foreground text-sm">
+          ←
+        </button>
+        <span className="font-heading text-[26px] font-black tracking-wider text-foreground">LOG MATCH</span>
+      </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-heading text-foreground">Log Match</h1>
-          <p className="text-muted-foreground text-xs">Fill in your match details</p>
-        </div>
-        <div className="text-right">
-          <p className="text-3xl font-heading text-primary">{rating !== null ? rating.toFixed(1) : '—'}</p>
-          <p className="text-[10px] text-muted-foreground uppercase">Rating</p>
-        </div>
+      {/* Rating Preview */}
+      <div className="rounded-xl p-[14px] mb-5 border border-primary/25"
+        style={{ background: 'linear-gradient(135deg, rgba(37,99,235,0.12), rgba(232,184,75,0.06))' }}>
+        <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-primary mb-1">🤖 Computed Rating</p>
+        <p className="font-heading text-5xl font-black text-gold leading-none">{rating !== null ? rating.toFixed(1) : '–'}</p>
+        <p className="text-[11px] text-muted-foreground mt-1">
+          {rating !== null ? 'Calculated from your inputs · Updates as you fill in the form' : 'Select your position and fill in the form'}
+        </p>
       </div>
 
       <div className="space-y-5">
         {/* Position */}
         <Section label="Position">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {POSITIONS.map(p => (
               <SelectCard key={p} selected={position === p} onClick={() => setPosition(p)} label={p} />
             ))}
@@ -105,7 +97,7 @@ const MatchLog = () => {
 
         {/* Competition */}
         <Section label="Competition">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             {COMPETITIONS.map(c => (
               <SelectCard key={c} selected={competition === c} onClick={() => setCompetition(c)} label={c} />
             ))}
@@ -114,31 +106,31 @@ const MatchLog = () => {
 
         {/* Venue */}
         <Section label="Venue">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {VENUES.map(v => (
-              <SelectCard key={v} selected={venue === v} onClick={() => setVenue(v)} label={v} />
+              <SelectCard key={v} selected={venue === v} onClick={() => setVenue(v)} label={v === 'Home' ? '🏠 Home' : '✈️ Away'} />
             ))}
           </div>
         </Section>
 
         {/* Score */}
         <Section label="Final Score">
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Your team</label>
-              <Input
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase mb-1 block font-bold tracking-wider">Your team</label>
+              <input
                 type="number" min={0} value={teamScore}
                 onChange={e => setTeamScore(e.target.value === '' ? '' : parseInt(e.target.value))}
-                className="bg-card text-center"
+                className="w-full bg-card border border-white/5 rounded-[10px] p-3 text-center font-heading text-3xl text-foreground outline-none focus:border-primary"
               />
             </div>
-            <span className="text-muted-foreground font-heading text-lg mt-4">–</span>
-            <div className="flex-1">
-              <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Opponent</label>
-              <Input
+            <span className="font-heading text-2xl text-muted-foreground mt-5">–</span>
+            <div>
+              <label className="text-[10px] text-muted-foreground uppercase mb-1 block font-bold tracking-wider">Opponent</label>
+              <input
                 type="number" min={0} value={opponentScore}
                 onChange={e => setOpponentScore(e.target.value === '' ? '' : parseInt(e.target.value))}
-                className="bg-card text-center"
+                className="w-full bg-card border border-white/5 rounded-[10px] p-3 text-center font-heading text-3xl text-foreground outline-none focus:border-primary"
               />
             </div>
           </div>
@@ -146,7 +138,7 @@ const MatchLog = () => {
 
         {/* Age Group */}
         <Section label="Age Group">
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             {MATCH_AGE_GROUPS.map(a => (
               <SelectCard key={a} selected={ageGroup === a} onClick={() => setAgeGroup(a)} label={a} className="flex-1 text-xs" />
             ))}
@@ -161,14 +153,14 @@ const MatchLog = () => {
               const v = e.target.value === '' ? '' : Math.min(parseInt(e.target.value), maxMinutes);
               setMinutesPlayed(v);
             }}
-            className="bg-card"
+            className="bg-card border-white/5"
             placeholder={`0–${maxMinutes}`}
           />
         </Section>
 
         {/* Card Received */}
         <Section label="Card Received">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             {CARDS.map(c => (
               <SelectCard
                 key={c} selected={cardReceived === c} onClick={() => setCardReceived(c)} label={c}
@@ -180,7 +172,7 @@ const MatchLog = () => {
 
         {/* Body Condition */}
         <Section label="Body Condition">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-1.5">
             {BODY_CONDITIONS.map(bc => (
               <SelectCard key={bc.label} selected={bodyCondition === bc.label} onClick={() => setBodyCondition(bc.label)} label={`${bc.emoji}\n${bc.label}`} />
             ))}
@@ -189,7 +181,7 @@ const MatchLog = () => {
 
         {/* Self-Rating */}
         <Section label="Overall Self-Rating">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {SELF_RATINGS.map(r => (
               <SelectCard key={r} selected={selfRating === r} onClick={() => setSelfRating(r)} label={r} />
             ))}
@@ -198,44 +190,25 @@ const MatchLog = () => {
 
         {/* Goals & Assists */}
         <Section label="Goals & Assists">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Goals</label>
-              <Input
-                type="number" min={0} max={maxGoalContributions}
-                value={goals}
-                onChange={e => {
-                  const v = e.target.value === '' ? '' : parseInt(e.target.value);
-                  if (v !== '' && assists !== '' && v + Number(assists) > maxGoalContributions) return;
-                  setGoals(v);
-                }}
-                disabled={!scoresFilled}
-                className={`bg-card ${!scoresFilled ? 'opacity-40' : ''}`}
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Assists</label>
-              <Input
-                type="number" min={0} max={maxGoalContributions}
-                value={assists}
-                onChange={e => {
-                  const v = e.target.value === '' ? '' : parseInt(e.target.value);
-                  if (v !== '' && goals !== '' && Number(goals) + v > maxGoalContributions) return;
-                  setAssists(v);
-                }}
-                disabled={!scoresFilled}
-                className={`bg-card ${!scoresFilled ? 'opacity-40' : ''}`}
-              />
-            </div>
+          <div className="grid grid-cols-3 gap-2">
+            <StatInput label="Goals" value={goals} disabled={!scoresFilled} max={maxGoalContributions}
+              onChange={v => { if (v !== '' && assists !== '' && v + Number(assists) > maxGoalContributions) return; setGoals(v); }} />
+            <StatInput label="Assists" value={assists} disabled={!scoresFilled} max={maxGoalContributions}
+              onChange={v => { if (v !== '' && goals !== '' && Number(goals) + v > maxGoalContributions) return; setAssists(v); }} />
           </div>
           {!scoresFilled && (
-            <p className="text-[10px] text-muted-foreground mt-1">Enter both scores to unlock goals & assists</p>
+            <p className="text-[10px] text-muted-foreground mt-2">Enter both scores to unlock goals & assists</p>
           )}
         </Section>
 
-        <Button onClick={handleSave} disabled={!canSave || saving} className="w-full mt-4">
-          {saving ? 'Saving...' : 'Save Match'}
-        </Button>
+        <button
+          onClick={handleSave}
+          disabled={!canSave || saving}
+          className="w-full rounded-[10px] py-4 text-white font-heading text-[15px] font-bold tracking-wide transition-all active:scale-[0.98] disabled:opacity-40"
+          style={{ background: 'linear-gradient(135deg, hsl(224 85% 35%) 0%, hsl(224 85% 53%) 100%)' }}
+        >
+          {saving ? 'Saving...' : 'Save & Calculate Rating →'}
+        </button>
       </div>
     </div>
   );
@@ -243,7 +216,7 @@ const MatchLog = () => {
 
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div>
-    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2 font-medium">{label}</p>
+    <p className="text-[11px] text-muted-foreground uppercase tracking-[0.08em] mb-2 font-bold">{label}</p>
     {children}
   </div>
 );
@@ -251,12 +224,26 @@ const Section = ({ label, children }: { label: string; children: React.ReactNode
 const SelectCard = ({ selected, onClick, label, className = '' }: { selected: boolean; onClick: () => void; label: string; className?: string }) => (
   <button
     onClick={onClick}
-    className={`border rounded-lg px-2 py-2.5 text-xs font-medium transition-colors whitespace-pre-line
-      ${selected ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card text-muted-foreground hover:border-primary/30'}
+    className={`border rounded-lg px-2 py-2.5 text-[11px] font-bold transition-colors whitespace-pre-line
+      ${selected ? 'border-primary bg-primary/15 text-primary' : 'border-white/5 bg-[hsl(222,40%,8%)] text-muted-foreground hover:border-primary/30'}
       ${className}`}
   >
     {label}
   </button>
+);
+
+const StatInput = ({ label, value, disabled, max, onChange }: {
+  label: string; value: number | ''; disabled: boolean; max: number;
+  onChange: (v: number | '') => void;
+}) => (
+  <div className={`bg-card border border-white/5 rounded-[10px] p-3 text-center ${disabled ? 'opacity-40' : ''}`}>
+    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-1.5">{label}</p>
+    <input
+      type="number" min={0} max={max} value={value} disabled={disabled}
+      onChange={e => onChange(e.target.value === '' ? '' : parseInt(e.target.value))}
+      className="bg-transparent border-none outline-none w-full text-center font-heading text-2xl text-foreground"
+    />
+  </div>
 );
 
 export default MatchLog;

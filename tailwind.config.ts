@@ -54,6 +54,7 @@ export default {
         "coach-orange": "hsl(var(--coach-orange))",
         "training-blue": "hsl(var(--training-blue))",
         gold: "hsl(var(--gold))",
+        red: "hsl(var(--red))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
