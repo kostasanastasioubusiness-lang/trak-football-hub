@@ -9,9 +9,56 @@ import {
   EUROPEAN_COUNTRIES, POSITIONS, AGE_GROUPS, COACH_ROLES,
   DAYS, MONTHS, YEARS
 } from '@/lib/constants';
-import { Trophy, Target, ClipboardList, Star } from 'lucide-react';
+import { Mail, RefreshCw } from 'lucide-react';
 
 type Role = 'player' | 'coach';
+
+const EmailConfirmationScreen = ({ email }: { email: string }) => {
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw error;
+      setResent(true);
+      toast.success('Confirmation email resent!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to resend email');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center text-center py-6">
+      <div className="w-20 h-20 rounded-full bg-primary/15 flex items-center justify-center mb-6">
+        <Mail className="w-10 h-10 text-primary" />
+      </div>
+      <h2 className="text-2xl font-heading text-foreground mb-2">Check your email</h2>
+      <p className="text-sm text-muted-foreground mb-2">
+        We sent a confirmation link to
+      </p>
+      <p className="text-sm font-semibold text-foreground mb-6">{email}</p>
+      <p className="text-xs text-muted-foreground mb-8">
+        Click the link to activate your account and get started.
+      </p>
+      <Button
+        variant="outline"
+        onClick={handleResend}
+        disabled={resending || resent}
+        className="w-full gap-2"
+      >
+        <RefreshCw className={`w-4 h-4 ${resending ? 'animate-spin' : ''}`} />
+        {resent ? 'Email resent' : resending ? 'Resending...' : 'Resend confirmation email'}
+      </Button>
+      <a href="/" className="mt-6 text-sm text-muted-foreground hover:text-primary transition-colors">
+        ← Back to home
+      </a>
+    </div>
+  );
+};
 
 const OnboardingPage = () => {
   const { role } = useParams<{ role: string }>();
@@ -193,26 +240,7 @@ const PlayerOnboarding = () => {
       )}
 
       {step === 4 && (
-        <div className="flex flex-col items-center text-center py-6">
-          <div className="w-20 h-20 rounded-full bg-primary/15 flex items-center justify-center mb-6">
-            <span className="text-4xl">⚽</span>
-          </div>
-          <h2 className="text-2xl font-heading text-foreground mb-2">
-            You're all set, {firstName}!
-          </h2>
-          <p className="text-sm text-muted-foreground mb-8">Your Trak account is ready. Start tracking your career.</p>
-          <div className="flex flex-col gap-3 w-full">
-            <Button onClick={() => navigate('/dashboard')} className="w-full gap-2">
-              <Trophy className="w-4 h-4" /> Log a Match
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/dashboard')} className="w-full gap-2">
-              <Target className="w-4 h-4" /> Set a Goal
-            </Button>
-          </div>
-          <button onClick={() => navigate('/dashboard')} className="mt-6 text-sm text-muted-foreground hover:text-primary transition-colors">
-            Go to Dashboard →
-          </button>
-        </div>
+        <EmailConfirmationScreen email={email} />
       )}
     </div>
   );
@@ -321,26 +349,7 @@ const CoachOnboarding = () => {
       )}
 
       {step === 3 && (
-        <div className="flex flex-col items-center text-center py-6">
-          <div className="w-20 h-20 rounded-full bg-coach-orange/15 flex items-center justify-center mb-6">
-            <span className="text-4xl">📋</span>
-          </div>
-          <h2 className="text-2xl font-heading text-foreground mb-2">
-            Ready to go, Coach {lastName}!
-          </h2>
-          <p className="text-sm text-muted-foreground mb-8">Your coaching hub is set up. Let's get to work.</p>
-          <div className="flex flex-col gap-3 w-full">
-            <Button onClick={() => navigate('/dashboard')} className="w-full gap-2">
-              <ClipboardList className="w-4 h-4" /> Log Session
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/dashboard')} className="w-full gap-2">
-              <Star className="w-4 h-4" /> Assess Player
-            </Button>
-          </div>
-          <button onClick={() => navigate('/dashboard')} className="mt-6 text-sm text-muted-foreground hover:text-primary transition-colors">
-            Go to Dashboard →
-          </button>
-        </div>
+        <EmailConfirmationScreen email={email} />
       )}
     </div>
   );
