@@ -20,6 +20,7 @@ import CoachPlayerProfile from "./components/coach/CoachPlayerProfile";
 import CoachProgress from "./components/coach/CoachProgress";
 import WellnessCheck from "./pages/WellnessCheck";
 import PlayerProfile from "./pages/PlayerProfile";
+import PlayerGoals from "./pages/PlayerGoals";
 
 const queryClient = new QueryClient();
 
