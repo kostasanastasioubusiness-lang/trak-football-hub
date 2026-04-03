@@ -19,6 +19,7 @@ import CoachAssess from "./components/coach/CoachAssess";
 import CoachPlayerProfile from "./components/coach/CoachPlayerProfile";
 import CoachProgress from "./components/coach/CoachProgress";
 import WellnessCheck from "./pages/WellnessCheck";
+import PlayerProfile from "./pages/PlayerProfile";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/log" element={<LogChooser />} />
             <Route path="/log/match" element={<MatchLog />} />
             <Route path="/wellness" element={<WellnessCheck />} />
+            <Route path="/profile" element={<PlayerProfile />} />
             {/* Coach routes */}
             <Route path="/coach/squad" element={<CoachSquad />} />
             <Route path="/coach/sessions" element={<CoachSessions />} />
