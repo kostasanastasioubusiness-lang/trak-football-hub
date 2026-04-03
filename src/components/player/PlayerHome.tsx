@@ -156,7 +156,7 @@ const PlayerHome = () => {
           <NavItem emoji="🏠" label="Home" active onClick={() => navigate('/dashboard')} />
           <NavItem emoji="📝" label="Log" onClick={() => navigate('/log')} />
           <NavItem emoji="🎬" label="Highlights" onClick={() => {}} />
-          <NavItem emoji="🧠" label="Goals" onClick={() => {}} />
+          <NavItem emoji="🧠" label="Goals" onClick={() => navigate('/goals')} />
           <NavItem emoji="👤" label="Profile" onClick={() => navigate('/profile')} />
         </div>
       </nav>
