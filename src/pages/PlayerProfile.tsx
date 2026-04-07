@@ -29,7 +29,6 @@ const PlayerProfile = () => {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Editable fields
   const [editName, setEditName] = useState('');
   const [editPosition, setEditPosition] = useState('');
   const [editClub, setEditClub] = useState('');
@@ -117,13 +116,13 @@ const PlayerProfile = () => {
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => navigate('/dashboard')} className="text-muted-foreground text-sm">← Back</button>
           {!editing ? (
-            <button onClick={() => setEditing(true)} className="text-xs text-primary font-semibold border border-primary/30 rounded-lg px-3 py-1.5">
+            <button onClick={() => setEditing(true)} className="text-xs text-primary font-medium border border-primary/30 rounded-lg px-3 py-1.5">
               Edit
             </button>
           ) : (
             <div className="flex gap-2">
               <button onClick={() => setEditing(false)} className="text-xs text-muted-foreground border border-border rounded-lg px-3 py-1.5">Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="text-xs text-primary-foreground bg-primary rounded-lg px-3 py-1.5 font-semibold disabled:opacity-50">
+              <button onClick={handleSave} disabled={saving} className="text-xs text-primary-foreground bg-primary rounded-lg px-3 py-1.5 font-medium disabled:opacity-50">
                 {saving ? 'Saving…' : 'Save'}
               </button>
             </div>
@@ -132,15 +131,14 @@ const PlayerProfile = () => {
 
         {/* Avatar + Name */}
         <div className="flex flex-col items-center mb-6">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-primary/30 mb-3"
-            style={{ background: 'linear-gradient(135deg, hsl(224 85% 53%) 0%, hsl(224 85% 35%) 100%)' }}>
+          <div className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-medium border-2 border-primary/30 mb-3 bg-secondary">
             {initials}
           </div>
           {editing ? (
             <input value={editName} onChange={e => setEditName(e.target.value)}
-              className="bg-secondary border border-border rounded-lg px-3 py-2 text-center text-foreground font-heading text-xl font-bold w-64" />
+              className="bg-secondary border border-border rounded-lg px-3 py-2 text-center text-foreground text-xl w-64" />
           ) : (
-            <h1 className="font-heading text-2xl font-black tracking-wide text-foreground">{profile.full_name}</h1>
+            <h1 className="text-2xl text-foreground">{profile.full_name}</h1>
           )}
           <p className="text-xs text-muted-foreground mt-1">
             {details?.position || '—'} · {details?.current_club || '—'}
@@ -149,7 +147,7 @@ const PlayerProfile = () => {
 
         {/* Season Stats */}
         <div className="rounded-xl border border-border bg-card p-4 mb-4">
-          <h3 className="font-heading text-xs font-bold tracking-widest text-muted-foreground uppercase mb-3">SEASON STATS</h3>
+          <h3 className="section-label mb-3">Season Stats</h3>
           <div className="grid grid-cols-3 gap-3">
             <StatCell label="Played" value={stats.matches} />
             <StatCell label="Goals" value={stats.goals} />
@@ -162,7 +160,7 @@ const PlayerProfile = () => {
 
         {/* Personal Details */}
         <div className="rounded-xl border border-border bg-card p-4 mb-4">
-          <h3 className="font-heading text-xs font-bold tracking-widest text-muted-foreground uppercase mb-3">PERSONAL DETAILS</h3>
+          <h3 className="section-label mb-3">Personal Details</h3>
           <div className="space-y-3">
             <DetailRow label="Position" value={editPosition} editing={editing} onChange={setEditPosition} />
             <DetailRow label="Club" value={editClub} editing={editing} onChange={setEditClub} />
@@ -174,7 +172,7 @@ const PlayerProfile = () => {
 
         {/* Sign Out */}
         <button onClick={handleSignOut}
-          className="w-full rounded-xl border border-destructive/30 text-destructive py-3 text-sm font-semibold hover:bg-destructive/10 transition-colors">
+          className="w-full rounded-xl border border-destructive/30 text-destructive py-3 text-sm font-medium hover:bg-destructive/10 transition-colors">
           Sign Out
         </button>
       </div>
@@ -194,9 +192,9 @@ const PlayerProfile = () => {
 };
 
 const StatCell = ({ label, value, color }: { label: string; value: string | number; color?: string }) => (
-  <div className="text-center rounded-lg py-2" style={{ background: 'rgba(0,0,0,0.2)' }}>
-    <p className={`font-heading text-xl leading-none ${color || 'text-foreground'}`}>{value}</p>
-    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mt-1">{label}</p>
+  <div className="text-center rounded-lg py-2 bg-secondary">
+    <p className={`text-xl leading-none ${color || 'text-foreground'}`}>{value}</p>
+    <p className="section-label mt-1">{label}</p>
   </div>
 );
 
@@ -217,7 +215,7 @@ const DetailRow = ({ label, value, editing, onChange, type = 'text' }: {
 const NavItem = ({ emoji, label, active, onClick }: { emoji: string; label: string; active?: boolean; onClick: () => void }) => (
   <button onClick={onClick} className={`flex flex-col items-center gap-1 px-3 py-1 ${active ? '' : 'opacity-35 grayscale'}`}>
     <span className="text-[19px]">{emoji}</span>
-    <span className={`text-[10px] font-semibold tracking-wide ${active ? 'text-primary' : 'text-muted-foreground'}`}>{label}</span>
+    <span className={`text-[10px] font-medium tracking-wide ${active ? 'text-primary' : 'text-muted-foreground'}`}>{label}</span>
   </button>
 );
 
