@@ -17,7 +17,6 @@ const CoachProgress = () => {
       .then(({ data }) => setAssessments(data || []));
   }, [user]);
 
-  // Group by player
   const playerStats = players.map(p => {
     const pa = assessments.filter(a => a.squad_player_id === p.id);
     const avg = pa.length > 0 ? pa.reduce((s, a) => s + Number(a.coach_rating), 0) / pa.length : 0;
@@ -27,39 +26,39 @@ const CoachProgress = () => {
   return (
     <div className="app-container flex flex-col min-h-screen">
       <div className="flex-1 px-[18px] pt-4 pb-24">
-        <h1 className="font-heading text-[28px] font-bold tracking-wider text-foreground mb-4">Progress</h1>
+        <h1 className="text-[28px] text-foreground mb-4">Progress</h1>
 
         {/* Squad Stats */}
         <div className="grid grid-cols-3 gap-2 mb-5">
-          <div className="bg-card border border-white/5 rounded-[10px] p-3 text-center">
-            <p className="font-heading text-2xl text-gold leading-none">{players.length}</p>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1">Players</p>
+          <div className="bg-card border border-border rounded-[10px] p-3 text-center">
+            <p className="text-2xl text-gold leading-none">{players.length}</p>
+            <p className="section-label mt-1">Players</p>
           </div>
-          <div className="bg-card border border-white/5 rounded-[10px] p-3 text-center">
-            <p className="font-heading text-2xl text-coach-orange leading-none">{assessments.length}</p>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1">Assessments</p>
+          <div className="bg-card border border-border rounded-[10px] p-3 text-center">
+            <p className="text-2xl text-coach-orange leading-none">{assessments.length}</p>
+            <p className="section-label mt-1">Assessments</p>
           </div>
-          <div className="bg-card border border-white/5 rounded-[10px] p-3 text-center">
-            <p className="font-heading text-2xl text-primary leading-none">
+          <div className="bg-card border border-border rounded-[10px] p-3 text-center">
+            <p className="text-2xl text-primary leading-none">
               {playerStats.length > 0 && playerStats[0].avgRating > 0 ? playerStats[0].avgRating.toFixed(1) : '—'}
             </p>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1">Top Rating</p>
+            <p className="section-label mt-1">Top Rating</p>
           </div>
         </div>
 
         {/* Player Rankings */}
-        <p className="font-heading text-[17px] font-bold tracking-wider text-foreground mb-3">SQUAD RANKINGS</p>
+        <p className="section-label mb-3">Squad Rankings</p>
         <div className="space-y-2">
           {playerStats.map((p, i) => (
-            <div key={p.id} className="bg-card border border-white/5 rounded-[10px] p-3 flex items-center gap-3">
-              <span className="text-muted-foreground font-heading text-lg w-6 text-center">{i + 1}</span>
+            <div key={p.id} className="bg-card border border-border rounded-[10px] p-3 flex items-center gap-3">
+              <span className="text-muted-foreground text-lg w-6 text-center">{i + 1}</span>
               <div className="flex-1">
-                <p className="text-sm font-bold text-foreground">{p.player_name}</p>
+                <p className="text-sm font-medium text-foreground">{p.player_name}</p>
                 <p className="text-[11px] text-muted-foreground">{p.position} · {p.assessmentCount} assessments</p>
               </div>
               <div className="text-right">
-                <p className="font-heading text-xl text-coach-orange leading-none">{p.avgRating > 0 ? p.avgRating.toFixed(1) : '—'}</p>
-                <p className="text-[8px] text-muted-foreground uppercase">Coach Avg</p>
+                <p className="text-xl text-coach-orange leading-none">{p.avgRating > 0 ? p.avgRating.toFixed(1) : '—'}</p>
+                <p className="section-label">Coach Avg</p>
               </div>
             </div>
           ))}

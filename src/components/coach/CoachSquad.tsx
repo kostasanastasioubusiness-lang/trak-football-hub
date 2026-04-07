@@ -53,18 +53,17 @@ const CoachSquad = () => {
     <div className="app-container flex flex-col min-h-screen">
       <div className="flex-1 px-[18px] pt-4 pb-24">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="font-heading text-[28px] font-bold tracking-wider text-foreground">Squad</h1>
+          <h1 className="text-[28px] text-foreground">Squad</h1>
           <button onClick={() => setShowAdd(!showAdd)}
-            className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center text-white text-lg"
-            style={{ background: 'linear-gradient(135deg, hsl(224 85% 35%), hsl(224 85% 53%))' }}>+</button>
+            className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center text-primary-foreground text-lg bg-primary">+</button>
         </div>
 
         {/* Filter */}
         <div className="grid grid-cols-4 gap-1.5 mb-4">
           {['All', 'Attack', 'Midfield', 'Defence'].map(f => (
             <button key={f} onClick={() => setFilter(f)}
-              className={`border rounded-lg py-2 text-[11px] font-bold transition-colors
-                ${filter === f ? 'border-primary bg-primary/15 text-primary' : 'border-white/5 bg-[hsl(222,40%,8%)] text-muted-foreground'}`}>
+              className={`border rounded-lg py-2 text-[11px] font-medium transition-colors
+                ${filter === f ? 'border-primary bg-primary/15 text-primary' : 'border-border bg-secondary text-muted-foreground'}`}>
               {f}
             </button>
           ))}
@@ -72,24 +71,23 @@ const CoachSquad = () => {
 
         {/* Add Form */}
         {showAdd && (
-          <div className="bg-card border border-white/5 rounded-xl p-4 mb-4 space-y-3">
-            <Input placeholder="Player Name" value={newName} onChange={e => setNewName(e.target.value)} className="bg-secondary border-white/5" />
+          <div className="bg-card border border-border rounded-xl p-4 mb-4 space-y-3">
+            <Input placeholder="Player Name" value={newName} onChange={e => setNewName(e.target.value)} className="bg-secondary border-border" />
             <div className="grid grid-cols-2 gap-1.5">
               {['Goalkeeper', 'Defender', 'Midfielder', 'Attacker'].map(p => (
                 <button key={p} onClick={() => setNewPosition(p)}
-                  className={`border rounded-lg py-2 text-[11px] font-bold transition-colors
-                    ${newPosition === p ? 'border-primary bg-primary/15 text-primary' : 'border-white/5 bg-[hsl(222,40%,8%)] text-muted-foreground'}`}>
+                  className={`border rounded-lg py-2 text-[11px] font-medium transition-colors
+                    ${newPosition === p ? 'border-primary bg-primary/15 text-primary' : 'border-border bg-secondary text-muted-foreground'}`}>
                   {p}
                 </button>
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Input placeholder="Shirt #" type="number" value={newShirt} onChange={e => setNewShirt(e.target.value)} className="bg-secondary border-white/5" />
-              <Input placeholder="Age" type="number" value={newAge} onChange={e => setNewAge(e.target.value)} className="bg-secondary border-white/5" />
+              <Input placeholder="Shirt #" type="number" value={newShirt} onChange={e => setNewShirt(e.target.value)} className="bg-secondary border-border" />
+              <Input placeholder="Age" type="number" value={newAge} onChange={e => setNewAge(e.target.value)} className="bg-secondary border-border" />
             </div>
             <button onClick={handleAddPlayer} disabled={!newName || !newPosition}
-              className="w-full rounded-[10px] py-3 text-white font-heading text-sm font-bold tracking-wide disabled:opacity-40"
-              style={{ background: 'linear-gradient(135deg, #7a3a00, hsl(24 78% 57%))' }}>
+              className="w-full rounded-[10px] py-3 bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40">
               Add Player →
             </button>
           </div>
@@ -98,11 +96,11 @@ const CoachSquad = () => {
         {/* Player List */}
         <div className="space-y-2">
           {filtered.map(p => (
-            <div key={p.id} className="bg-card border border-white/5 rounded-[10px] p-3 flex items-center gap-3 cursor-pointer hover:border-gold/30 transition-colors"
+            <div key={p.id} className="bg-card border border-border rounded-[10px] p-3 flex items-center gap-3 cursor-pointer hover:border-gold/30 transition-colors"
               onClick={() => navigate(`/coach/player/${p.id}`)}>
-              <div className="w-10 h-10 rounded-full bg-secondary border border-white/5 flex items-center justify-center text-base flex-shrink-0">👦</div>
+              <div className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center text-base flex-shrink-0">👦</div>
               <div className="flex-1">
-                <p className="text-sm font-bold text-foreground">{p.player_name}</p>
+                <p className="text-sm font-medium text-foreground">{p.player_name}</p>
                 <p className="text-[11px] text-muted-foreground">{p.position} {p.age ? `· Age ${p.age}` : ''} {p.shirt_number ? `· #${p.shirt_number}` : ''}</p>
               </div>
             </div>

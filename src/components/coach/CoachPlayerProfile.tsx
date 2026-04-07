@@ -45,32 +45,31 @@ const CoachPlayerProfile = () => {
   return (
     <div className="app-container px-[18px] py-6 pb-8">
       <div className="flex items-center gap-3 mb-5">
-        <button onClick={() => navigate('/coach/squad')} className="w-[34px] h-[34px] bg-secondary border border-white/5 rounded-[10px] flex items-center justify-center text-foreground text-sm">←</button>
-        <span className="font-heading text-[26px] font-black tracking-wider text-foreground">PLAYER PROFILE</span>
+        <button onClick={() => navigate('/coach/squad')} className="w-[34px] h-[34px] bg-secondary border border-border rounded-[10px] flex items-center justify-center text-foreground text-sm">←</button>
+        <span className="text-[26px] text-foreground">Player profile</span>
       </div>
 
       {/* Player Header */}
-      <div className="rounded-2xl p-4 mb-4 border border-white/5"
-        style={{ background: 'linear-gradient(135deg, hsl(222 40% 10%) 0%, hsl(222 50% 15%) 100%)' }}>
+      <div className="rounded-2xl p-4 mb-4 border border-border bg-card">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-[52px] h-[52px] rounded-[14px] bg-primary/15 flex items-center justify-center text-2xl flex-shrink-0">👦</div>
           <div>
-            <h2 className="font-heading text-xl font-black tracking-wide text-foreground">{player.player_name}</h2>
+            <h2 className="text-xl text-foreground">{player.player_name}</h2>
             <p className="text-[11px] text-muted-foreground">{player.position} {player.age ? `· Age ${player.age}` : ''} {player.shirt_number ? `· #${player.shirt_number}` : ''}</p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <div className="text-center rounded-lg py-2" style={{ background: 'rgba(0,0,0,0.2)' }}>
-            <p className="font-heading text-2xl text-coach-orange leading-none">{avgCoach}</p>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1">Coach Avg</p>
+          <div className="text-center rounded-lg py-2 bg-secondary">
+            <p className="text-2xl text-coach-orange leading-none">{avgCoach}</p>
+            <p className="section-label mt-1">Coach Avg</p>
           </div>
-          <div className="text-center rounded-lg py-2" style={{ background: 'rgba(0,0,0,0.2)' }}>
-            <p className="font-heading text-2xl text-primary leading-none">—</p>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1">Computed</p>
+          <div className="text-center rounded-lg py-2 bg-secondary">
+            <p className="text-2xl text-primary leading-none">—</p>
+            <p className="section-label mt-1">Computed</p>
           </div>
-          <div className="text-center rounded-lg py-2" style={{ background: 'rgba(0,0,0,0.2)' }}>
-            <p className="font-heading text-2xl text-foreground leading-none">{assessments.length}</p>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1">Assessed</p>
+          <div className="text-center rounded-lg py-2 bg-secondary">
+            <p className="text-2xl text-foreground leading-none">{assessments.length}</p>
+            <p className="section-label mt-1">Assessed</p>
           </div>
         </div>
       </div>
@@ -78,30 +77,28 @@ const CoachPlayerProfile = () => {
       {/* Actions */}
       <div className="grid grid-cols-2 gap-2 mb-5">
         <button onClick={() => navigate('/coach/assess')}
-          className="rounded-[10px] py-3 text-white font-heading text-sm font-bold"
-          style={{ background: 'linear-gradient(135deg, #7a3a00, hsl(24 78% 57%))' }}>
+          className="rounded-[10px] py-3 bg-primary text-primary-foreground text-sm font-medium">
           ⭐ New Assessment
         </button>
         <button onClick={() => setShowRequest(!showRequest)}
-          className="bg-card border border-white/10 rounded-[10px] py-3 text-foreground font-heading text-sm font-bold">
+          className="bg-card border border-border rounded-[10px] py-3 text-foreground text-sm font-medium">
           💬 Request 1-on-1
         </button>
       </div>
 
       {/* Meeting Request */}
       {showRequest && (
-        <div className="bg-card border border-white/5 rounded-xl p-4 mb-4 space-y-3">
-          <Input placeholder="Reason (optional)" value={requestReason} onChange={e => setRequestReason(e.target.value)} className="bg-secondary border-white/5" />
+        <div className="bg-card border border-border rounded-xl p-4 mb-4 space-y-3">
+          <Input placeholder="Reason (optional)" value={requestReason} onChange={e => setRequestReason(e.target.value)} className="bg-secondary border-border" />
           <button onClick={handleRequest}
-            className="w-full rounded-[10px] py-3 text-white font-heading text-sm font-bold"
-            style={{ background: 'linear-gradient(135deg, hsl(224 85% 35%), hsl(224 85% 53%))' }}>
+            className="w-full rounded-[10px] py-3 bg-primary text-primary-foreground text-sm font-medium">
             Send Request →
           </button>
         </div>
       )}
 
       {/* Assessment History */}
-      <p className="font-heading text-[17px] font-bold tracking-wider text-foreground mb-3">ASSESSMENT HISTORY</p>
+      <p className="section-label mb-3">Assessment History</p>
       {assessments.length === 0 ? (
         <div className="bg-card rounded-xl border border-border p-4 text-center">
           <p className="text-xs text-muted-foreground">No assessments yet.</p>
@@ -109,13 +106,13 @@ const CoachPlayerProfile = () => {
       ) : (
         <div className="space-y-2">
           {assessments.map(a => (
-            <div key={a.id} className="bg-card border border-white/5 rounded-xl p-3">
+            <div key={a.id} className="bg-card border border-border rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <p className="text-sm font-bold text-foreground">{(a.coach_sessions as any)?.title || 'General'}</p>
+                  <p className="text-sm font-medium text-foreground">{(a.coach_sessions as any)?.title || 'General'}</p>
                   <p className="text-[11px] text-muted-foreground">{new Date(a.created_at).toLocaleDateString()} · {a.appearance || ''}</p>
                 </div>
-                <p className="font-heading text-3xl text-coach-orange leading-none">{Number(a.coach_rating).toFixed(1)}</p>
+                <p className="text-3xl text-coach-orange leading-none">{Number(a.coach_rating).toFixed(1)}</p>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
@@ -126,7 +123,7 @@ const CoachPlayerProfile = () => {
                   { l: 'Physical', v: a.physical },
                   { l: 'Coachability', v: a.coachability },
                 ].map(c => (
-                  <span key={c.l} className="text-[10px] text-muted-foreground">{c.l} <span className="text-foreground font-bold">{c.v}</span></span>
+                  <span key={c.l} className="text-[10px] text-muted-foreground">{c.l} <span className="text-foreground font-medium">{c.v}</span></span>
                 ))}
               </div>
               {a.private_note && (
