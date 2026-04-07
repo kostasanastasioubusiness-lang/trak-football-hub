@@ -41,7 +41,7 @@ const ParentOnboarding = () => {
         <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
           <span className="text-3xl">⚠️</span>
         </div>
-        <h1 className="text-2xl font-heading text-foreground mb-4">Invalid Invite</h1>
+        <h1 className="text-2xl text-foreground mb-4">Invalid Invite</h1>
         <p className="text-muted-foreground text-center text-sm mb-6">
           This invite link is invalid or has expired. Ask your child to send you a new invite.
         </p>
