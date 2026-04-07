@@ -86,7 +86,7 @@ const ParentOnboarding = () => {
 
   return (
     <div className="app-container px-6 py-8">
-      <h1 className="text-2xl font-heading text-foreground mb-1">Parent Registration</h1>
+      <h1 className="text-2xl text-foreground mb-1">Parent Registration</h1>
       <p className="text-muted-foreground text-sm mb-6">You've been invited to follow a player's journey</p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
