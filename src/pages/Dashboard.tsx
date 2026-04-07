@@ -61,8 +61,8 @@ const Dashboard = () => {
     <div className="app-container px-6 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-widest">Welcome back</p>
-          <h1 className="text-2xl font-heading text-gold">{profile.full_name}</h1>
+          <p className="section-label">Welcome back</p>
+          <h1 className="text-2xl text-gold">{profile.full_name}</h1>
         </div>
         <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground text-xs">Sign Out</Button>
       </div>
@@ -70,7 +70,7 @@ const Dashboard = () => {
         <div className="flex items-center gap-3">
           <span className="text-3xl">👨‍👩‍👦</span>
           <div>
-            <h2 className="font-heading text-lg text-foreground">Parent Dashboard</h2>
+            <h2 className="text-lg text-foreground">Parent Dashboard</h2>
             <p className="text-xs text-muted-foreground">Coming soon</p>
           </div>
         </div>

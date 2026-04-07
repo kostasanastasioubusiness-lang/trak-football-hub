@@ -60,8 +60,8 @@ const WellnessCheck = () => {
   return (
     <div className="app-container px-[18px] py-6 pb-8">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate('/dashboard')} className="w-[34px] h-[34px] bg-secondary border border-white/5 rounded-[10px] flex items-center justify-center text-foreground text-sm">←</button>
-        <span className="font-heading text-[26px] font-black tracking-wider text-foreground">WELLNESS</span>
+        <button onClick={() => navigate('/dashboard')} className="w-[34px] h-[34px] bg-secondary border border-border rounded-[10px] flex items-center justify-center text-foreground text-sm">←</button>
+        <span className="text-[26px] text-foreground">Wellness</span>
       </div>
 
       <p className="text-sm text-muted-foreground mb-6">How are you feeling today? This helps track your readiness and recovery.</p>
@@ -83,11 +83,11 @@ const WellnessCheck = () => {
 
       {/* Notes */}
       <div className="mb-6">
-        <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-bold mb-2">Notes <span className="text-[10px] font-normal">(optional)</span></p>
+        <p className="section-label mb-2">Notes <span className="text-[10px] font-normal">(optional)</span></p>
         <textarea
           value={notes}
           onChange={e => setNotes(e.target.value)}
-          className="w-full bg-card border border-white/5 rounded-[10px] p-3 text-sm text-foreground outline-none focus:border-primary resize-none"
+          className="w-full bg-card border border-border rounded-[10px] p-3 text-sm text-foreground outline-none focus:border-primary resize-none"
           rows={3}
           placeholder="e.g. Slept late, feeling stiff from yesterday's session..."
         />
@@ -96,7 +96,7 @@ const WellnessCheck = () => {
       {/* Summary */}
       {canSave && (
         <div className="rounded-[10px] p-4 mb-4 border border-primary/20 bg-primary/5">
-          <p className="text-[10px] font-bold tracking-wider uppercase text-primary mb-2">Today's Check-in</p>
+          <p className="section-label mb-2 !text-primary">Today's Check-in</p>
           <div className="flex items-center gap-4 text-sm">
             <span>😴 {SLEEP_OPTIONS.find(o => o.value === sleep)?.label}</span>
             <span>⚡ {ENERGY_OPTIONS.find(o => o.value === energy)?.label}</span>
@@ -108,8 +108,7 @@ const WellnessCheck = () => {
       <button
         onClick={handleSave}
         disabled={!canSave || saving}
-        className="w-full rounded-[10px] py-4 text-white font-heading text-[15px] font-bold tracking-wide transition-all active:scale-[0.98] disabled:opacity-40"
-        style={{ background: 'linear-gradient(135deg, hsl(224 85% 35%), hsl(224 85% 53%))' }}
+        className="w-full rounded-[10px] py-4 bg-primary text-primary-foreground text-[15px] font-medium transition-all active:scale-[0.98] disabled:opacity-40"
       >
         {saving ? 'Saving...' : 'Log Wellness →'}
       </button>
@@ -119,7 +118,7 @@ const WellnessCheck = () => {
 
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div className="mb-5">
-    <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-bold mb-2">{label}</p>
+    <p className="section-label mb-2">{label}</p>
     {children}
   </div>
 );
@@ -136,12 +135,12 @@ const EmojiGrid = ({ options, selected, onSelect }: {
         onClick={() => onSelect(o.value)}
         className={`flex flex-col items-center gap-1.5 rounded-xl py-3 border transition-all active:scale-95 ${
           selected === o.value
-            ? 'border-primary bg-primary/15 shadow-[0_0_12px_rgba(37,99,235,0.15)]'
-            : 'border-white/5 bg-card hover:border-white/10'
+            ? 'border-primary bg-primary/15 shadow-[0_0_12px_rgba(200,242,90,0.15)]'
+            : 'border-border bg-card hover:border-primary/30'
         }`}
       >
         <span className="text-2xl">{o.emoji}</span>
-        <span className={`text-[11px] font-semibold ${selected === o.value ? 'text-primary' : 'text-muted-foreground'}`}>{o.label}</span>
+        <span className={`text-[11px] font-medium ${selected === o.value ? 'text-primary' : 'text-muted-foreground'}`}>{o.label}</span>
       </button>
     ))}
   </div>

@@ -36,11 +36,11 @@ const EmailConfirmationScreen = ({ email }: { email: string }) => {
       <div className="w-20 h-20 rounded-full bg-primary/15 flex items-center justify-center mb-6">
         <Mail className="w-10 h-10 text-primary" />
       </div>
-      <h2 className="text-2xl font-heading text-foreground mb-2">Check your email</h2>
+      <h2 className="text-2xl text-foreground mb-2">Check your email</h2>
       <p className="text-sm text-muted-foreground mb-2">
         We sent a confirmation link to
       </p>
-      <p className="text-sm font-semibold text-foreground mb-6">{email}</p>
+      <p className="text-sm font-medium text-foreground mb-6">{email}</p>
       <p className="text-xs text-muted-foreground mb-8">
         Click the link to activate your account and get started.
       </p>
@@ -71,7 +71,7 @@ const OnboardingPage = () => {
       <a href="/" className="text-sm text-muted-foreground hover:text-primary mb-6 inline-block">
         ← Back
       </a>
-      <h1 className="text-2xl font-heading text-foreground mb-1">
+      <h1 className="text-2xl text-foreground mb-1">
         {validRole === 'player' ? 'Player' : 'Coach'} Registration
       </h1>
       <p className="text-muted-foreground text-sm mb-6">Create your Trak account</p>
@@ -85,7 +85,6 @@ const PlayerOnboarding = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Step 1
   const [name, setName] = useState('');
   const [dobDay, setDobDay] = useState('');
   const [dobMonth, setDobMonth] = useState('');
@@ -95,13 +94,11 @@ const PlayerOnboarding = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Step 2
   const [position, setPosition] = useState('');
   const [club, setClub] = useState('');
   const [ageGroup, setAgeGroup] = useState('');
   const [shirtNumber, setShirtNumber] = useState('');
 
-  // Step 3 - parent invite
   const [parentEmail, setParentEmail] = useState('');
 
   const handleStep1 = () => {
@@ -147,7 +144,6 @@ const PlayerOnboarding = () => {
       const { user, error } = await signUp(email, password, pendingProfile);
       if (error || !user) throw error || new Error('Signup failed');
 
-      // Keep local backup for users who confirm in the same browser session
       localStorage.setItem('trak_pending_profile', JSON.stringify(pendingProfile));
       setStep(4);
     } catch (err: any) {
@@ -159,7 +155,6 @@ const PlayerOnboarding = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Step indicator */}
       <div className="flex gap-2 mb-2">
         {[1, 2, 3].map(s => (
           <div key={s} className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-primary' : 'bg-muted'}`} />
@@ -284,7 +279,6 @@ const CoachOnboarding = () => {
       const { user, error } = await signUp(email, password, pendingProfile);
       if (error || !user) throw error || new Error('Signup failed');
 
-      // Keep local backup for users who confirm in the same browser session
       localStorage.setItem('trak_pending_profile', JSON.stringify(pendingProfile));
       setStep(3);
     } catch (err: any) {

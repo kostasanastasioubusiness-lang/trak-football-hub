@@ -99,9 +99,9 @@ const PlayerGoals = () => {
       <div className="flex-1 px-[18px] pt-4 pb-24">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <h1 className="font-heading text-2xl font-black tracking-wider text-foreground">MY GOALS</h1>
+          <h1 className="text-2xl text-foreground">My goals</h1>
           <button onClick={() => setShowAdd(true)}
-            className="text-xs text-primary-foreground bg-primary rounded-lg px-3 py-1.5 font-semibold">
+            className="text-xs text-primary-foreground bg-primary rounded-lg px-3 py-1.5 font-medium">
             + Add Goal
           </button>
         </div>
@@ -127,12 +127,12 @@ const PlayerGoals = () => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{p?.emoji || '🎯'}</span>
-                    <span className="font-heading text-sm font-bold tracking-wide text-foreground">{p?.label || goal.goal_type}</span>
+                    <span className="text-sm font-medium text-foreground">{p?.label || goal.goal_type}</span>
                   </div>
                   <button onClick={() => handleDelete(goal.id)} className="text-[10px] text-muted-foreground hover:text-destructive">✕</button>
                 </div>
                 <div className="flex items-end justify-between mb-2">
-                  <span className={`font-heading text-2xl leading-none ${isComplete ? 'text-primary' : 'text-foreground'}`}>
+                  <span className={`text-2xl leading-none ${isComplete ? 'text-primary' : 'text-foreground'}`}>
                     {goal.goal_type === 'avg_rating' ? current.toFixed(1) : current}
                   </span>
                   <span className="text-xs text-muted-foreground">
@@ -156,9 +156,9 @@ const PlayerGoals = () => {
         {/* Add Goal Form */}
         {showAdd && (
           <div className="bg-card rounded-xl border border-primary/30 p-4 space-y-3">
-            <h3 className="font-heading text-sm font-bold text-foreground">New Goal</h3>
+            <h3 className="text-sm font-medium text-foreground">New Goal</h3>
             <div>
-              <label className="text-[11px] text-muted-foreground block mb-1">Goal Type</label>
+              <label className="section-label block mb-1">Goal Type</label>
               <select value={newType} onChange={e => setNewType(e.target.value)}
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground">
                 {GOAL_PRESETS.map(p => (
@@ -167,13 +167,13 @@ const PlayerGoals = () => {
               </select>
             </div>
             <div>
-              <label className="text-[11px] text-muted-foreground block mb-1">Target</label>
+              <label className="section-label block mb-1">Target</label>
               <input type="number" value={newTarget} onChange={e => setNewTarget(e.target.value)} placeholder="e.g. 10"
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground" />
             </div>
             <div className="flex gap-2">
               <button onClick={() => setShowAdd(false)} className="flex-1 border border-border rounded-lg py-2 text-xs text-muted-foreground">Cancel</button>
-              <button onClick={handleAdd} className="flex-1 bg-primary text-primary-foreground rounded-lg py-2 text-xs font-semibold">Add</button>
+              <button onClick={handleAdd} className="flex-1 bg-primary text-primary-foreground rounded-lg py-2 text-xs font-medium">Add</button>
             </div>
           </div>
         )}
@@ -196,7 +196,7 @@ const PlayerGoals = () => {
 const NavItem = ({ emoji, label, active, onClick }: { emoji: string; label: string; active?: boolean; onClick: () => void }) => (
   <button onClick={onClick} className={`flex flex-col items-center gap-1 px-3 py-1 ${active ? '' : 'opacity-35 grayscale'}`}>
     <span className="text-[19px]">{emoji}</span>
-    <span className={`text-[10px] font-semibold tracking-wide ${active ? 'text-primary' : 'text-muted-foreground'}`}>{label}</span>
+    <span className={`text-[10px] font-medium tracking-wide ${active ? 'text-primary' : 'text-muted-foreground'}`}>{label}</span>
   </button>
 );
 

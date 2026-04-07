@@ -37,7 +37,6 @@ const MatchLog = () => {
     setPositionInputs(prev => ({ ...prev, [id]: val }));
   };
 
-  // When position changes, reset position-specific inputs
   const handlePositionChange = (p: string) => {
     setPosition(p);
     setPositionInputs({});
@@ -83,24 +82,22 @@ const MatchLog = () => {
     }
   };
 
-  // Get position-specific questions
   const posQuestions = position ? POSITION_QUESTIONS[position] || [] : [];
   const midSubQuestions = midRoleKey ? MID_ROLE_QUESTIONS[midRoleKey] || [] : [];
 
   return (
     <div className="app-container px-[18px] py-6 pb-8">
       <div className="flex items-center gap-3 mb-5">
-        <button onClick={() => navigate('/log')} className="w-[34px] h-[34px] bg-secondary border border-white/5 rounded-[10px] flex items-center justify-center text-foreground text-sm">
+        <button onClick={() => navigate('/log')} className="w-[34px] h-[34px] bg-secondary border border-border rounded-[10px] flex items-center justify-center text-foreground text-sm">
           ←
         </button>
-        <span className="font-heading text-[26px] font-black tracking-wider text-foreground">LOG MATCH</span>
+        <span className="text-[26px] text-foreground">Log match</span>
       </div>
 
       {/* Rating Preview */}
-      <div className="rounded-xl p-[14px] mb-5 border border-primary/25"
-        style={{ background: 'linear-gradient(135deg, rgba(37,99,235,0.12), rgba(232,184,75,0.06))' }}>
-        <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-primary mb-1">🤖 Computed Rating</p>
-        <p className="font-heading text-5xl font-black text-gold leading-none">{rating !== null ? rating.toFixed(1) : '–'}</p>
+      <div className="rounded-xl p-[14px] mb-5 border border-primary/25 bg-primary/5">
+        <p className="section-label mb-1">🤖 Computed Rating</p>
+        <p className="text-5xl text-gold leading-none">{rating !== null ? rating.toFixed(1) : '–'}</p>
         <p className="text-[11px] text-muted-foreground mt-1">
           {rating !== null ? 'Calculated from your inputs · Updates as you fill in the form' : 'Select your position and fill in the form'}
         </p>
@@ -138,17 +135,17 @@ const MatchLog = () => {
         <Section label="Final Score">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase mb-1 block font-bold tracking-wider">Your team</label>
+              <label className="section-label block mb-1">Your team</label>
               <input type="number" min={0} value={teamScore}
                 onChange={e => setTeamScore(e.target.value === '' ? '' : parseInt(e.target.value))}
-                className="w-full bg-card border border-white/5 rounded-[10px] p-3 text-center font-heading text-3xl text-foreground outline-none focus:border-primary" />
+                className="w-full bg-card border border-border rounded-[10px] p-3 text-center text-3xl text-foreground outline-none focus:border-primary" />
             </div>
-            <span className="font-heading text-2xl text-muted-foreground mt-5">–</span>
+            <span className="text-2xl text-muted-foreground mt-5">–</span>
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase mb-1 block font-bold tracking-wider">Opponent</label>
+              <label className="section-label block mb-1">Opponent</label>
               <input type="number" min={0} value={opponentScore}
                 onChange={e => setOpponentScore(e.target.value === '' ? '' : parseInt(e.target.value))}
-                className="w-full bg-card border border-white/5 rounded-[10px] p-3 text-center font-heading text-3xl text-foreground outline-none focus:border-primary" />
+                className="w-full bg-card border border-border rounded-[10px] p-3 text-center text-3xl text-foreground outline-none focus:border-primary" />
             </div>
           </div>
         </Section>
@@ -166,7 +163,7 @@ const MatchLog = () => {
         <Section label={`Minutes Played (max ${maxMinutes})`}>
           <Input type="number" min={0} max={maxMinutes} value={minutesPlayed}
             onChange={e => { const v = e.target.value === '' ? '' : Math.min(parseInt(e.target.value), maxMinutes); setMinutesPlayed(v); }}
-            className="bg-card border-white/5" placeholder={`0–${maxMinutes}`} />
+            className="bg-card border-border" placeholder={`0–${maxMinutes}`} />
         </Section>
 
         {/* Card */}
@@ -231,8 +228,8 @@ const MatchLog = () => {
         {/* Position-specific questions */}
         {position && posQuestions.length > 0 && (
           <>
-            <div className="border-t border-white/5 pt-4">
-              <p className="text-[13px] font-bold text-primary mb-3 tracking-wide">📋 {position} Questions</p>
+            <div className="border-t border-border pt-4">
+              <p className="text-[13px] text-primary mb-3 tracking-wide">📋 {position} Questions</p>
             </div>
             {posQuestions.map(q => {
               if (q.id === 'midrole') {
@@ -275,8 +272,7 @@ const MatchLog = () => {
         )}
 
         <button onClick={handleSave} disabled={!canSave || saving}
-          className="w-full rounded-[10px] py-4 text-white font-heading text-[15px] font-bold tracking-wide transition-all active:scale-[0.98] disabled:opacity-40"
-          style={{ background: 'linear-gradient(135deg, hsl(224 85% 35%) 0%, hsl(224 85% 53%) 100%)' }}>
+          className="w-full rounded-[10px] py-4 bg-primary text-primary-foreground text-[15px] font-medium transition-all active:scale-[0.98] disabled:opacity-40">
           {saving ? 'Saving...' : 'Save & Calculate Rating →'}
         </button>
       </div>
@@ -286,15 +282,15 @@ const MatchLog = () => {
 
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div>
-    <p className="text-[11px] text-muted-foreground uppercase tracking-[0.08em] mb-2 font-bold">{label}</p>
+    <p className="section-label mb-2">{label}</p>
     {children}
   </div>
 );
 
 const SelectCard = ({ selected, onClick, label, className = '' }: { selected: boolean; onClick: () => void; label: string; className?: string }) => (
   <button onClick={onClick}
-    className={`border rounded-lg px-2 py-2.5 text-[11px] font-bold transition-colors whitespace-pre-line
-      ${selected ? 'border-primary bg-primary/15 text-primary' : 'border-white/5 bg-[hsl(222,40%,8%)] text-muted-foreground hover:border-primary/30'}
+    className={`border rounded-lg px-2 py-2.5 text-[11px] font-medium transition-colors whitespace-pre-line
+      ${selected ? 'border-primary bg-primary/15 text-primary' : 'border-border bg-secondary text-muted-foreground hover:border-primary/30'}
       ${className}`}>
     {label}
   </button>
@@ -304,11 +300,11 @@ const StatInput = ({ label, value, disabled, max, onChange }: {
   label: string; value: number | ''; disabled: boolean; max: number;
   onChange: (v: number | '') => void;
 }) => (
-  <div className={`bg-card border border-white/5 rounded-[10px] p-3 text-center ${disabled ? 'opacity-40' : ''}`}>
-    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-1.5">{label}</p>
+  <div className={`bg-card border border-border rounded-[10px] p-3 text-center ${disabled ? 'opacity-40' : ''}`}>
+    <p className="section-label mb-1.5">{label}</p>
     <input type="number" min={0} max={max} value={value} disabled={disabled}
       onChange={e => onChange(e.target.value === '' ? '' : parseInt(e.target.value))}
-      className="bg-transparent border-none outline-none w-full text-center font-heading text-2xl text-foreground" />
+      className="bg-transparent border-none outline-none w-full text-center text-2xl text-foreground" />
   </div>
 );
 
