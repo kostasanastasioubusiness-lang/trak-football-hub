@@ -39,10 +39,8 @@ const CoachProgress = () => {
             <p className="text-2xl text-coach-orange leading-none">{assessments.length}</p>
             <p className="section-label mt-1">Assessments</p>
           </div>
-          <div className="bg-card border border-border rounded-[10px] p-3 text-center">
-            <p className="text-2xl text-primary leading-none">
-              {playerStats.length > 0 && playerStats[0].avgRating > 0 ? playerStats[0].avgRating.toFixed(1) : '—'}
-            </p>
+          <div className="bg-card border border-border rounded-[10px] p-3 text-center flex flex-col items-center justify-center">
+            {playerStats.length > 0 && playerStats[0].avgRating > 0 ? <RatingBandPill rating={playerStats[0].avgRating} /> : <p className="text-2xl text-primary leading-none">—</p>}
             <p className="section-label mt-1">Top Rating</p>
           </div>
         </div>
