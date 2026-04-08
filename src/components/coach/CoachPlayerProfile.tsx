@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { RatingBandPill } from '@/lib/ratingBand';
 
 const CoachPlayerProfile = () => {
   const { user } = useAuth();
