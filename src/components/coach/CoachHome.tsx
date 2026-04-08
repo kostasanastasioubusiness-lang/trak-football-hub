@@ -77,8 +77,7 @@ const CoachHome = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl text-coach-orange leading-none">{Number(a.coach_rating).toFixed(1)}</p>
-                  <p className="section-label">Coach Rating</p>
+                  <RatingBandPill rating={Number(a.coach_rating)} />
                 </div>
               </div>
             ))}

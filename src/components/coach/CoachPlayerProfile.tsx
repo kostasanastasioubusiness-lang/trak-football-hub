@@ -60,8 +60,8 @@ const CoachPlayerProfile = () => {
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <div className="text-center rounded-lg py-2 bg-secondary">
-            <p className="text-2xl text-coach-orange leading-none">{avgCoach}</p>
+          <div className="text-center rounded-lg py-2 bg-secondary flex flex-col items-center justify-center">
+            {avgCoach !== '—' ? <RatingBandPill rating={Number(avgCoach)} /> : <p className="text-2xl leading-none text-foreground">—</p>}
             <p className="section-label mt-1">Coach Avg</p>
           </div>
           <div className="text-center rounded-lg py-2 bg-secondary">

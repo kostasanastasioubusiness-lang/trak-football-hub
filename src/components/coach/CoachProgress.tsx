@@ -56,8 +56,7 @@ const CoachProgress = () => {
                 <p className="text-[11px] text-muted-foreground">{p.position} · {p.assessmentCount} assessments</p>
               </div>
               <div className="text-right">
-                <p className="text-xl text-coach-orange leading-none">{p.avgRating > 0 ? p.avgRating.toFixed(1) : '—'}</p>
-                <p className="section-label">Coach Avg</p>
+                {p.avgRating > 0 ? <RatingBandPill rating={p.avgRating} /> : <span className="text-xl text-muted-foreground">—</span>}
               </div>
             </div>
           ))}
