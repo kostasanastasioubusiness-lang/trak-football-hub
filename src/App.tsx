@@ -18,7 +18,7 @@ import CoachSessionDetail from "./components/coach/CoachSessionDetail";
 import CoachAssess from "./components/coach/CoachAssess";
 import CoachPlayerProfile from "./components/coach/CoachPlayerProfile";
 import CoachProgress from "./components/coach/CoachProgress";
-import WellnessCheck from "./pages/WellnessCheck";
+
 import PlayerProfile from "./pages/PlayerProfile";
 import PlayerGoals from "./pages/PlayerGoals";
 
@@ -39,7 +39,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/log" element={<LogChooser />} />
             <Route path="/log/match" element={<MatchLog />} />
-            <Route path="/wellness" element={<WellnessCheck />} />
+            
             <Route path="/profile" element={<PlayerProfile />} />
             <Route path="/goals" element={<PlayerGoals />} />
             {/* Coach routes */}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { RatingBandPill } from '@/lib/ratingBand';
 
 const CoachHome = () => {
   const { user, profile, signOut } = useAuth();
@@ -76,8 +77,7 @@ const CoachHome = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl text-coach-orange leading-none">{Number(a.coach_rating).toFixed(1)}</p>
-                  <p className="section-label">Coach Rating</p>
+                  <RatingBandPill rating={Number(a.coach_rating)} />
                 </div>
               </div>
             ))}

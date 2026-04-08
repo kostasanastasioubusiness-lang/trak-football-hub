@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { RatingBandPill } from '@/lib/ratingBand';
 
 interface SeasonStats {
   matches: number;
@@ -15,7 +16,6 @@ const PlayerHome = () => {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<SeasonStats>({ matches: 0, goals: 0, sessions: 0, avgComputed: null, avgCoach: null });
-  const [wellnessToday, setWellnessToday] = useState<boolean | null>(null);
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [playerDetails, setPlayerDetails] = useState<any>(null);
 
@@ -36,10 +36,6 @@ const PlayerHome = () => {
           avgCoach: null,
         });
       });
-
-    const today = new Date().toISOString().split('T')[0];
-    supabase.from('wellness_logs').select('id').eq('user_id', user.id).eq('logged_date', today).maybeSingle()
-      .then(({ data }) => setWellnessToday(!!data));
   }, [user]);
 
   if (!profile) return null;
@@ -79,32 +75,22 @@ const PlayerHome = () => {
           <div className="grid grid-cols-4 gap-1.5">
             <StatBox label="Played" value={stats.matches} />
             <StatBox label="Goals" value={stats.goals} />
-            <StatBox label="Avg Rating" value={stats.avgComputed !== null ? stats.avgComputed.toFixed(1) : '—'} color="text-primary" />
-            <StatBox label="Coach Avg" value={stats.avgCoach !== null ? stats.avgCoach.toFixed(1) : '—'} color="text-coach-orange" />
+            <div className="text-center rounded-lg py-2 px-1 bg-secondary flex flex-col items-center justify-center">
+              {stats.avgComputed !== null ? <RatingBandPill rating={stats.avgComputed} /> : <p className="text-2xl leading-none text-foreground">—</p>}
+              <p className="section-label mt-1">Avg Rating</p>
+            </div>
+            <div className="text-center rounded-lg py-2 px-1 bg-secondary flex flex-col items-center justify-center">
+              {stats.avgCoach !== null ? <RatingBandPill rating={stats.avgCoach} /> : <p className="text-2xl leading-none text-foreground">—</p>}
+              <p className="section-label mt-1">Coach Avg</p>
+            </div>
           </div>
         </div>
-
-        {/* Wellness Banner */}
-        {wellnessToday !== null && (
-          <div
-            onClick={() => !wellnessToday && navigate('/wellness')}
-            className={`rounded-xl px-4 py-3 mb-4 text-sm font-medium cursor-pointer transition-colors ${
-              wellnessToday
-                ? 'bg-primary/10 text-primary border border-primary/20'
-                : 'bg-gold/10 text-gold border border-gold/20'
-            }`}
-          >
-            {wellnessToday
-              ? '✅ Wellness logged today.'
-              : '🟡 How are you feeling today? — Tap to check in.'}
-          </div>
-        )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-3 gap-2 mb-5">
           <QuickAction emoji="📝" label="Log" onClick={() => navigate('/log')} />
           <QuickAction emoji="🎬" label="Highlight" onClick={() => {}} />
-          <QuickAction emoji="🧠" label="Goal" onClick={() => {}} />
+          <QuickAction emoji="🧠" label="Goal" onClick={() => navigate('/goals')} />
         </div>
 
         {/* Recent Activity */}
@@ -135,10 +121,7 @@ const PlayerHome = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`text-sm px-2 py-0.5 rounded-lg ${resultClass}`}>{resultLabel}</span>
-                      <div className="text-right">
-                        <p className="text-lg text-primary leading-none">{Number(m.computed_rating).toFixed(1)}</p>
-                        <p className="section-label">Cmptd R</p>
-                      </div>
+                      <RatingBandPill rating={Number(m.computed_rating)} />
                     </div>
                   </div>
                 );

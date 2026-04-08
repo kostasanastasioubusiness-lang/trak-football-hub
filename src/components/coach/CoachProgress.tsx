@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { CoachNav } from './CoachHome';
+import { RatingBandPill } from '@/lib/ratingBand';
 
 const CoachProgress = () => {
   const { user } = useAuth();
@@ -38,10 +39,8 @@ const CoachProgress = () => {
             <p className="text-2xl text-coach-orange leading-none">{assessments.length}</p>
             <p className="section-label mt-1">Assessments</p>
           </div>
-          <div className="bg-card border border-border rounded-[10px] p-3 text-center">
-            <p className="text-2xl text-primary leading-none">
-              {playerStats.length > 0 && playerStats[0].avgRating > 0 ? playerStats[0].avgRating.toFixed(1) : '—'}
-            </p>
+          <div className="bg-card border border-border rounded-[10px] p-3 text-center flex flex-col items-center justify-center">
+            {playerStats.length > 0 && playerStats[0].avgRating > 0 ? <RatingBandPill rating={playerStats[0].avgRating} /> : <p className="text-2xl text-primary leading-none">—</p>}
             <p className="section-label mt-1">Top Rating</p>
           </div>
         </div>
@@ -57,8 +56,7 @@ const CoachProgress = () => {
                 <p className="text-[11px] text-muted-foreground">{p.position} · {p.assessmentCount} assessments</p>
               </div>
               <div className="text-right">
-                <p className="text-xl text-coach-orange leading-none">{p.avgRating > 0 ? p.avgRating.toFixed(1) : '—'}</p>
-                <p className="section-label">Coach Avg</p>
+                {p.avgRating > 0 ? <RatingBandPill rating={p.avgRating} /> : <span className="text-xl text-muted-foreground">—</span>}
               </div>
             </div>
           ))}

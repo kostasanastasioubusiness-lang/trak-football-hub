@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { RatingBandPill } from '@/lib/ratingBand';
 
 const CoachPlayerProfile = () => {
   const { user } = useAuth();
@@ -59,8 +60,8 @@ const CoachPlayerProfile = () => {
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <div className="text-center rounded-lg py-2 bg-secondary">
-            <p className="text-2xl text-coach-orange leading-none">{avgCoach}</p>
+          <div className="text-center rounded-lg py-2 bg-secondary flex flex-col items-center justify-center">
+            {avgCoach !== '—' ? <RatingBandPill rating={Number(avgCoach)} /> : <p className="text-2xl leading-none text-foreground">—</p>}
             <p className="section-label mt-1">Coach Avg</p>
           </div>
           <div className="text-center rounded-lg py-2 bg-secondary">
@@ -112,7 +113,7 @@ const CoachPlayerProfile = () => {
                   <p className="text-sm font-medium text-foreground">{(a.coach_sessions as any)?.title || 'General'}</p>
                   <p className="text-[11px] text-muted-foreground">{new Date(a.created_at).toLocaleDateString()} · {a.appearance || ''}</p>
                 </div>
-                <p className="text-3xl text-coach-orange leading-none">{Number(a.coach_rating).toFixed(1)}</p>
+                <RatingBandPill rating={Number(a.coach_rating)} />
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
