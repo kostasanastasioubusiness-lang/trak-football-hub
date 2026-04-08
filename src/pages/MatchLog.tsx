@@ -10,6 +10,7 @@ import {
   AGE_GROUP_MAX_MINUTES, POSITION_QUESTIONS, MID_ROLE_QUESTIONS,
   computeRating, type MatchInputs,
 } from '@/lib/rating';
+import { getRatingBand } from '@/lib/ratingBand';
 
 const MatchLog = () => {
   const { user } = useAuth();
