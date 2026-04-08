@@ -141,16 +141,18 @@ const CoachAssess = () => {
       </div>
 
       {/* Coach Rating Preview */}
-      <div className="rounded-[10px] p-3 mb-4 flex items-center justify-between"
-        style={{ background: 'rgba(232,128,58,0.08)', border: '1px solid rgba(232,128,58,0.2)' }}>
-        <div>
-          <p className="section-label mb-1 !text-coach-orange">Coach Rating</p>
-          <p className="text-[11px] text-muted-foreground">Average of 6 categories</p>
-        </div>
-        <p className="text-5xl text-coach-orange leading-none">
-          {touched ? avgRating.toFixed(1) : '–'}
-        </p>
-      </div>
+      {(() => {
+        const band = touched ? getRatingBand(avgRating) : null;
+        return (
+          <div className="rounded-[18px] p-5 mb-4" style={{ background: 'rgba(232,128,58,0.06)', border: '1px solid rgba(232,128,58,0.18)' }}>
+            <p className="section-label mb-2 !text-coach-orange">Coach Rating Band</p>
+            <p className="text-[48px] leading-none font-light" style={{ color: band?.color || 'rgba(255,255,255,0.22)' }}>
+              {band ? band.label : '–'}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-2">Average of 6 categories</p>
+          </div>
+        );
+      })()}
 
       {/* Flag */}
       <div className="mb-4">
