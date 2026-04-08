@@ -113,7 +113,7 @@ const CoachPlayerProfile = () => {
                   <p className="text-sm font-medium text-foreground">{(a.coach_sessions as any)?.title || 'General'}</p>
                   <p className="text-[11px] text-muted-foreground">{new Date(a.created_at).toLocaleDateString()} · {a.appearance || ''}</p>
                 </div>
-                <p className="text-3xl text-coach-orange leading-none">{Number(a.coach_rating).toFixed(1)}</p>
+                <RatingBandPill rating={Number(a.coach_rating)} />
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {[

@@ -153,7 +153,10 @@ const PlayerProfile = () => {
             <StatCell label="Played" value={stats.matches} />
             <StatCell label="Goals" value={stats.goals} />
             <StatCell label="Assists" value={stats.assists} />
-            <StatCell label="Avg Rating" value={stats.avgRating?.toFixed(1) || '—'} color="text-primary" />
+            <div className="text-center rounded-lg py-2 bg-secondary flex flex-col items-center justify-center">
+              {stats.avgRating !== null ? <RatingBandPill rating={stats.avgRating} /> : <p className="text-xl leading-none text-foreground">—</p>}
+              <p className="section-label mt-1">Avg Rating</p>
+            </div>
             <StatCell label="Wins" value={stats.wins} />
             <StatCell label="Losses" value={stats.losses} />
           </div>

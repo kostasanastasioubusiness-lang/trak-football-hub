@@ -95,14 +95,21 @@ const MatchLog = () => {
         <span className="text-[26px] text-foreground">Log match</span>
       </div>
 
-      {/* Rating Preview */}
-      <div className="rounded-xl p-[14px] mb-5 border border-primary/25 bg-primary/5">
-        <p className="section-label mb-1">🤖 Computed Rating</p>
-        <p className="text-5xl text-gold leading-none">{rating !== null ? rating.toFixed(1) : '–'}</p>
-        <p className="text-[11px] text-muted-foreground mt-1">
-          {rating !== null ? 'Calculated from your inputs · Updates as you fill in the form' : 'Select your position and fill in the form'}
-        </p>
-      </div>
+      {/* Performance Band Preview */}
+      {(() => {
+        const band = rating !== null ? getRatingBand(rating) : null;
+        return (
+          <div className="rounded-[18px] p-5 mb-5" style={{ background: 'rgba(200,242,90,0.06)', border: '1px solid rgba(200,242,90,0.18)' }}>
+            <p className="section-label mb-2">Performance Band</p>
+            <p className="text-[48px] leading-none font-light" style={{ color: band?.color || 'rgba(255,255,255,0.22)' }}>
+              {band ? band.label : '–'}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              {band ? 'Updates live as you fill in the form' : 'Select your position and fill in the form'}
+            </p>
+          </div>
+        );
+      })()}
 
       <div className="space-y-5">
         {/* Position */}
