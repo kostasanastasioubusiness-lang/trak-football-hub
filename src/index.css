@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 100%;
+
+    --card: 240 4% 6.5%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 240 4% 6.5%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 73 85% 65%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 240 3% 10%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 240 3% 10%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 73 85% 65%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 85% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 100% / 0.07;
+    --input: 240 3% 13%;
+    --ring: 73 85% 65%;
+
+    --radius: 0.75rem;
+
+    --coach-orange: 24 78% 57%;
+    --training-blue: 214 60% 57%;
+    --gold: 40 78% 60%;
+    --red: 0 65% 55%;
+
+    --sidebar-background: 240 4% 5%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 73 85% 65%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 240 3% 10%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.07;
+    --sidebar-ring: 73 85% 65%;
+
+    /* Text opacity tokens */
+    --t1: rgba(255,255,255,0.88);
+    --t2: rgba(255,255,255,0.45);
+    --t3: rgba(255,255,255,0.22);
+
+    font-family: 'DM Sans', sans-serif;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    color: var(--t1);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+}
+
+@layer components {
+  .app-container {
+    @apply max-w-[430px] mx-auto min-h-screen relative;
+  }
+
+  /* Section labels: DM Mono, 9px, 500, uppercase, spaced */
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--t3);
+  }
+}
