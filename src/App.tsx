@@ -4,23 +4,40 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { RouteGuard } from "@/components/layout/RouteGuard";
+
+// Existing pages
 import LandingPage from "./pages/LandingPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import ParentInfoPage from "./pages/ParentInfoPage";
 import ParentOnboarding from "./pages/ParentOnboarding";
-import Dashboard from "./pages/Dashboard";
-import LogChooser from "./pages/LogChooser";
-import MatchLog from "./pages/MatchLog";
 import NotFound from "./pages/NotFound";
-import CoachSquad from "./components/coach/CoachSquad";
-import CoachSessions from "./components/coach/CoachSessions";
-import CoachSessionDetail from "./components/coach/CoachSessionDetail";
-import CoachAssess from "./components/coach/CoachAssess";
-import CoachPlayerProfile from "./components/coach/CoachPlayerProfile";
-import CoachProgress from "./components/coach/CoachProgress";
 
-import PlayerProfile from "./pages/PlayerProfile";
-import PlayerGoals from "./pages/PlayerGoals";
+// Player pages
+import PlayerHome from "./pages/player/PlayerHome";
+import PlayerLogForm from "./pages/player/PlayerLogForm";
+import PlayerResult from "./pages/player/PlayerResult";
+import PlayerMatches from "./pages/player/PlayerMatches";
+import PlayerMatchDetail from "./pages/player/PlayerMatchDetail";
+import PlayerGoalsPage from "./pages/player/PlayerGoalsPage";
+import PlayerMedals from "./pages/player/PlayerMedals";
+import PlayerProfilePage from "./pages/player/PlayerProfilePage";
+
+// Coach pages
+import CoachHomePage from "./pages/coach/CoachHomePage";
+import CoachSquadPage from "./pages/coach/CoachSquadPage";
+import CoachAddPlayer from "./pages/coach/CoachAddPlayer";
+import CoachAssessPage from "./pages/coach/CoachAssessPage";
+import CoachSessionsPage from "./pages/coach/CoachSessionsPage";
+import CoachAddSession from "./pages/coach/CoachAddSession";
+import CoachProfilePage from "./pages/coach/CoachProfilePage";
+import CoachPlayerProfilePage from "./pages/coach/CoachPlayerProfilePage";
+
+// Parent pages
+import ParentHome from "./pages/parent/ParentHome";
+import ParentMatches from "./pages/parent/ParentMatches";
+import ParentGoals from "./pages/parent/ParentGoals";
+import ParentAlerts from "./pages/parent/ParentAlerts";
 
 const queryClient = new QueryClient();
 
@@ -32,23 +49,45 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/onboarding/:role" element={<OnboardingPage />} />
             <Route path="/parent-info" element={<ParentInfoPage />} />
             <Route path="/parent-invite" element={<ParentOnboarding />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/log" element={<LogChooser />} />
-            <Route path="/log/match" element={<MatchLog />} />
-            
-            <Route path="/profile" element={<PlayerProfile />} />
-            <Route path="/goals" element={<PlayerGoals />} />
+
+            {/* Player routes */}
+            <Route path="/player/home" element={<RouteGuard allowedRole="player"><PlayerHome /></RouteGuard>} />
+            <Route path="/player/log" element={<RouteGuard allowedRole="player"><PlayerLogForm /></RouteGuard>} />
+            <Route path="/player/result" element={<RouteGuard allowedRole="player"><PlayerResult /></RouteGuard>} />
+            <Route path="/player/matches" element={<RouteGuard allowedRole="player"><PlayerMatches /></RouteGuard>} />
+            <Route path="/player/match/:id" element={<RouteGuard allowedRole="player"><PlayerMatchDetail /></RouteGuard>} />
+            <Route path="/player/goals" element={<RouteGuard allowedRole="player"><PlayerGoalsPage /></RouteGuard>} />
+            <Route path="/player/medals" element={<RouteGuard allowedRole="player"><PlayerMedals /></RouteGuard>} />
+            <Route path="/player/profile" element={<RouteGuard allowedRole="player"><PlayerProfilePage /></RouteGuard>} />
+
             {/* Coach routes */}
-            <Route path="/coach/squad" element={<CoachSquad />} />
-            <Route path="/coach/sessions" element={<CoachSessions />} />
-            <Route path="/coach/session/:id" element={<CoachSessionDetail />} />
-            <Route path="/coach/assess" element={<CoachAssess />} />
-            <Route path="/coach/player/:id" element={<CoachPlayerProfile />} />
-            <Route path="/coach/progress" element={<CoachProgress />} />
+            <Route path="/coach/home" element={<RouteGuard allowedRole="coach"><CoachHomePage /></RouteGuard>} />
+            <Route path="/coach/squad" element={<RouteGuard allowedRole="coach"><CoachSquadPage /></RouteGuard>} />
+            <Route path="/coach/squad/add" element={<RouteGuard allowedRole="coach"><CoachAddPlayer /></RouteGuard>} />
+            <Route path="/coach/assess" element={<RouteGuard allowedRole="coach"><CoachAssessPage /></RouteGuard>} />
+            <Route path="/coach/sessions" element={<RouteGuard allowedRole="coach"><CoachSessionsPage /></RouteGuard>} />
+            <Route path="/coach/sessions/add" element={<RouteGuard allowedRole="coach"><CoachAddSession /></RouteGuard>} />
+            <Route path="/coach/profile" element={<RouteGuard allowedRole="coach"><CoachProfilePage /></RouteGuard>} />
+            <Route path="/coach/player/:id" element={<RouteGuard allowedRole="coach"><CoachPlayerProfilePage /></RouteGuard>} />
+
+            {/* Parent routes */}
+            <Route path="/parent/home" element={<RouteGuard allowedRole="parent"><ParentHome /></RouteGuard>} />
+            <Route path="/parent/matches" element={<RouteGuard allowedRole="parent"><ParentMatches /></RouteGuard>} />
+            <Route path="/parent/goals" element={<RouteGuard allowedRole="parent"><ParentGoals /></RouteGuard>} />
+            <Route path="/parent/alerts" element={<RouteGuard allowedRole="parent"><ParentAlerts /></RouteGuard>} />
+
+            {/* Legacy redirects for old routes */}
+            <Route path="/dashboard" element={<PlayerHome />} />
+            <Route path="/log" element={<PlayerLogForm />} />
+            <Route path="/log/match" element={<PlayerLogForm />} />
+            <Route path="/profile" element={<PlayerProfilePage />} />
+            <Route path="/goals" element={<PlayerGoalsPage />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
