@@ -1,183 +1,422 @@
-import { useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { toast } from 'sonner'
-import { PLAYERS, BAND_COLORS, initials, type Band } from '@/lib/clubMock'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
+import { MobileShell } from '@/components/trak'
+import { SliderInput } from '@/components/trak/SliderInput'
+import { scoreToBand } from '@/lib/rating-engine'
+import { BANDS } from '@/lib/types'
+import type { BandType } from '@/lib/types'
+import { trackEvent } from '@/lib/telemetry'
+import { ChevronLeft, Check, MessageSquare } from 'lucide-react'
 
-const QUICK_BANDS: Band[] = ['Exceptional', 'Good', 'Steady', 'Mixed']
-const SESSION = { name: 'vs AEK Athens', date: '12 Apr 2026' }
+/* ---------- helpers ---------- */
 
-export default function CoachQuickAssess() {
-  const navigate = useNavigate()
-  const [picks, setPicks] = useState<Record<string, Band>>({})
-
-  const setBand = (playerId: string, band: Band) =>
-    setPicks(p => ({ ...p, [playerId]: band }))
-
-  const save = () => {
-    const count = Object.keys(picks).length
-    toast.success('Assessments saved', {
-      description: `${count} player${count === 1 ? '' : 's'} assessed for ${SESSION.name}`,
-    })
-    setTimeout(() => navigate('/coach/home'), 600)
-  }
-
-  const players = PLAYERS.slice(0, 8)
-
-  return (
-    <div className="min-h-screen" style={{ background: '#0A0A0B', fontFamily: "'DM Sans', sans-serif" }}>
-      <div className="mx-auto max-w-[430px] px-5 pt-5 pb-32">
-        {/* Header */}
-        <div className="relative flex items-center justify-center mb-5 h-10">
-          <button
-            onClick={() => navigate(-1)}
-            className="absolute left-0 flex items-center justify-center"
-            style={{
-              width: 36, height: 36, borderRadius: 999,
-              background: '#101012', border: '1px solid rgba(255,255,255,0.07)',
-              color: 'rgba(255,255,255,0.88)',
-            }}
-            aria-label="Back"
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <h1 style={{ fontSize: 17, fontWeight: 400, color: 'rgba(255,255,255,0.88)' }}>
-            Quick Assessment
-          </h1>
-        </div>
-
-        {/* Info card */}
-        <div
-          className="p-4 mb-5"
-          style={{
-            background: '#101012',
-            border: '1px solid rgba(255,255,255,0.07)',
-            borderRadius: 18,
-          }}
-        >
-          <SectionLabel>Current Session</SectionLabel>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.88)' }}>{SESSION.name}</span>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{SESSION.date}</span>
-          </div>
-          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 8, lineHeight: 1.5 }}>
-            Tap a band for each player. Takes about 2 minutes.
-          </p>
-        </div>
-
-        {/* Player list */}
-        <div className="space-y-3">
-          {players.map(p => {
-            const selected = picks[p.id]
-            const isTop = p.band === 'Exceptional' || p.band === 'Standout'
-            return (
-              <div
-                key={p.id}
-                className="p-4"
-                style={{
-                  background: '#101012',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                  borderRadius: 18,
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="flex items-center justify-center shrink-0"
-                    style={{
-                      width: 40, height: 40, borderRadius: 8,
-                      background: isTop ? 'rgba(200,242,90,0.12)' : '#0A0A0B',
-                      border: isTop
-                        ? '1px solid rgba(200,242,90,0.3)'
-                        : '1px solid rgba(255,255,255,0.07)',
-                      color: isTop ? '#C8F25A' : 'rgba(255,255,255,0.45)',
-                      fontSize: 13,
-                    }}
-                  >
-                    {initials(p.name)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.88)' }}>{p.name}</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{p.position}</div>
-                  </div>
-                  <button
-                    onClick={() => navigate('/coach/assess')}
-                    className="flex items-center gap-1"
-                    style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}
-                  >
-                    Full <ArrowRight size={12} />
-                  </button>
-                </div>
-
-                <div className="mt-3 grid grid-cols-4 gap-1.5">
-                  {QUICK_BANDS.map(b => {
-                    const sel = selected === b
-                    const c = BAND_COLORS[b]
-                    return (
-                      <button
-                        key={b}
-                        onClick={() => setBand(p.id, b)}
-                        style={{
-                          height: 28,
-                          borderRadius: 999,
-                          fontSize: 11,
-                          color: c,
-                          background: sel ? `${c}26` : 'transparent',
-                          border: sel ? `1px solid ${c}` : `1px solid ${c}40`,
-                          fontWeight: sel ? 500 : 400,
-                          transition: 'all 120ms ease',
-                        }}
-                      >
-                        {b}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Sticky save bar */}
-      <div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pt-3 pb-5"
-        style={{
-          background: 'linear-gradient(180deg, rgba(10,10,11,0) 0%, #0A0A0B 40%)',
-        }}
-      >
-        <button
-          onClick={save}
-          disabled={Object.keys(picks).length === 0}
-          className="w-full py-3 rounded-lg transition"
-          style={{
-            background: Object.keys(picks).length > 0 ? '#C8F25A' : 'rgba(200,242,90,0.2)',
-            color: '#000',
-            fontSize: 14,
-            fontWeight: 500,
-            opacity: Object.keys(picks).length > 0 ? 1 : 0.5,
-            cursor: Object.keys(picks).length > 0 ? 'pointer' : 'not-allowed',
-          }}
-        >
-          Save All ({Object.keys(picks).length})
-        </button>
-      </div>
-    </div>
-  )
+function bandConfig(band: BandType) {
+  return BANDS.find(b => b.word.toLowerCase() === band) ?? BANDS[BANDS.length - 1]
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function initials(name: string) {
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+/* ========== main page ========== */
+
+export default function CoachQuickAssess() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+
+  /* --- squad data --- */
+  const [players, setPlayers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  /* --- current index + tracking --- */
+  const [currentIdx, setCurrentIdx] = useState(0)
+  const [assessedIds, setAssessedIds] = useState<Set<string>>(new Set())
+  const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set())
+
+  /* --- slider state --- */
+  const [workRate, setWorkRate] = useState(5)
+  const [tactical, setTactical] = useState(5)
+  const [attitude, setAttitude] = useState(5)
+  const [technical, setTechnical] = useState(5)
+  const [physical, setPhysical] = useState(5)
+  const [coachability, setCoachability] = useState(5)
+
+  /* --- note --- */
+  const [note, setNote] = useState('')
+  const [noteOpen, setNoteOpen] = useState(false)
+
+  /* --- saving --- */
+  const [saving, setSaving] = useState(false)
+
+  /* --- completion --- */
+  const isComplete = currentIdx >= players.length && players.length > 0
+
+  /* fetch squad players sorted by oldest assessment first, unassessed at top */
+  useEffect(() => {
+    if (!user) return
+    ;(async () => {
+      setLoading(true)
+      // Get all squad players
+      const { data: squadPlayers } = await supabase
+        .from('squad_players')
+        .select('*')
+        .eq('coach_user_id', user.id)
+        .order('player_name')
+
+      if (!squadPlayers || squadPlayers.length === 0) {
+        setPlayers([])
+        setLoading(false)
+        return
+      }
+
+      // Get latest assessment date per player
+      const { data: latestAssessments } = await supabase
+        .from('coach_assessments')
+        .select('squad_player_id, created_at')
+        .eq('coach_user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      // Build a map: squad_player_id -> latest assessment date
+      const lastAssessedMap = new Map<string, string>()
+      latestAssessments?.forEach(a => {
+        if (!lastAssessedMap.has(a.squad_player_id)) {
+          lastAssessedMap.set(a.squad_player_id, a.created_at)
+        }
+      })
+
+      // Sort: unassessed first, then by oldest assessment
+      const sorted = [...squadPlayers].sort((a, b) => {
+        const dateA = lastAssessedMap.get(a.id)
+        const dateB = lastAssessedMap.get(b.id)
+        if (!dateA && !dateB) return a.player_name.localeCompare(b.player_name)
+        if (!dateA) return -1
+        if (!dateB) return 1
+        return new Date(dateA).getTime() - new Date(dateB).getTime()
+      })
+
+      setPlayers(sorted)
+      setLoading(false)
+    })()
+  }, [user])
+
+  /* --- computed --- */
+  const avg = (workRate + tactical + attitude + technical + physical + coachability) / 6
+  const band = scoreToBand(avg)
+  const overallCfg = bandConfig(band)
+  const currentPlayer = players[currentIdx] ?? null
+  const total = players.length
+  const displayIdx = Math.min(currentIdx + 1, total)
+
+  /* --- reset sliders for new player --- */
+  const resetSliders = () => {
+    setWorkRate(5)
+    setTactical(5)
+    setAttitude(5)
+    setTechnical(5)
+    setPhysical(5)
+    setCoachability(5)
+    setNote('')
+    setNoteOpen(false)
+  }
+
+  /* --- advance to next player --- */
+  const advance = () => {
+    resetSliders()
+    setCurrentIdx(prev => prev + 1)
+  }
+
+  /* --- save assessment --- */
+  const handleNext = async () => {
+    if (!user || !currentPlayer || saving) return
+    setSaving(true)
+
+    await supabase.from('coach_assessments').insert({
+      coach_user_id: user.id,
+      squad_player_id: currentPlayer.id,
+      session_id: null,
+      appearance: 'training',
+      work_rate: workRate,
+      tactical,
+      attitude,
+      technical,
+      physical,
+      coachability,
+      coach_rating: Math.round(avg * 10) / 10,
+      private_note: note || null,
+      self_rating_flag: null,
+    })
+
+    setAssessedIds(prev => new Set(prev).add(currentPlayer.id))
+    setSaving(false)
+    advance()
+  }
+
+  /* --- skip --- */
+  const handleSkip = () => {
+    if (!currentPlayer) return
+    setSkippedIds(prev => new Set(prev).add(currentPlayer.id))
+    advance()
+  }
+
+  /* --- fire telemetry on completion --- */
+  useEffect(() => {
+    if (isComplete && players.length > 0) {
+      trackEvent('quick_assess_completed', {
+        assessed: assessedIds.size,
+        skipped: skippedIds.size,
+      })
+    }
+  }, [isComplete])
+
+  /* --- progress bar width --- */
+  const progressPct = total > 0 ? (currentIdx / total) * 100 : 0
+
+  /* ---- render ---- */
+  if (loading) {
+    return (
+      <MobileShell>
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="w-6 h-6 border-2 border-[#C8F25A] border-t-transparent rounded-full animate-spin" />
+        </div>
+      </MobileShell>
+    )
+  }
+
+  if (players.length === 0) {
+    return (
+      <MobileShell>
+        <div className="pt-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]"
+            >
+              <ChevronLeft size={16} className="text-white/70" />
+            </button>
+            <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90 -ml-[34px]">
+              Quick Assess
+            </h1>
+          </div>
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <p className="text-[15px] text-white/60">No players in your squad yet.</p>
+            <button
+              onClick={() => navigate('/coach/squad/add')}
+              className="px-5 py-2.5 rounded-[10px] bg-[#C8F25A] text-black text-sm font-bold"
+            >
+              Add Players
+            </button>
+          </div>
+        </div>
+      </MobileShell>
+    )
+  }
+
+  /* ---- completion screen ---- */
+  if (isComplete) {
+    return (
+      <MobileShell>
+        <div className="flex flex-col items-center justify-center min-h-[80vh] gap-5 px-4">
+          {/* Checkmark */}
+          <div
+            className="flex items-center justify-center w-[72px] h-[72px] rounded-full"
+            style={{
+              background: 'rgba(200,242,90,0.12)',
+              border: '2px solid rgba(200,242,90,0.3)',
+            }}
+          >
+            <Check size={36} style={{ color: '#C8F25A' }} />
+          </div>
+
+          <h2
+            className="text-[24px] font-semibold"
+            style={{ color: 'rgba(255,255,255,0.9)', fontFamily: "'DM Sans', sans-serif" }}
+          >
+            All done!
+          </h2>
+
+          <p
+            className="text-[14px] text-center"
+            style={{ color: 'rgba(255,255,255,0.45)', fontFamily: "'DM Sans', sans-serif" }}
+          >
+            {assessedIds.size} assessed, {skippedIds.size} skipped
+          </p>
+
+          <button
+            onClick={() => navigate('/coach/home')}
+            className="w-full max-w-[280px] py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm mt-4"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </MobileShell>
+    )
+  }
+
+  /* ---- main assessment flow ---- */
   return (
-    <div
-      style={{
-        fontFamily: "'DM Mono', monospace",
-        fontSize: 9,
-        fontWeight: 500,
-        textTransform: 'uppercase',
-        letterSpacing: '0.12em',
-        color: 'rgba(255,255,255,0.22)',
-      }}
-    >
-      {children}
-    </div>
+    <MobileShell>
+      <div className="pb-10 space-y-4">
+        {/* ---- 1. Top bar ---- */}
+        <div className="flex items-center gap-3 pt-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]"
+          >
+            <ChevronLeft size={16} className="text-white/70" />
+          </button>
+          <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90">
+            Quick Assess
+          </h1>
+          <span
+            className="text-[13px] font-medium w-[34px] text-right"
+            style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.35)' }}
+          >
+            {displayIdx}/{total}
+          </span>
+        </div>
+
+        {/* ---- 2. Progress bar ---- */}
+        <div className="h-[3px] rounded-full bg-white/[0.07] overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-300"
+            style={{ width: `${progressPct}%`, background: '#C8F25A' }}
+          />
+        </div>
+
+        {/* ---- 3. Player card ---- */}
+        {currentPlayer && (
+          <div
+            className="flex items-center gap-3.5 p-4 rounded-[14px] border border-white/[0.06]"
+            style={{ background: '#101012' }}
+          >
+            {/* Initials avatar */}
+            <div
+              className="flex items-center justify-center w-[48px] h-[48px] rounded-[14px] text-[15px] font-bold shrink-0"
+              style={{ background: '#202024', color: '#C8F25A' }}
+            >
+              {initials(currentPlayer.player_name)}
+            </div>
+            <div className="min-w-0">
+              <p
+                className="text-[18px] font-medium truncate"
+                style={{ color: 'rgba(255,255,255,0.9)', fontFamily: "'DM Sans', sans-serif" }}
+              >
+                {currentPlayer.player_name}
+              </p>
+              <p
+                className="text-[11px] mt-0.5 truncate"
+                style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.35)' }}
+              >
+                {currentPlayer.position?.toUpperCase() ?? 'Player'}
+                {currentPlayer.squad_number ? ` \u00B7 #${currentPlayer.squad_number}` : ''}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ---- 4. Sliders ---- */}
+        <div className="rounded-[14px] bg-[rgba(0,0,0,0.25)] p-[14px_16px] space-y-5">
+          <SliderInput label="Work Rate" value={workRate} onChange={setWorkRate} />
+          <SliderInput label="Tactical Discipline" value={tactical} onChange={setTactical} />
+          <SliderInput label="Attitude" value={attitude} onChange={setAttitude} />
+          <SliderInput label="Technical Execution" value={technical} onChange={setTechnical} />
+          <SliderInput label="Physical Presence" value={physical} onChange={setPhysical} />
+          <SliderInput label="Coachability" value={coachability} onChange={setCoachability} />
+        </div>
+
+        {/* ---- 5. Overall band preview ---- */}
+        <div
+          className="flex items-center justify-between px-4 py-3.5 rounded-[12px]"
+          style={{
+            background: overallCfg.bg,
+            border: `1px solid ${overallCfg.border}`,
+            boxShadow: `0 0 20px ${overallCfg.bg}`,
+          }}
+        >
+          <span
+            className="text-[9px] font-medium tracking-[0.12em] uppercase"
+            style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.4)' }}
+          >
+            OVERALL
+          </span>
+          <div className="flex items-center gap-2.5">
+            <span
+              className="text-[14px] font-semibold"
+              style={{ color: overallCfg.color }}
+            >
+              {overallCfg.word}
+            </span>
+            <span className="text-[13px] text-white/40 font-medium">
+              {(Math.round(avg * 10) / 10).toFixed(1)}
+            </span>
+          </div>
+        </div>
+
+        {/* ---- 6. Optional note ---- */}
+        {!noteOpen ? (
+          <button
+            onClick={() => setNoteOpen(true)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-[10px] border border-white/[0.06] text-white/35 text-[12px] font-medium w-full"
+            style={{ background: 'transparent' }}
+          >
+            <MessageSquare size={14} className="text-white/25" />
+            Add note
+          </button>
+        ) : (
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center">
+              <span
+                className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45"
+                style={{ fontFamily: "'DM Mono', monospace" }}
+              >
+                NOTE
+              </span>
+              <span className="text-[10px] text-white/25">{note.length}/200</span>
+            </div>
+            <textarea
+              value={note}
+              onChange={e => {
+                if (e.target.value.length <= 200) setNote(e.target.value)
+              }}
+              maxLength={200}
+              rows={2}
+              autoFocus
+              placeholder="Quick note about this player..."
+              className="w-full px-4 py-3 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none resize-none placeholder:text-white/20"
+            />
+          </div>
+        )}
+
+        {/* ---- 7. Action buttons ---- */}
+        <div className="flex gap-3 pt-1">
+          <button
+            onClick={handleSkip}
+            className="flex-1 py-3.5 rounded-[10px] text-sm font-semibold transition-opacity active:scale-[0.97]"
+            style={{
+              background: 'transparent',
+              border: '1.5px solid rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.5)',
+            }}
+          >
+            Skip
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={saving}
+            className="flex-[2] py-3.5 rounded-[10px] text-sm font-bold transition-opacity active:scale-[0.97] disabled:opacity-40"
+            style={{ background: '#C8F25A', color: '#000' }}
+          >
+            {saving ? 'Saving...' : 'Next \u2192'}
+          </button>
+        </div>
+      </div>
+    </MobileShell>
   )
 }

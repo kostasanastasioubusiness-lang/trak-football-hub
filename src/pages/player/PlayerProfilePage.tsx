@@ -3,139 +3,366 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
+import { scoreToBand } from '@/lib/rating-engine'
+import { BANDS } from '@/lib/types'
+import { trackEvent } from '@/lib/telemetry'
+import { calculateRecords, type PersonalRecords } from '@/lib/records'
+import RatingTrendChart from '@/components/player/RatingTrendChart'
 
-interface SeasonStats {
-  played: number
-  goals: number
-  assists: number
-  wins: number
+const BAND_DESCRIPTIONS: Record<string, string> = {
+  exceptional: 'Outstanding — everything clicked',
+  standout: 'Excellent — clearly above the norm',
+  good: 'Solid positive — contributing well',
+  steady: 'Reliable — did the job',
+  mixed: 'Moments and struggles — inconsistent',
+  developing: 'Below target — room to grow',
+  difficult: 'Tough match — part of the journey',
 }
+
+const BAND_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  exceptional: { bg: 'rgba(200,242,90,0.15)', text: '#C8F25A', border: 'rgba(200,242,90,0.3)' },
+  standout: { bg: 'rgba(134,239,172,0.13)', text: '#86efac', border: 'rgba(134,239,172,0.26)' },
+  good: { bg: 'rgba(74,222,128,0.13)', text: '#4ade80', border: 'rgba(74,222,128,0.24)' },
+  steady: { bg: 'rgba(96,165,250,0.13)', text: '#60a5fa', border: 'rgba(96,165,250,0.24)' },
+  mixed: { bg: 'rgba(251,146,60,0.13)', text: '#fb923c', border: 'rgba(251,146,60,0.24)' },
+  developing: { bg: 'rgba(167,139,250,0.13)', text: '#a78bfa', border: 'rgba(167,139,250,0.24)' },
+  difficult: { bg: 'rgba(255,255,255,0.06)', text: 'rgba(255,255,255,0.4)', border: 'rgba(255,255,255,0.1)' },
+}
+
+type TrendFilter = 'last5' | 'last10' | 'all'
 
 export default function PlayerProfilePage() {
   const { user, profile, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [details, setDetails] = useState<any>(null)
-  const [stats, setStats] = useState<SeasonStats>({ played: 0, goals: 0, assists: 0, wins: 0 })
+  const [stats, setStats] = useState({ matches: 0, goals: 0, assists: 0, medals: 0 })
+  const [assessment, setAssessment] = useState<any>(null)
+  const [matchHistory, setMatchHistory] = useState<{ created_at: string; computed_rating: number }[]>([])
+  const [trendFilter, setTrendFilter] = useState<TrendFilter>('all')
+  const [records, setRecords] = useState<PersonalRecords | null>(null)
+  const [matchOpponents, setMatchOpponents] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!user) return
-    supabase
-      .from('player_details')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => setDetails(data))
-    supabase
-      .from('matches')
-      .select('*')
-      .eq('user_id', user.id)
-      .then(({ data }) => {
-        const matches = data || []
-        setStats({
-          played: matches.length,
-          goals: matches.reduce((s, m) => s + (m.goals || 0), 0),
-          assists: matches.reduce((s, m) => s + (m.assists || 0), 0),
-          wins: matches.filter((m) => (m.team_score || 0) > (m.opponent_score || 0)).length,
-        })
+    supabase.from('player_details').select('*').eq('user_id', user.id).maybeSingle().then(({ data }) => setDetails(data))
+    supabase.from('matches').select('id, goals, assists, computed_rating, created_at, opponent').eq('user_id', user.id).order('created_at', { ascending: true }).then(({ data }) => {
+      if (!data) return
+      setStats({
+        matches: data.length,
+        goals: data.reduce((s, m) => s + (m.goals || 0), 0),
+        assists: data.reduce((s, m) => s + (m.assists || 0), 0),
+        medals: 0,
       })
+      setMatchHistory(data.map((m) => ({ created_at: m.created_at, computed_rating: m.computed_rating })))
+
+      // Build opponent lookup and calculate personal records
+      const opMap: Record<string, string> = {}
+      for (const m of data) {
+        if (m.opponent) opMap[m.id] = m.opponent
+      }
+      setMatchOpponents(opMap)
+      setRecords(calculateRecords(data))
+      trackEvent('records_viewed', {})
+    })
+    // Get latest coach assessment
+    supabase.from('coach_assessments').select('*')
+      .eq('squad_player_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setAssessment(data) })
   }, [user])
 
-  const initials =
-    profile?.full_name
-      ?.split(' ')
-      .map((n: string) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || '??'
+  // Track chart view once we have enough data
+  useEffect(() => {
+    if (matchHistory.length >= 3) {
+      trackEvent('chart_viewed', { type: 'trend' })
+    }
+  }, [matchHistory])
 
-  const pills = [details?.position, details?.current_club, details?.age_group].filter(Boolean) as string[]
+  const filteredMatches = (() => {
+    if (trendFilter === 'last5') return matchHistory.slice(-5)
+    if (trendFilter === 'last10') return matchHistory.slice(-10)
+    return matchHistory
+  })()
+
+  const initials = profile?.full_name
+    ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : '?'
+
+  const assessmentCategories = assessment ? [
+    { name: 'Work Rate', score: assessment.work_rate },
+    { name: 'Tactical', score: assessment.tactical },
+    { name: 'Attitude', score: assessment.attitude },
+    { name: 'Technical', score: assessment.technical },
+    { name: 'Physical', score: assessment.physical },
+    { name: 'Coachability', score: assessment.coachability },
+  ] : []
+
+  const scoreToBandLabel = (score: number) => {
+    if (score >= 9) return { word: 'Standout', color: '#86efac' }
+    if (score >= 7) return { word: 'Good', color: '#4ade80' }
+    if (score >= 5) return { word: 'Steady', color: '#60a5fa' }
+    if (score >= 3) return { word: 'Mixed', color: '#fb923c' }
+    return { word: 'Developing', color: '#a78bfa' }
+  }
+
+  const FILTER_OPTIONS: { key: TrendFilter; label: string }[] = [
+    { key: 'last5', label: 'Last 5' },
+    { key: 'last10', label: 'Last 10' },
+    { key: 'all', label: 'All' },
+  ]
+
+  const getBandLabel = (score: number): { word: string; color: string } => {
+    const band = scoreToBand(score)
+    const cfg = BANDS.find(b => b.word.toLowerCase() === band)
+    return cfg ? { word: cfg.word, color: cfg.color } : { word: 'Unknown', color: '#fff' }
+  }
+
+  const formatRecordDate = (dateStr: string): string =>
+    new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  const isWithinLastWeek = (dateStr: string): boolean => {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    return diff <= 7 * 24 * 60 * 60 * 1000
+  }
+
+  const NewBadge = () => (
+    <span
+      className="ml-1.5 inline-flex items-center h-[14px] px-1.5 rounded-[4px] text-[7px] font-bold tracking-[0.08em] uppercase"
+      style={{ fontFamily: "'DM Mono', monospace", background: 'rgba(200,242,90,0.18)', color: '#C8F25A', border: '1px solid rgba(200,242,90,0.25)' }}
+    >
+      NEW
+    </span>
+  )
 
   return (
     <MobileShell>
-      <div className="pt-12 pb-4 space-y-8">
-        <MetadataLabel text="PROFILE" />
+      <div className="flex items-center justify-between pt-3 pb-2 border-b border-white/[0.07]">
+        <span className="text-[16px] font-medium text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>Profile</span>
+      </div>
 
-        {/* Identity */}
-        <div className="space-y-4">
-          <div
-            className="w-20 h-20 flex items-center justify-center bg-[#202024] border border-white/10"
-            style={{ borderRadius: '16px' }}
-          >
-            <span
-              className="text-[28px] leading-none text-[#C8F25A]"
-              style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300 }}
-            >
-              {initials}
-            </span>
+      <div className="pt-3.5 pb-4 space-y-2.5">
+        {/* Avatar + Identity */}
+        <div className="text-center mb-6">
+          <div className="w-[72px] h-[72px] rounded-[22px] bg-[#202024] border border-[rgba(200,242,90,0.18)] mx-auto mb-3 flex items-center justify-center text-[32px]">⚽</div>
+          <p className="text-[20px] font-semibold text-white/88 tracking-tight" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
+            {profile?.full_name}
+          </p>
+          <div className="flex justify-center gap-1.5 mt-2 flex-wrap">
+            {details?.position && (
+              <span className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
+                style={{ fontFamily: "'DM Mono', monospace" }}>{details.position}</span>
+            )}
+            {details?.current_club && (
+              <span className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
+                style={{ fontFamily: "'DM Mono', monospace" }}>{details.current_club} {details.age_group}</span>
+            )}
+            {details?.shirt_number && (
+              <span className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
+                style={{ fontFamily: "'DM Mono', monospace" }}>#{details.shirt_number}</span>
+            )}
           </div>
+        </div>
 
-          <h1
-            className="text-[28px] leading-tight text-[rgba(255,255,255,0.92)]"
-            style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, letterSpacing: '-0.02em' }}
-          >
-            {profile?.full_name || 'Player'}
-          </h1>
+        {/* Band Legend */}
+        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+          <MetadataLabel text="PERFORMANCE BANDS" />
+          <div className="mt-3 space-y-[7px]">
+            {BANDS.map(b => {
+              const key = b.word.toLowerCase()
+              const colors = BAND_COLORS[key]
+              return (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="inline-flex items-center justify-center h-6 px-2.5 rounded-lg text-[11px] font-semibold"
+                    style={{ background: colors?.bg, color: colors?.text, border: `1px solid ${colors?.border}` }}>
+                    {b.word}
+                  </span>
+                  <span className="text-[10px] text-white/22">{BAND_DESCRIPTIONS[key]}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
 
-          {pills.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {pills.map((p) => (
-                <span
-                  key={p}
-                  className="px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider bg-white/5 border border-white/10 text-white/70"
-                  style={{ fontFamily: "'DM Mono', monospace" }}
-                >
-                  {p}
-                </span>
-              ))}
+        {/* Season Summary */}
+        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+          <MetadataLabel text="SEASON SUMMARY" />
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
+              <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif" }}>{stats.matches}</p>
+              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Matches</span>
             </div>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
+              <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif" }}>{stats.goals}</p>
+              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Goals</span>
+            </div>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
+              <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif" }}>{stats.assists}</p>
+              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Assists</span>
+            </div>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
+              <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif" }}>{stats.medals}</p>
+              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Medals</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Performance Trend */}
+        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+          <MetadataLabel text="PERFORMANCE TREND" />
+          {matchHistory.length < 3 ? (
+            <p className="text-[12px] text-white/30 mt-4 text-center pb-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              Log at least 3 matches to see your trend
+            </p>
+          ) : (
+            <>
+              <div className="mt-3">
+                <RatingTrendChart matches={filteredMatches} />
+              </div>
+              <div className="flex gap-1.5 mt-3">
+                {FILTER_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setTrendFilter(opt.key)}
+                    className="h-[26px] px-3 rounded-full text-[9px] font-medium tracking-[0.06em] uppercase transition-colors"
+                    style={{
+                      fontFamily: "'DM Mono', monospace",
+                      background: trendFilter === opt.key ? 'rgba(200,242,90,0.13)' : 'rgba(255,255,255,0.04)',
+                      color: trendFilter === opt.key ? '#C8F25A' : 'rgba(255,255,255,0.3)',
+                      border: `1px solid ${trendFilter === opt.key ? 'rgba(200,242,90,0.25)' : 'rgba(255,255,255,0.07)'}`,
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
-        {/* Season stats */}
-        <div className="space-y-3">
-          <MetadataLabel text="SEASON STATS" />
-          <div className="grid grid-cols-3 gap-2">
-            <StatCard label="Played" value={stats.played} />
-            <StatCard label="Goals" value={stats.goals} />
-            <StatCard label="Assists" value={stats.assists} />
-            <StatCard label="Wins" value={stats.wins} />
-          </div>
-        </div>
+        {/* Personal Records */}
+        {records && records.totalMatches > 0 && (
+          <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            <MetadataLabel text="PERSONAL RECORDS" />
+            <div className="mt-3 space-y-[10px]">
+              {/* Highest Rating */}
+              {records.highestRating && (() => {
+                const bl = getBandLabel(records.highestRating.value)
+                return (
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-[14px] leading-none mt-[1px]" aria-hidden>&#127942;</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center flex-wrap gap-x-1">
+                        <span className="text-[12px] text-white/88 font-medium" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                          Highest Rating:
+                        </span>
+                        <span className="text-[12px] font-semibold" style={{ color: bl.color }}>
+                          {records.highestRating.value.toFixed(1)} — {bl.word}
+                        </span>
+                        {isWithinLastWeek(records.highestRating.date) && <NewBadge />}
+                      </div>
+                      <span className="text-[9px] text-white/22 block mt-[2px]" style={{ fontFamily: "'DM Mono', monospace" }}>
+                        {formatRecordDate(records.highestRating.date)}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })()}
 
-        <button
-          onClick={async () => {
-            await signOut()
-            navigate('/')
-          }}
-          className="w-full py-3 rounded-[10px] border border-white/[0.07] bg-[#202024] text-sm text-white/45"
-        >
+              {/* Most Goals in a Match */}
+              {records.mostGoalsInMatch && (
+                <div className="flex items-start gap-2.5">
+                  <span className="text-[14px] leading-none mt-[1px]" aria-hidden>&#9917;</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-x-1">
+                      <span className="text-[12px] text-white/88 font-medium" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                        Most Goals in a Match:
+                      </span>
+                      <span className="text-[12px] font-semibold text-white/88">
+                        {records.mostGoalsInMatch.value}
+                        {matchOpponents[records.mostGoalsInMatch.matchId] && (
+                          <span className="text-white/45 font-normal"> vs {matchOpponents[records.mostGoalsInMatch.matchId]}</span>
+                        )}
+                      </span>
+                      {isWithinLastWeek(records.mostGoalsInMatch.date) && <NewBadge />}
+                    </div>
+                    <span className="text-[9px] text-white/22 block mt-[2px]" style={{ fontFamily: "'DM Mono', monospace" }}>
+                      {formatRecordDate(records.mostGoalsInMatch.date)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Longest Good+ Streak */}
+              {records.longestGoodStreak > 0 && (
+                <div className="flex items-start gap-2.5">
+                  <span className="text-[14px] leading-none mt-[1px]" aria-hidden>&#128293;</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-x-1">
+                      <span className="text-[12px] text-white/88 font-medium" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                        Longest Good+ Streak:
+                      </span>
+                      <span className="text-[12px] font-semibold" style={{ color: '#4ade80' }}>
+                        {records.longestGoodStreak} {records.longestGoodStreak === 1 ? 'match' : 'matches'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* First Match */}
+              {records.firstMatchDate && (
+                <div className="flex items-start gap-2.5">
+                  <span className="text-[14px] leading-none mt-[1px]" aria-hidden>&#128197;</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-x-1">
+                      <span className="text-[12px] text-white/88 font-medium" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                        First Match:
+                      </span>
+                      <span className="text-[12px] text-white/45">
+                        {formatRecordDate(records.firstMatchDate)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Coach Assessments */}
+        {assessmentCategories.length > 0 && (
+          <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            <MetadataLabel text="COACH ASSESSMENTS" />
+            <div className="mt-3 space-y-2">
+              {assessmentCategories.map(cat => {
+                const bandInfo = scoreToBandLabel(cat.score)
+                const pct = (cat.score / 10) * 100
+                return (
+                  <div key={cat.name} className="flex items-center gap-2.5">
+                    <span className="text-[11px] text-white/88 w-[110px] flex-shrink-0">{cat.name}</span>
+                    <div className="flex-1 h-[5px] rounded-full bg-white/[0.06] overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: bandInfo.color }} />
+                    </div>
+                    <span className="text-[11px] font-semibold w-[68px] text-right flex-shrink-0" style={{ color: bandInfo.color }}>
+                      {bandInfo.word}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Sign Out */}
+        <button onClick={async () => { await signOut(); navigate('/') }}
+          className="text-sm text-white/22 hover:text-white/45 transition-colors pt-4 block mx-auto">
           Sign Out
         </button>
       </div>
       <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
-  )
-}
-
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div
-      className="bg-[#101012] border border-white/[0.07] px-3 py-4 flex flex-col gap-2"
-      style={{ borderRadius: '14px' }}
-    >
-      <span
-        className="text-[32px] leading-none text-[rgba(255,255,255,0.92)]"
-        style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300 }}
-      >
-        {value}
-      </span>
-      <span
-        className="text-[9px] uppercase tracking-wider text-white/45"
-        style={{ fontFamily: "'DM Mono', monospace" }}
-      >
-        {label}
-      </span>
-    </div>
   )
 }

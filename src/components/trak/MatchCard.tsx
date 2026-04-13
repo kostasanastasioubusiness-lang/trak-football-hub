@@ -19,7 +19,7 @@ export function MatchCard({ opponent, date, scoreUs, scoreThem, band, onClick }:
       <button onClick={onClick} className="w-full text-left">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-[rgba(255,255,255,0.88)]">vs {opponent}</p>
+            <p className="text-sm text-[rgba(255,255,255,0.88)]">{opponent}</p>
             <MetadataLabel text={`${formattedDate} \u00b7 ${scoreUs}-${scoreThem}`} />
           </div>
           <BandPill band={band} />

@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
-import { MobileShell, BandPill, MetadataLabel, TrakCard } from '@/components/trak'
+import { MobileShell, BandPill, MetadataLabel, TrakCard, NavBar } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
+import { useAuth } from '@/contexts/AuthContext'
 import { ChevronLeft } from 'lucide-react'
 import { MatchDetailExtras } from '@/components/player/MatchDetailExtras'
 
 export default function PlayerMatchDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [match, setMatch] = useState<any>(null)
 
   useEffect(() => {
@@ -47,6 +49,7 @@ export default function PlayerMatchDetail() {
           note={(match as any).private_note}
         />
       </div>
+      <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )
 }

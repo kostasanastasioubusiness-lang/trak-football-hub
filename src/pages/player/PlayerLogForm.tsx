@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ChevronLeft } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, PillSelector, BandPreview, MetadataLabel, NavBar } from '@/components/trak'
+import { MobileShell, PillSelector, BandPreview, MetadataLabel } from '@/components/trak'
 import { computeMatchScore, scoreToBand } from '@/lib/rating-engine'
 import { trackEvent } from '@/lib/telemetry'
 import type { MatchInput, Position, Competition, Venue, CardType, BodyCondition, SelfRating } from '@/lib/types'
@@ -47,7 +48,6 @@ const POSITION_FIELDS: Record<string, typeof GK_FIELDS> = { gk: GK_FIELDS, def: 
 export default function PlayerLogForm() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   const [saving, setSaving] = useState(false)
   const [position, setPosition] = useState<Position>('att')
   const [competition, setCompetition] = useState<Competition>('league')
@@ -60,6 +60,19 @@ export default function PlayerLogForm() {
   const [body, setBody] = useState<BodyCondition>('good')
   const [selfRating, setSelfRating] = useState<SelfRating>('average')
   const [posInputs, setPosInputs] = useState<Record<string, string>>({})
+  const [matchDate, setMatchDate] = useState(new Date().toISOString().split('T')[0])
+
+  useEffect(() => {
+    if (!user) return
+    supabase.from('player_details').select('position').eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => {
+        if (data?.position) {
+          const map: Record<string, string> = { 'Goalkeeper': 'gk', 'Defender': 'def', 'Midfielder': 'mid', 'Attacker': 'att' }
+          const mapped = map[data.position]
+          if (mapped) setPosition(mapped as any)
+        }
+      })
+  }, [user])
 
   const isFriendly = competition === 'friendly'
   const filledCount = [position, competition, venue, opponent, scoreUs, scoreThem].filter(Boolean).length
@@ -83,6 +96,7 @@ export default function PlayerLogForm() {
       position: position === 'gk' ? 'Goalkeeper' : position === 'def' ? 'Defender' : position === 'mid' ? 'Midfielder' : 'Attacker',
       competition: competition.charAt(0).toUpperCase() + competition.slice(1),
       venue: venue.charAt(0).toUpperCase() + venue.slice(1),
+      opponent: opponent.trim() || null,
       team_score: Number(scoreUs) || 0,
       opponent_score: Number(scoreThem) || 0,
       age_group: 'U19+',
@@ -108,18 +122,14 @@ export default function PlayerLogForm() {
 
   return (
     <MobileShell>
-      <div className="pt-8 pb-32 space-y-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/player/home')}
-            className="p-2 -ml-2 rounded-full text-white/60 hover:text-white/90 hover:bg-white/5 transition-colors"
-            aria-label="Back to home"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m15 18-6-6 6-6"/>
-            </svg>
+      <div className="pt-8 pb-40 space-y-6">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={() => navigate('/player/logchoose')}
+            className="w-[34px] h-[34px] bg-[#17171A] border border-white/[0.11] rounded-[10px] flex items-center justify-center">
+            <ChevronLeft size={14} className="text-white/88" />
           </button>
-          <h1 className="text-2xl font-light text-[rgba(255,255,255,0.88)]" style={{ fontFamily: "'DM Sans', sans-serif" }}>Log Match</h1>
+          <span className="text-[16px] font-medium text-white/88 tracking-tight" style={{ fontFamily: "'DM Sans', sans-serif" }}>Log a Match</span>
+          <div className="w-[34px]" />
         </div>
 
         <PillSelector label="Position" options={[
@@ -146,13 +156,23 @@ export default function PlayerLogForm() {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <MetadataLabel text="OUR SCORE" />
-            <input type="number" min={0} max={20} value={scoreUs} onChange={e => setScoreUs(e.target.value)}
-              className="w-full px-4 py-3 rounded-[10px] bg-[#202024] border border-white/[0.07] text-sm text-[rgba(255,255,255,0.88)] outline-none focus:border-[#C8F25A]/30" />
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setScoreUs(String(Math.max(0, (Number(scoreUs) || 0) - 1)))}
+                className="w-10 h-10 rounded-[10px] bg-[#202024] border border-white/[0.07] text-white/45 text-lg flex items-center justify-center active:scale-95">{'\u2212'}</button>
+              <span className="text-xl text-white/88 w-8 text-center tabular-nums">{scoreUs || '0'}</span>
+              <button type="button" onClick={() => setScoreUs(String(Math.min(20, (Number(scoreUs) || 0) + 1)))}
+                className="w-10 h-10 rounded-[10px] bg-[#202024] border border-white/[0.07] text-white/45 text-lg flex items-center justify-center active:scale-95">+</button>
+            </div>
           </div>
           <div className="space-y-2">
             <MetadataLabel text="THEIR SCORE" />
-            <input type="number" min={0} max={20} value={scoreThem} onChange={e => setScoreThem(e.target.value)}
-              className="w-full px-4 py-3 rounded-[10px] bg-[#202024] border border-white/[0.07] text-sm text-[rgba(255,255,255,0.88)] outline-none focus:border-[#C8F25A]/30" />
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setScoreThem(String(Math.max(0, (Number(scoreThem) || 0) - 1)))}
+                className="w-10 h-10 rounded-[10px] bg-[#202024] border border-white/[0.07] text-white/45 text-lg flex items-center justify-center active:scale-95">{'\u2212'}</button>
+              <span className="text-xl text-white/88 w-8 text-center tabular-nums">{scoreThem || '0'}</span>
+              <button type="button" onClick={() => setScoreThem(String(Math.min(20, (Number(scoreThem) || 0) + 1)))}
+                className="w-10 h-10 rounded-[10px] bg-[#202024] border border-white/[0.07] text-white/45 text-lg flex items-center justify-center active:scale-95">+</button>
+            </div>
           </div>
         </div>
 
@@ -160,6 +180,12 @@ export default function PlayerLogForm() {
           <MetadataLabel text="MINUTES PLAYED" />
           <input type="number" min={0} max={120} value={minutes} onChange={e => setMinutes(e.target.value)}
             className="w-full px-4 py-3 rounded-[10px] bg-[#202024] border border-white/[0.07] text-sm text-[rgba(255,255,255,0.88)] outline-none focus:border-[#C8F25A]/30" />
+        </div>
+
+        <div className="space-y-2">
+          <MetadataLabel text="MATCH DATE" />
+          <input type="date" value={matchDate} onChange={e => setMatchDate(e.target.value)}
+            className="w-full px-4 py-3 rounded-[10px] bg-[#202024] border border-white/[0.07] text-sm text-[rgba(255,255,255,0.88)] outline-none focus:border-[#C8F25A]/30 [color-scheme:dark]" />
         </div>
 
         <PillSelector label="Card" options={[
@@ -186,14 +212,17 @@ export default function PlayerLogForm() {
           </div>
         )}
 
+      </div>
+
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pb-5 pt-3 z-40"
+        style={{ background: 'linear-gradient(to top, #0A0A0B 70%, transparent)' }}>
         <button onClick={handleSave} disabled={saving || !opponent}
-          className="w-full py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm disabled:opacity-50 transition-opacity">
+          className="w-full py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm disabled:opacity-50 transition-all active:scale-[0.97]">
           {saving ? 'Saving...' : 'Save Match'}
         </button>
       </div>
 
       <BandPreview matchInput={buildMatchInput()} visible={filledCount >= 3} />
-      <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )
 }

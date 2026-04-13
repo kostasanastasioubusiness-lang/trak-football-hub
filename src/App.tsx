@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RouteGuard } from "@/components/layout/RouteGuard";
+import { ErrorBoundary } from "@/components/trak/ErrorBoundary";
+import { DevSwitcher } from "@/components/trak/DevSwitcher";
 
 // Existing pages
 import LandingPage from "./pages/LandingPage";
@@ -13,15 +15,18 @@ import ParentInfoPage from "./pages/ParentInfoPage";
 import ParentOnboarding from "./pages/ParentOnboarding";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
+import DevSetupPage from "./pages/DevSetupPage";
 
 // Player pages
 import PlayerHome from "./pages/player/PlayerHome";
+import PlayerLogChoose from "./pages/player/PlayerLogChoose";
 import PlayerLogForm from "./pages/player/PlayerLogForm";
 import PlayerResult from "./pages/player/PlayerResult";
 import PlayerMatches from "./pages/player/PlayerMatches";
 import PlayerMatchDetail from "./pages/player/PlayerMatchDetail";
 import PlayerGoalsPage from "./pages/player/PlayerGoalsPage";
 import PlayerMedals from "./pages/player/PlayerMedals";
+import PlayerAddGoal from "./pages/player/PlayerAddGoal";
 import PlayerProfilePage from "./pages/player/PlayerProfilePage";
 import PlayerPassport from "./pages/player/PlayerPassport";
 import PlayerCard from "./pages/player/PlayerCard";
@@ -36,6 +41,7 @@ import CoachAddSession from "./pages/coach/CoachAddSession";
 import CoachProfilePage from "./pages/coach/CoachProfilePage";
 import CoachPlayerProfilePage from "./pages/coach/CoachPlayerProfilePage";
 import CoachRecognition from "./pages/coach/CoachRecognition";
+import CoachAwardPlayer from "./pages/coach/CoachAwardPlayer";
 import CoachQuickAssess from "./pages/coach/CoachQuickAssess";
 
 // Parent pages
@@ -53,12 +59,14 @@ import ClubCoaches from "./pages/club/ClubCoaches";
 const queryClient = new QueryClient();
 
 const App = () => (
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          {import.meta.env.DEV && <DevSwitcher />}
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
@@ -67,14 +75,17 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/parent-info" element={<ParentInfoPage />} />
             <Route path="/parent-invite" element={<ParentOnboarding />} />
+            {import.meta.env.DEV && <Route path="/dev-setup" element={<DevSetupPage />} />}
 
             {/* Player routes */}
             <Route path="/player/home" element={<RouteGuard allowedRole="player"><PlayerHome /></RouteGuard>} />
+            <Route path="/player/logchoose" element={<RouteGuard allowedRole="player"><PlayerLogChoose /></RouteGuard>} />
             <Route path="/player/log" element={<RouteGuard allowedRole="player"><PlayerLogForm /></RouteGuard>} />
             <Route path="/player/result" element={<RouteGuard allowedRole="player"><PlayerResult /></RouteGuard>} />
             <Route path="/player/matches" element={<RouteGuard allowedRole="player"><PlayerMatches /></RouteGuard>} />
             <Route path="/player/match/:id" element={<RouteGuard allowedRole="player"><PlayerMatchDetail /></RouteGuard>} />
             <Route path="/player/goals" element={<RouteGuard allowedRole="player"><PlayerGoalsPage /></RouteGuard>} />
+            <Route path="/player/goals/add" element={<RouteGuard allowedRole="player"><PlayerAddGoal /></RouteGuard>} />
             <Route path="/player/medals" element={<RouteGuard allowedRole="player"><PlayerMedals /></RouteGuard>} />
             <Route path="/player/profile" element={<RouteGuard allowedRole="player"><PlayerProfilePage /></RouteGuard>} />
             <Route path="/player/passport" element={<RouteGuard allowedRole="player"><PlayerPassport /></RouteGuard>} />
@@ -88,9 +99,10 @@ const App = () => (
             <Route path="/coach/sessions" element={<RouteGuard allowedRole="coach"><CoachSessionsPage /></RouteGuard>} />
             <Route path="/coach/sessions/add" element={<RouteGuard allowedRole="coach"><CoachAddSession /></RouteGuard>} />
             <Route path="/coach/profile" element={<RouteGuard allowedRole="coach"><CoachProfilePage /></RouteGuard>} />
+            <Route path="/coach/quick-assess" element={<RouteGuard allowedRole="coach"><CoachQuickAssess /></RouteGuard>} />
             <Route path="/coach/player/:id" element={<RouteGuard allowedRole="coach"><CoachPlayerProfilePage /></RouteGuard>} />
             <Route path="/coach/recognition" element={<RouteGuard allowedRole="coach"><CoachRecognition /></RouteGuard>} />
-            <Route path="/coach/quick-assess" element={<RouteGuard allowedRole="coach"><CoachQuickAssess /></RouteGuard>} />
+            <Route path="/coach/award" element={<RouteGuard allowedRole="coach"><CoachAwardPlayer /></RouteGuard>} />
 
             {/* Parent routes */}
             <Route path="/parent/home" element={<RouteGuard allowedRole="parent"><ParentHome /></RouteGuard>} />
@@ -103,7 +115,7 @@ const App = () => (
             <Route path="/club/squads" element={<ClubSquads />} />
             <Route path="/club/coaches" element={<ClubCoaches />} />
 
-            {/* Legacy redirects for old routes */}
+            {/* Legacy redirects */}
             <Route path="/dashboard" element={<PlayerHome />} />
             <Route path="/log" element={<PlayerLogForm />} />
             <Route path="/log/match" element={<PlayerLogForm />} />
@@ -116,6 +128,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

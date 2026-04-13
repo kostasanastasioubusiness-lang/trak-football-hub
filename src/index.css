@@ -100,4 +100,9 @@
   .band-mixed       { background: rgba(251,146,60,0.13);  color: #fb923c; border: 1px solid rgba(251,146,60,0.24); }
   .band-developing  { background: rgba(167,139,250,0.13); color: #a78bfa; border: 1px solid rgba(167,139,250,0.24); }
   .band-difficult   { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.1); }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }

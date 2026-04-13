@@ -9,7 +9,21 @@ import {
   EUROPEAN_COUNTRIES, POSITIONS, AGE_GROUPS, COACH_ROLES,
   DAYS, MONTHS, YEARS
 } from '@/lib/constants';
-import { Mail, RefreshCw } from 'lucide-react';
+import { Mail, RefreshCw, ChevronDown } from 'lucide-react';
+
+const StyledSelect = ({ value, onChange, placeholder, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { placeholder?: string }) => (
+  <div className="relative">
+    <select
+      value={value}
+      onChange={onChange}
+      className="w-full appearance-none bg-card border border-border rounded-xl px-4 py-3 pr-10 text-sm text-foreground outline-none focus:border-[#C8F25A]/30 transition-colors"
+      {...props}
+    >
+      {children}
+    </select>
+    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+  </div>
+);
 
 type Role = 'player' | 'coach';
 
@@ -155,10 +169,18 @@ const PlayerOnboarding = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-2 mb-2">
-        {[1, 2, 3].map(s => (
-          <div key={s} className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-primary' : 'bg-muted'}`} />
-        ))}
+      <div className="space-y-2 mb-4">
+        <div className="flex gap-2">
+          {[1, 2, 3].map(s => (
+            <div key={s} className={`h-1 flex-1 rounded-full transition-colors ${s <= step ? 'bg-primary' : 'bg-muted'}`} />
+          ))}
+        </div>
+        <div className="flex justify-between">
+          {['Personal', 'Football', 'Parent'].map((label, i) => (
+            <span key={label} className={`text-[9px] uppercase tracking-wider ${i + 1 <= step ? 'text-primary' : 'text-white/22'}`}
+              style={{ fontFamily: "'DM Mono', monospace" }}>{label}</span>
+          ))}
+        </div>
       </div>
 
       {step === 1 && (
@@ -166,23 +188,23 @@ const PlayerOnboarding = () => {
           <Input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} className="bg-card" />
           <p className="text-xs text-muted-foreground">Date of Birth</p>
           <div className="grid grid-cols-3 gap-2">
-            <select value={dobDay} onChange={e => setDobDay(e.target.value)} className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+            <StyledSelect value={dobDay} onChange={e => setDobDay(e.target.value)}>
               <option value="">Day</option>
               {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
-            <select value={dobMonth} onChange={e => setDobMonth(e.target.value)} className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+            </StyledSelect>
+            <StyledSelect value={dobMonth} onChange={e => setDobMonth(e.target.value)}>
               <option value="">Month</option>
               {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-            <select value={dobYear} onChange={e => setDobYear(e.target.value)} className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+            </StyledSelect>
+            <StyledSelect value={dobYear} onChange={e => setDobYear(e.target.value)}>
               <option value="">Year</option>
               {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
+            </StyledSelect>
           </div>
-          <select value={nationality} onChange={e => setNationality(e.target.value)} className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+          <StyledSelect value={nationality} onChange={e => setNationality(e.target.value)}>
             <option value="">Select nationality</option>
             {EUROPEAN_COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+          </StyledSelect>
           <Input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="bg-card" />
           <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="bg-card" />
           <Input type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="bg-card" />
@@ -192,15 +214,15 @@ const PlayerOnboarding = () => {
 
       {step === 2 && (
         <>
-          <select value={position} onChange={e => setPosition(e.target.value)} className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+          <StyledSelect value={position} onChange={e => setPosition(e.target.value)}>
             <option value="">Select position</option>
             {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
+          </StyledSelect>
           <Input placeholder="Current club" value={club} onChange={e => setClub(e.target.value)} className="bg-card" />
-          <select value={ageGroup} onChange={e => setAgeGroup(e.target.value)} className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+          <StyledSelect value={ageGroup} onChange={e => setAgeGroup(e.target.value)}>
             <option value="">Select age group</option>
             {AGE_GROUPS.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
+          </StyledSelect>
           <Input type="number" placeholder="Shirt number (optional)" value={shirtNumber} onChange={e => setShirtNumber(e.target.value)} className="bg-card" />
           <div className="flex gap-2 mt-2">
             <Button variant="outline" onClick={() => setStep(1)} className="flex-1">Back</Button>
@@ -290,19 +312,27 @@ const CoachOnboarding = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-2 mb-2">
-        {[1, 2].map(s => (
-          <div key={s} className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-primary' : 'bg-muted'}`} />
-        ))}
+      <div className="space-y-2 mb-4">
+        <div className="flex gap-2">
+          {[1, 2].map(s => (
+            <div key={s} className={`h-1 flex-1 rounded-full transition-colors ${s <= step ? 'bg-primary' : 'bg-muted'}`} />
+          ))}
+        </div>
+        <div className="flex justify-between">
+          {['Personal', 'Club Details'].map((label, i) => (
+            <span key={label} className={`text-[9px] uppercase tracking-wider ${i + 1 <= step ? 'text-primary' : 'text-white/22'}`}
+              style={{ fontFamily: "'DM Mono', monospace" }}>{label}</span>
+          ))}
+        </div>
       </div>
 
       {step === 1 && (
         <>
           <Input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} className="bg-card" />
-          <select value={nationality} onChange={e => setNationality(e.target.value)} className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+          <StyledSelect value={nationality} onChange={e => setNationality(e.target.value)}>
             <option value="">Select nationality</option>
             {EUROPEAN_COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+          </StyledSelect>
           <Input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="bg-card" />
           <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="bg-card" />
           <Input type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="bg-card" />
@@ -314,10 +344,10 @@ const CoachOnboarding = () => {
         <>
           <Input placeholder="Current club" value={club} onChange={e => setClub(e.target.value)} className="bg-card" />
           <Input placeholder="Team name" value={team} onChange={e => setTeam(e.target.value)} className="bg-card" />
-          <select value={coachRole} onChange={e => setCoachRole(e.target.value)} className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+          <StyledSelect value={coachRole} onChange={e => setCoachRole(e.target.value)}>
             <option value="">Select role</option>
             {COACH_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
+          </StyledSelect>
           <div className="flex gap-2 mt-2">
             <Button variant="outline" onClick={() => setStep(1)} className="flex-1">Back</Button>
             <Button onClick={handleSubmit} disabled={loading} className="flex-1">
