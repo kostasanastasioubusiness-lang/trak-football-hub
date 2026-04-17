@@ -39,6 +39,11 @@ import ParentMatches from "./pages/parent/ParentMatches";
 import ParentGoals from "./pages/parent/ParentGoals";
 import ParentAlerts from "./pages/parent/ParentAlerts";
 
+// Club pages
+import ClubHome from "./pages/club/ClubHome";
+import ClubSquads from "./pages/club/ClubSquads";
+import ClubCoaches from "./pages/club/ClubCoaches";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -80,6 +85,11 @@ const App = () => (
             <Route path="/parent/matches" element={<RouteGuard allowedRole="parent"><ParentMatches /></RouteGuard>} />
             <Route path="/parent/goals" element={<RouteGuard allowedRole="parent"><ParentGoals /></RouteGuard>} />
             <Route path="/parent/alerts" element={<RouteGuard allowedRole="parent"><ParentAlerts /></RouteGuard>} />
+
+            {/* Club admin routes */}
+            <Route path="/club/home" element={<ClubHome />} />
+            <Route path="/club/squads" element={<ClubSquads />} />
+            <Route path="/club/coaches" element={<ClubCoaches />} />
 
             {/* Legacy redirects for old routes */}
             <Route path="/dashboard" element={<PlayerHome />} />
