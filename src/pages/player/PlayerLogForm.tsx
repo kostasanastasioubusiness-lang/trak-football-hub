@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, PillSelector, BandPreview, MetadataLabel } from '@/components/trak'
+import { MobileShell, PillSelector, BandPreview, MetadataLabel, NavBar } from '@/components/trak'
 import { computeMatchScore, scoreToBand } from '@/lib/rating-engine'
 import { trackEvent } from '@/lib/telemetry'
 import type { MatchInput, Position, Competition, Venue, CardType, BodyCondition, SelfRating } from '@/lib/types'
@@ -47,6 +47,7 @@ const POSITION_FIELDS: Record<string, typeof GK_FIELDS> = { gk: GK_FIELDS, def: 
 export default function PlayerLogForm() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [saving, setSaving] = useState(false)
   const [position, setPosition] = useState<Position>('att')
   const [competition, setCompetition] = useState<Competition>('league')
@@ -192,6 +193,7 @@ export default function PlayerLogForm() {
       </div>
 
       <BandPreview matchInput={buildMatchInput()} visible={filledCount >= 3} />
+      <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )
 }
