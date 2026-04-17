@@ -64,6 +64,7 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/onboarding/parent" element={<ParentOnboardingFlow />} />
             <Route path="/onboarding/:role" element={<OnboardingPage />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/parent-info" element={<ParentInfoPage />} />
             <Route path="/parent-invite" element={<ParentOnboarding />} />
 
