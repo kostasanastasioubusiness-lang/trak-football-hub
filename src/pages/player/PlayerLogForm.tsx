@@ -193,6 +193,7 @@ export default function PlayerLogForm() {
       </div>
 
       <BandPreview matchInput={buildMatchInput()} visible={filledCount >= 3} />
+      <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )
 }
