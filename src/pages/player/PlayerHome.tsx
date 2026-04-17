@@ -5,13 +5,22 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MatchCard, MetadataLabel, BandPill, TrakCard } from '@/components/trak'
 import { BANDS, type BandType } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
+import { getDailyMessage } from '@/lib/playerMessages'
+
+function getGreeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning,'
+  if (h < 18) return 'Good afternoon,'
+  return 'Good evening,'
+}
 
 export default function PlayerHome() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [matches, setMatches] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [playerDetails, setPlayerDetails] = useState<any>(null)
 
   useEffect(() => {
     if (!user) return
@@ -24,6 +33,12 @@ export default function PlayerHome() {
         setMatches(data || [])
         setLoading(false)
       })
+    supabase
+      .from('player_details')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => setPlayerDetails(data))
   }, [user])
 
   const getBandDistribution = () => {
@@ -57,13 +72,65 @@ export default function PlayerHome() {
   return (
     <MobileShell>
       <div className="pt-12 pb-4 space-y-6">
+        {/* Greeting */}
+        <div className="space-y-3">
+          <p className="text-xs text-white/45" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            {getGreeting()}
+          </p>
+          <h1
+            className="text-[32px] leading-[1.05] text-[rgba(255,255,255,0.92)]"
+            style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, letterSpacing: '-0.03em' }}
+          >
+            {profile?.full_name?.split(' ')[0] || 'Player'}
+          </h1>
+          {(playerDetails?.position || playerDetails?.current_club) && (
+            <div className="flex flex-wrap gap-2">
+              {playerDetails?.position && (
+                <span
+                  className="px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider bg-white/5 border border-white/10 text-white/70"
+                  style={{ fontFamily: "'DM Mono', monospace" }}
+                >
+                  {playerDetails.position}
+                </span>
+              )}
+              {playerDetails?.current_club && (
+                <span
+                  className="px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider bg-white/5 border border-white/10 text-white/70"
+                  style={{ fontFamily: "'DM Mono', monospace" }}
+                >
+                  {playerDetails.current_club}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Daily message */}
+        <div
+          className="bg-[#101012] border border-white/[0.07] border-l-[3px] border-l-[#C8F25A] px-4 py-3 space-y-1.5"
+          style={{ borderRadius: '0 14px 14px 0' }}
+        >
+          <p
+            className="text-[9px] uppercase tracking-wider text-white/45"
+            style={{ fontFamily: "'DM Mono', monospace" }}
+          >
+            Today
+          </p>
+          <p
+            className="text-[12px] italic leading-snug text-[rgba(255,255,255,0.78)]"
+            style={{ fontFamily: "'DM Sans', sans-serif" }}
+          >
+            {getDailyMessage()}
+          </p>
+        </div>
+
         <TrakCard elevated>
           <div className="space-y-4">
             <MetadataLabel text="THIS SEASON" />
             {matches.length > 0 ? (
               <>
-                <p className="text-[48px] leading-none" style={{
-                  fontFamily: "'DM Sans', sans-serif", fontWeight: 300,
+                <p className="text-[52px] leading-none" style={{
+                  fontFamily: "'DM Sans', sans-serif", fontWeight: 300, letterSpacing: '-0.04em',
                   color: BANDS.find(b => b.word.toLowerCase() === seasonBand)?.color
                 }}>
                   {BANDS.find(b => b.word.toLowerCase() === seasonBand)?.word}
