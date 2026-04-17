@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { RatingBandPill } from '@/lib/ratingBand';
+import { MentorCard } from '@/components/player/MentorCard';
 
 interface SeasonStats {
   matches: number;
@@ -58,12 +59,12 @@ const PlayerHome = () => {
         </div>
 
         {/* Hero Card */}
-        <div className="rounded-2xl p-[18px] mb-4 border border-border relative overflow-hidden bg-card">
+        <div className="rounded-2xl p-[18px] mb-3 border border-border relative overflow-hidden bg-card">
           <div className="flex items-center gap-3.5 mb-4">
             <div className="w-[54px] h-[54px] rounded-full flex items-center justify-center text-xl border-2 border-border flex-shrink-0 bg-secondary">
               {initials}
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h2 className="text-2xl text-foreground leading-tight">{profile.full_name}</h2>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-[11px] text-muted-foreground">
@@ -72,6 +73,12 @@ const PlayerHome = () => {
               </div>
             </div>
           </div>
+
+          {/* Daily mentor message — directly below player name */}
+          <div className="mb-4 -ml-[18px]" style={{ marginRight: 0 }}>
+            <MentorCard variant="daily" />
+          </div>
+
           <div className="grid grid-cols-4 gap-1.5">
             <StatBox label="Played" value={stats.matches} />
             <StatBox label="Goals" value={stats.goals} />
@@ -84,6 +91,11 @@ const PlayerHome = () => {
               <p className="section-label mt-1">Coach Avg</p>
             </div>
           </div>
+        </div>
+
+        {/* Weekly mentor tip — below hero */}
+        <div className="mb-4 -ml-[18px]">
+          <MentorCard variant="weekly" />
         </div>
 
         {/* Quick Actions */}
