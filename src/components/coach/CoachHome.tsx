@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { RatingBandPill } from '@/lib/ratingBand';
+import { PostMatchPrompt } from '@/components/coach/PostMatchPrompt';
 
 const CoachHome = () => {
   const { user, profile, signOut } = useAuth();
@@ -30,6 +31,11 @@ const CoachHome = () => {
   return (
     <div className="app-container flex flex-col min-h-screen">
       <div className="flex-1 px-[18px] pt-4 pb-24">
+        {/* Post-match prompt — sits at the top, above the hero */}
+        <div className="-ml-[18px]">
+          <PostMatchPrompt />
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
