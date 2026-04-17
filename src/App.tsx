@@ -12,6 +12,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import ParentInfoPage from "./pages/ParentInfoPage";
 import ParentOnboarding from "./pages/ParentOnboarding";
 import NotFound from "./pages/NotFound";
+import Settings from "./pages/Settings";
 
 // Player pages
 import PlayerHome from "./pages/player/PlayerHome";
