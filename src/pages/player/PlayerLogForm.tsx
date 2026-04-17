@@ -47,6 +47,7 @@ const POSITION_FIELDS: Record<string, typeof GK_FIELDS> = { gk: GK_FIELDS, def: 
 export default function PlayerLogForm() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [saving, setSaving] = useState(false)
   const [position, setPosition] = useState<Position>('att')
   const [competition, setCompetition] = useState<Competition>('league')
