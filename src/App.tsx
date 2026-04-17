@@ -23,6 +23,7 @@ import PlayerGoalsPage from "./pages/player/PlayerGoalsPage";
 import PlayerMedals from "./pages/player/PlayerMedals";
 import PlayerProfilePage from "./pages/player/PlayerProfilePage";
 import PlayerPassport from "./pages/player/PlayerPassport";
+import PlayerCard from "./pages/player/PlayerCard";
 
 // Coach pages
 import CoachHomePage from "./pages/coach/CoachHomePage";
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="/player/medals" element={<RouteGuard allowedRole="player"><PlayerMedals /></RouteGuard>} />
             <Route path="/player/profile" element={<RouteGuard allowedRole="player"><PlayerProfilePage /></RouteGuard>} />
             <Route path="/player/passport" element={<RouteGuard allowedRole="player"><PlayerPassport /></RouteGuard>} />
+            <Route path="/player/card" element={<RouteGuard allowedRole="player"><PlayerCard /></RouteGuard>} />
 
             {/* Coach routes */}
             <Route path="/coach/home" element={<RouteGuard allowedRole="coach"><CoachHomePage /></RouteGuard>} />
