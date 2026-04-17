@@ -73,12 +73,6 @@ const PlayerHome = () => {
               </div>
             </div>
           </div>
-
-          {/* Daily mentor message — directly below player name */}
-          <div className="mb-4 -ml-[18px]" style={{ marginRight: 0 }}>
-            <MentorCard variant="daily" />
-          </div>
-
           <div className="grid grid-cols-4 gap-1.5">
             <StatBox label="Played" value={stats.matches} />
             <StatBox label="Goals" value={stats.goals} />
@@ -93,8 +87,13 @@ const PlayerHome = () => {
           </div>
         </div>
 
-        {/* Weekly mentor tip — below hero */}
-        <div className="mb-4 -ml-[18px]">
+        {/* Daily mentor message — sits below the player name / hero */}
+        <div className="-ml-[18px] mb-3">
+          <MentorCard variant="daily" />
+        </div>
+
+        {/* Weekly mentor tip — below daily message */}
+        <div className="-ml-[18px] mb-5">
           <MentorCard variant="weekly" />
         </div>
 
