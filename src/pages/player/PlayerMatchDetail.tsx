@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { MobileShell, BandPill, MetadataLabel, TrakCard } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
 import { ChevronLeft } from 'lucide-react'
+import { MatchDetailExtras } from '@/components/player/MatchDetailExtras'
 
 export default function PlayerMatchDetail() {
   const { id } = useParams()
@@ -39,6 +40,12 @@ export default function PlayerMatchDetail() {
             <div className="flex justify-between"><MetadataLabel text="Assists" /><span className="text-sm text-white/88">{match.assists}</span></div>
           </div>
         </TrakCard>
+
+        <MatchDetailExtras
+          matchId={match.id}
+          selfRating={match.self_rating}
+          note={(match as any).private_note}
+        />
       </div>
     </MobileShell>
   )
