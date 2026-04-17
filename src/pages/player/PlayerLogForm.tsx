@@ -108,7 +108,18 @@ export default function PlayerLogForm() {
   return (
     <MobileShell>
       <div className="pt-8 pb-32 space-y-6">
-        <h1 className="text-2xl font-light text-[rgba(255,255,255,0.88)]" style={{ fontFamily: "'DM Sans', sans-serif" }}>Log Match</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/player/home')}
+            className="p-2 -ml-2 rounded-full text-white/60 hover:text-white/90 hover:bg-white/5 transition-colors"
+            aria-label="Back to home"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m15 18-6-6 6-6"/>
+            </svg>
+          </button>
+          <h1 className="text-2xl font-light text-[rgba(255,255,255,0.88)]" style={{ fontFamily: "'DM Sans', sans-serif" }}>Log Match</h1>
+        </div>
 
         <PillSelector label="Position" options={[
           { label: 'GK', value: 'gk' }, { label: 'DEF', value: 'def' },
