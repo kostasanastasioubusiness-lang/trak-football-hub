@@ -34,6 +34,7 @@ import CoachAddSession from "./pages/coach/CoachAddSession";
 import CoachProfilePage from "./pages/coach/CoachProfilePage";
 import CoachPlayerProfilePage from "./pages/coach/CoachPlayerProfilePage";
 import CoachRecognition from "./pages/coach/CoachRecognition";
+import CoachQuickAssess from "./pages/coach/CoachQuickAssess";
 
 // Parent pages
 import ParentHome from "./pages/parent/ParentHome";
@@ -83,6 +84,7 @@ const App = () => (
             <Route path="/coach/profile" element={<RouteGuard allowedRole="coach"><CoachProfilePage /></RouteGuard>} />
             <Route path="/coach/player/:id" element={<RouteGuard allowedRole="coach"><CoachPlayerProfilePage /></RouteGuard>} />
             <Route path="/coach/recognition" element={<RouteGuard allowedRole="coach"><CoachRecognition /></RouteGuard>} />
+            <Route path="/coach/quick-assess" element={<RouteGuard allowedRole="coach"><CoachQuickAssess /></RouteGuard>} />
 
             {/* Parent routes */}
             <Route path="/parent/home" element={<RouteGuard allowedRole="parent"><ParentHome /></RouteGuard>} />
