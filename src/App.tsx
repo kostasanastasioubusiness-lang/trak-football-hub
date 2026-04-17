@@ -42,6 +42,7 @@ import ParentHome from "./pages/parent/ParentHome";
 import ParentMatches from "./pages/parent/ParentMatches";
 import ParentGoals from "./pages/parent/ParentGoals";
 import ParentAlerts from "./pages/parent/ParentAlerts";
+import ParentOnboardingFlow from "./pages/parent/ParentOnboardingFlow";
 
 // Club pages
 import ClubHome from "./pages/club/ClubHome";
@@ -60,6 +61,7 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/onboarding/parent" element={<ParentOnboardingFlow />} />
             <Route path="/onboarding/:role" element={<OnboardingPage />} />
             <Route path="/parent-info" element={<ParentInfoPage />} />
             <Route path="/parent-invite" element={<ParentOnboarding />} />
