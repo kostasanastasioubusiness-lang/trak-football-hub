@@ -5,6 +5,14 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MatchCard, MetadataLabel, BandPill, TrakCard } from '@/components/trak'
 import { BANDS, type BandType } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
+import { getDailyMessage } from '@/lib/playerMessages'
+
+function getGreeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning,'
+  if (h < 18) return 'Good afternoon,'
+  return 'Good evening,'
+}
 
 export default function PlayerHome() {
   const { user } = useAuth()
