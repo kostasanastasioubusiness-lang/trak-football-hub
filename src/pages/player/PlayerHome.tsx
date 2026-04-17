@@ -15,11 +15,12 @@ function getGreeting(): string {
 }
 
 export default function PlayerHome() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [matches, setMatches] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [playerDetails, setPlayerDetails] = useState<any>(null)
 
   useEffect(() => {
     if (!user) return
@@ -32,6 +33,12 @@ export default function PlayerHome() {
         setMatches(data || [])
         setLoading(false)
       })
+    supabase
+      .from('player_details')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => setPlayerDetails(data))
   }, [user])
 
   const getBandDistribution = () => {
