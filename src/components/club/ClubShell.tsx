@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { ClubNavBar } from './ClubNavBar'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '@/integrations/supabase/client'
 
 export function ClubShell({ children }: { children: ReactNode }) {
   return (
@@ -43,11 +45,34 @@ export function ClubCard({ children, className = '' }: { children: ReactNode; cl
 }
 
 export function ClubHeader({ club = 'Panetolikos FC', coaches = 3 }: { club?: string; coaches?: number }) {
+  const navigate = useNavigate()
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    navigate('/', { replace: true })
+  }
   return (
     <div className="mb-6">
-      <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: 28, color: 'rgba(255,255,255,0.88)' }}>
-        {club}
-      </h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: 28, color: 'rgba(255,255,255,0.88)' }}>
+          {club}
+        </h1>
+        <button
+          onClick={handleSignOut}
+          className="flex-shrink-0 px-3 py-1.5 rounded-[8px] transition-colors hover:bg-white/[0.06]"
+          style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: 10,
+            fontWeight: 500,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'rgba(255,255,255,0.45)',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          Sign out
+        </button>
+      </div>
       <div className="mt-3 flex gap-2">
         <Pill label="Pilot Active" accent />
         <Pill label={`${coaches} Coaches`} />
