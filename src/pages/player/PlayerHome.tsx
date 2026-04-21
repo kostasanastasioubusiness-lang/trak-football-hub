@@ -207,6 +207,79 @@ export default function PlayerHome() {
           )}
         </div>
 
+        {/* Evolution Card teaser */}
+        <button
+          onClick={() => navigate('/player/evolution')}
+          className="w-full mt-3.5 relative overflow-hidden text-left rounded-[16px] p-4 flex items-center gap-3"
+          style={{
+            background: 'linear-gradient(135deg, #101012 0%, #0f0f14 100%)',
+            border: '1px solid rgba(200,242,90,0.18)',
+          }}
+        >
+          <div
+            className="absolute -bottom-[40px] -right-[40px] w-[160px] h-[160px] rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.10) 0%, transparent 70%)' }}
+          />
+          <div
+            className="flex items-center justify-center relative z-10"
+            style={{
+              width: 44, height: 44, borderRadius: 12,
+              background: '#0A0A0B',
+              border: '1px solid rgba(200,242,90,0.25)',
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 300, fontSize: 18, color: '#C8F25A',
+            }}
+          >
+            ◆
+          </div>
+          <div className="relative z-10 flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span
+                style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontWeight: 500, fontSize: 14, color: '#FFFFFF',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                Evolution Card
+              </span>
+              <span
+                className="px-1.5 py-0.5"
+                style={{
+                  borderRadius: 999,
+                  background: 'rgba(200,242,90,0.12)',
+                  border: '1px solid rgba(200,242,90,0.3)',
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 8, letterSpacing: '0.16em',
+                  textTransform: 'uppercase', color: '#C8F25A',
+                }}
+              >
+                NEW
+              </span>
+            </div>
+            <p
+              className="mt-0.5"
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 12, color: 'rgba(255,255,255,0.55)',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              See your card · 2 evolutions in progress
+            </p>
+          </div>
+          <span
+            className="relative z-10"
+            style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 9, letterSpacing: '0.18em',
+              textTransform: 'uppercase', color: 'rgba(200,242,90,0.7)',
+            }}
+          >
+            OPEN →
+          </span>
+        </button>
+
         {/* Stats grid */}
         {matches.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mt-3.5">
