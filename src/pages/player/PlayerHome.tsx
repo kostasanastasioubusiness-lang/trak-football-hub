@@ -284,41 +284,6 @@ export default function PlayerHome() {
           </div>
         )}
 
-        {/* Latest Coach Assessment */}
-        {coachAssessment && (
-          <div className="mt-5 rounded-[18px] p-4"
-            style={{ background: 'rgba(200,242,90,0.04)', border: '1px solid rgba(200,242,90,0.14)' }}>
-            <div className="flex items-center justify-between mb-3">
-              <MetadataLabel text="LATEST COACH ASSESSMENT" />
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] text-white/25" style={{ fontFamily: "'DM Mono', monospace" }}>
-                  {coachName || 'Coach'}
-                </span>
-                <BandPill band={scoreToBand((coachAssessment.work_rate + coachAssessment.tactical + coachAssessment.attitude + coachAssessment.technical + coachAssessment.physical + coachAssessment.coachability) / 6)} />
-              </div>
-            </div>
-            {[
-              { label: 'Work Rate', val: coachAssessment.work_rate },
-              { label: 'Tactical',  val: coachAssessment.tactical  },
-              { label: 'Attitude',  val: coachAssessment.attitude  },
-              { label: 'Technical', val: coachAssessment.technical },
-              { label: 'Physical',  val: coachAssessment.physical  },
-              { label: 'Coachability', val: coachAssessment.coachability },
-            ].map(({ label, val }) => (
-              <div key={label} className="flex items-center gap-2 mb-1.5">
-                <span className="text-[10px] text-white/35 w-20 flex-shrink-0" style={{ fontFamily: "'DM Mono', monospace" }}>{label}</span>
-                <div className="flex-1 h-1.5 rounded-full bg-white/[0.06]">
-                  <div className="h-full rounded-full" style={{ width: `${(val / 10) * 100}%`, background: 'rgba(200,242,90,0.7)' }} />
-                </div>
-                <span className="text-[10px] text-white/50 w-4 text-right">{val}</span>
-              </div>
-            ))}
-            {coachAssessment.private_note && (
-              <p className="text-[11px] text-white/40 mt-2.5 italic" style={{ fontFamily: "'DM Sans', sans-serif" }}>"{coachAssessment.private_note}"</p>
-            )}
-          </div>
-        )}
-
         {/* Recent Matches */}
         {recentMatches.length > 0 && (
           <div className="mt-5">
