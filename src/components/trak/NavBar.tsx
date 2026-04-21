@@ -19,12 +19,14 @@ function getNavItems(role: Role): NavItem[] {
     { label: 'Squad', path: '/coach/squad', emoji: '\u{1F465}' },
     { label: 'Sessions', path: '/coach/sessions', emoji: '\u{1F4C5}' },
     { label: 'Assess', path: '/coach/assess', emoji: '\u{2B50}' },
+    { label: 'Profile', path: '/coach/profile', emoji: '\u{1F464}' },
   ]
   return [
     { label: 'Home', path: '/parent/home', emoji: '\u{1F3E0}' },
     { label: 'Matches', path: '/parent/matches', emoji: '\u{26BD}' },
     { label: 'Goals', path: '/parent/goals', emoji: '\u{1F3AF}' },
     { label: 'Alerts', path: '/parent/alerts', emoji: '\u{1F514}' },
+    { label: 'Settings', path: '/settings', emoji: '\u{2699}\u{FE0F}' },
   ]
 }
 
