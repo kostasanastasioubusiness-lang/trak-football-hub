@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { IconRolePlayer, IconRoleCoach, IconRoleParent } from '@/components/icons/TrakIcons';
+import { IconRolePlayer, IconRoleCoach, IconRoleParent, IconRoleClub } from '@/components/icons/TrakIcons';
 
 const IS_DEV = import.meta.env.DEV;
 
@@ -13,6 +13,7 @@ const DEV_ACCOUNTS = [
   { role: 'coach',  label: 'Coach',  email: 'coach@trak.dev',  color: 'hsl(40,78%,60%)' },
   { role: 'player', label: 'Player', email: 'player@trak.dev', color: '#C8F25A' },
   { role: 'parent', label: 'Parent', email: 'parent@trak.dev', color: 'hsl(214,60%,57%)' },
+  { role: 'club',   label: 'Admin',  email: 'club@trak.dev',   color: 'rgba(255,255,255,0.7)' },
 ] as const;
 
 const DEV_PASSWORD = 'TrakDev123';
@@ -36,6 +37,8 @@ const LandingPage = () => {
   const handleRoleSelect = (role: string) => {
     if (role === 'parent') {
       navigate('/parent-info');
+    } else if (role === 'club') {
+      navigate('/club/home');
     } else {
       navigate(`/onboarding/${role}`);
     }
@@ -83,6 +86,14 @@ const LandingPage = () => {
               bg="rgba(74,222,128,0.08)"
               border="rgba(74,222,128,0.18)"
               onClick={() => handleRoleSelect('parent')}
+            />
+            <RoleCard
+              icon={<IconRoleClub size={28} />}
+              name="Administrator"
+              desc="Read-only academy overview across all coaches and squads"
+              bg="rgba(255,255,255,0.04)"
+              border="rgba(255,255,255,0.12)"
+              onClick={() => handleRoleSelect('club')}
             />
           </div>
 
@@ -171,6 +182,10 @@ const DevLoginPanel = () => {
   const [busyRole, setBusyRole] = useState<string | null>(null);
 
   const loginAs = async (account: typeof DEV_ACCOUNTS[number]) => {
+    if (account.role === 'club') {
+      navigate('/club/home', { replace: true });
+      return;
+    }
     setBusyRole(account.role);
     await supabase.auth.signOut();
     const { error } = await signIn(account.email, DEV_PASSWORD);
@@ -190,13 +205,13 @@ const DevLoginPanel = () => {
           style={{ fontFamily: "'DM Mono', monospace" }}>Dev quick-login</span>
         <div className="flex-1 h-px bg-white/[0.07]" />
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {DEV_ACCOUNTS.map(account => (
           <button
             key={account.role}
             onClick={() => loginAs(account)}
             disabled={busyRole !== null}
-            className="rounded-[10px] py-3 text-center text-[12px] font-semibold transition-opacity disabled:opacity-50"
+            className="rounded-[10px] py-3 text-center text-[11px] font-semibold transition-opacity disabled:opacity-50"
             style={{
               background: 'rgba(255,255,255,0.04)',
               border: `1.5px solid rgba(255,255,255,0.08)`,
