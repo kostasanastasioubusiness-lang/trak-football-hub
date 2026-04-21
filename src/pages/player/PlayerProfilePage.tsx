@@ -37,7 +37,7 @@ export default function PlayerProfilePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [details, setDetails] = useState<any>(null)
-  const [stats, setStats] = useState({ matches: 0, goals: 0, assists: 0, medals: 0 })
+  const [stats, setStats] = useState({ matches: 0, goals: 0, assists: 0 })
   const [assessment, setAssessment] = useState<any>(null)
   const [matchHistory, setMatchHistory] = useState<{ created_at: string; computed_rating: number }[]>([])
   const [trendFilter, setTrendFilter] = useState<TrendFilter>('all')
@@ -53,7 +53,6 @@ export default function PlayerProfilePage() {
         matches: data.length,
         goals: data.reduce((s, m) => s + (m.goals || 0), 0),
         assists: data.reduce((s, m) => s + (m.assists || 0), 0),
-        medals: 0,
       })
       setMatchHistory(data.map((m) => ({ created_at: m.created_at, computed_rating: m.computed_rating })))
 
@@ -190,7 +189,7 @@ export default function PlayerProfilePage() {
         {/* Season Summary */}
         <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
           <MetadataLabel text="SEASON SUMMARY" />
-          <div className="grid grid-cols-2 gap-2 mt-3">
+          <div className="grid grid-cols-3 gap-2 mt-3">
             <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
               <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif" }}>{stats.matches}</p>
               <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Matches</span>
@@ -202,10 +201,6 @@ export default function PlayerProfilePage() {
             <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
               <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif" }}>{stats.assists}</p>
               <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Assists</span>
-            </div>
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
-              <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif" }}>{stats.medals}</p>
-              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Medals</span>
             </div>
           </div>
         </div>
