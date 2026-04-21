@@ -182,6 +182,10 @@ const DevLoginPanel = () => {
   const [busyRole, setBusyRole] = useState<string | null>(null);
 
   const loginAs = async (account: typeof DEV_ACCOUNTS[number]) => {
+    if (account.role === 'club') {
+      navigate('/club/home', { replace: true });
+      return;
+    }
     setBusyRole(account.role);
     await supabase.auth.signOut();
     const { error } = await signIn(account.email, DEV_PASSWORD);
@@ -201,13 +205,13 @@ const DevLoginPanel = () => {
           style={{ fontFamily: "'DM Mono', monospace" }}>Dev quick-login</span>
         <div className="flex-1 h-px bg-white/[0.07]" />
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {DEV_ACCOUNTS.map(account => (
           <button
             key={account.role}
             onClick={() => loginAs(account)}
             disabled={busyRole !== null}
-            className="rounded-[10px] py-3 text-center text-[12px] font-semibold transition-opacity disabled:opacity-50"
+            className="rounded-[10px] py-3 text-center text-[11px] font-semibold transition-opacity disabled:opacity-50"
             style={{
               background: 'rgba(255,255,255,0.04)',
               border: `1.5px solid rgba(255,255,255,0.08)`,
