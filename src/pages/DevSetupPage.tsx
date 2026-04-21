@@ -95,7 +95,7 @@ export default function DevSetupPage() {
         { team_score: 3, opponent_score: 2, opponent: 'Park City',        competition: 'League',  venue: 'Home', minutes_played: 90, goals: 0, assists: 1, self_rating: 8, body_condition: 'good',      card_received: 'None',   created_at: new Date(now - 50  * 86400000).toISOString() },
         { team_score: 2, opponent_score: 0, opponent: 'West United',      competition: 'League',  venue: 'Away', minutes_played: 85, goals: 1, assists: 0, self_rating: 7, body_condition: 'good',      card_received: 'None',   created_at: new Date(now - 57  * 86400000).toISOString() },
         { team_score: 1, opponent_score: 4, opponent: 'Crestwood FC',     competition: 'League',  venue: 'Away', minutes_played: 90, goals: 0, assists: 0, self_rating: 5, body_condition: 'tired',     card_received: 'None',   created_at: new Date(now - 64  * 86400000).toISOString() },
-      ].map(m => ({ ...m, user_id: playerId, position: 'CM', age_group: 'U15' }))
+      ].map(m => ({ ...m, self_rating: String(m.self_rating), user_id: playerId, position: 'CM', age_group: 'U15' }))
       await supabase.from('matches').insert(matches)
       update('Seed 10 matches', 'done')
 
