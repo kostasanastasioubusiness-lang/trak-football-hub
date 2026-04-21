@@ -27,7 +27,7 @@ function getNavItems(role: Role): NavItem[] {
     { label: 'Home', path: '/player/home', Icon: IconHome },
     { label: 'Log', path: '/player/logchoose', Icon: IconLog },
     { label: 'Goals', path: '/player/goals', Icon: IconGoals },
-    { label: 'Medals', path: '/player/medals', Icon: IconRecognition },
+    { label: 'Card', path: '/player/evolution', Icon: IconRecognition },
     { label: 'Profile', path: '/player/profile', Icon: IconProfile },
   ]
   if (role === 'coach') return [

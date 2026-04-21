@@ -7,7 +7,7 @@ import { scoreToBand } from '@/lib/rating-engine'
 
 interface Alert {
   id: string
-  type: 'new_match' | 'coach_assessment' | 'medal'
+  type: 'new_match' | 'coach_assessment'
   title: string
   description: string
   date: string
