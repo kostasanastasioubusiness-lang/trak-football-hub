@@ -137,7 +137,7 @@ export default function CoachQuickAssess() {
     if (!user || !currentPlayer || saving) return
     setSaving(true)
 
-    await supabase.from('coach_assessments').insert({
+    await supabase.from('coach_assessments').insert([{
       coach_user_id: user.id,
       squad_player_id: currentPlayer.id,
       session_id: null,
@@ -150,8 +150,7 @@ export default function CoachQuickAssess() {
       coachability,
       coach_rating: Math.round(avg * 10) / 10,
       private_note: note || null,
-      self_rating_flag: null,
-    })
+    }])
 
     setAssessedIds(prev => new Set(prev).add(currentPlayer.id))
     setSaving(false)

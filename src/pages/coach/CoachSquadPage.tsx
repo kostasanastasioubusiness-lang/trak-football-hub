@@ -30,15 +30,15 @@ export default function CoachSquadPage() {
     // Fetch latest assessment per player for band display
     supabase
       .from('coach_assessments')
-      .select('player_id, overall_score, created_at')
+      .select('squad_player_id, coach_rating, created_at')
       .eq('coach_user_id', user.id)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (!data) return
         const latest: Record<string, number> = {}
         for (const a of data) {
-          if (!latest[a.player_id]) {
-            latest[a.player_id] = a.overall_score
+          if (a.squad_player_id && latest[a.squad_player_id] === undefined && a.coach_rating != null) {
+            latest[a.squad_player_id] = Number(a.coach_rating)
           }
         }
         setAssessments(latest)
