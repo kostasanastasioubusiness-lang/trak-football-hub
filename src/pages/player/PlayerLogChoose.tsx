@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { MobileShell, NavBar } from '@/components/trak'
 import { ChevronLeft } from 'lucide-react'
+import { IconMatch } from '@/components/icons/TrakIcons'
 
 export default function PlayerLogChoose() {
   const navigate = useNavigate()
@@ -24,6 +25,7 @@ export default function PlayerLogChoose() {
       <div className="flex-1 flex flex-col justify-center py-6 gap-4">
         <button onClick={() => navigate('/player/log')}
           className="w-full bg-[#101012] border border-[rgba(200,242,90,0.18)] rounded-[24px] p-7 text-left active:scale-[0.98] transition-transform">
+          <div className="mb-3"><IconMatch size={32} color="#C8F25A" /></div>
           <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-[#C8F25A] block mb-3"
             style={{ fontFamily: "'DM Mono', monospace" }}>
             Match

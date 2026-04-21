@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, BandPill, MetadataLabel } from '@/components/trak'
+import { IconMatch } from '@/components/icons/TrakIcons'
 import { CardSkeleton, MatchCardSkeleton, Skeleton } from '@/components/trak'
 import { BANDS, type BandType } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
@@ -330,7 +331,7 @@ export default function PlayerHome() {
                 return (
                   <button key={m.id} onClick={() => navigate(`/player/match/${m.id}`)}
                     className="flex items-center gap-3 py-[13px] w-full border-b border-white/[0.04] last:border-b-0">
-                    <div className="w-[34px] h-[34px] rounded-[10px] bg-white/[0.04] flex items-center justify-center text-[15px] flex-shrink-0">⚽</div>
+                    <div className="w-[34px] h-[34px] rounded-[10px] bg-white/[0.04] flex items-center justify-center flex-shrink-0"><IconMatch size={18} /></div>
                     <div className="flex-1 text-left">
                       <p className="text-[13px] font-medium text-white/88">{m.competition || 'Match'}</p>
                       <p className="text-[9px] text-white/22 mt-[3px] tracking-[0.04em]" style={{ fontFamily: "'DM Mono', monospace" }}>

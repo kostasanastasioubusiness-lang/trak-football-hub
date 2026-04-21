@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
+import { IconGoals } from '@/components/icons/TrakIcons'
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   performance: { bg: 'rgba(200,242,90,0.12)', text: '#C8F25A' },
@@ -114,7 +115,7 @@ export default function PlayerGoalsPage() {
         {/* Add goal CTA */}
         <button onClick={() => navigate('/player/goals/add')}
           className="w-full rounded-[18px] py-6 border border-dashed border-white/[0.08] bg-white/[0.02] text-center active:scale-[0.98] transition-transform">
-          <span className="text-2xl block mb-2">🎯</span>
+          <span className="block mb-2 flex justify-center"><IconGoals size={24} /></span>
           <span className="text-[13px] font-medium text-white/45 block">Add a goal</span>
           <span className="text-[11px] text-white/22 block mt-1">What do you want to achieve this season?</span>
         </button>

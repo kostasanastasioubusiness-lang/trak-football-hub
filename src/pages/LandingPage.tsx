@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { CircleDot, ClipboardList, Users } from 'lucide-react';
+import { IconRolePlayer, IconRoleCoach, IconRoleParent } from '@/components/icons/TrakIcons';
 
 const IS_DEV = import.meta.env.DEV;
 
@@ -61,24 +61,27 @@ const LandingPage = () => {
 
           <div className="flex flex-col gap-2.5 w-full">
             <RoleCard
-              icon={<CircleDot size={24} className="text-[#C8F25A]" />}
+              icon={<IconRolePlayer size={28} />}
               name="Player"
               desc="Track your career, log matches, earn medals and set goals"
-              colorClass="bg-primary/20"
+              bg="rgba(200,242,90,0.08)"
+              border="rgba(200,242,90,0.18)"
               onClick={() => handleRoleSelect('player')}
             />
             <RoleCard
-              icon={<ClipboardList size={24} className="text-[hsl(40,78%,60%)]" />}
+              icon={<IconRoleCoach size={28} />}
               name="Coach"
               desc="Manage your squad, track attendance and assess players"
-              colorClass="bg-gold/15"
+              bg="rgba(96,165,250,0.08)"
+              border="rgba(96,165,250,0.18)"
               onClick={() => handleRoleSelect('coach')}
             />
             <RoleCard
-              icon={<Users size={24} className="text-[hsl(214,60%,57%)]" />}
+              icon={<IconRoleParent size={28} />}
               name="Parent"
               desc="Follow your child's development, see both ratings and progress"
-              colorClass="bg-training-blue/15"
+              bg="rgba(74,222,128,0.08)"
+              border="rgba(74,222,128,0.18)"
               onClick={() => handleRoleSelect('parent')}
             />
           </div>
@@ -99,14 +102,17 @@ const LandingPage = () => {
   );
 };
 
-const RoleCard = ({ icon, name, desc, colorClass, onClick }: {
-  icon: React.ReactNode; name: string; desc: string; colorClass: string; onClick: () => void;
+const RoleCard = ({ icon, name, desc, bg, border, onClick }: {
+  icon: React.ReactNode; name: string; desc: string; bg: string; border: string; onClick: () => void;
 }) => (
   <button
     onClick={onClick}
     className="group w-full bg-card border border-border rounded-2xl p-[18px] flex items-center gap-4 text-left transition-all active:scale-[0.98] hover:border-primary/30"
   >
-    <div className={`w-[52px] h-[52px] rounded-[14px] flex items-center justify-center flex-shrink-0 ${colorClass}`}>
+    <div
+      className="w-[52px] h-[52px] rounded-[14px] flex items-center justify-center flex-shrink-0"
+      style={{ background: bg, border: `1px solid ${border}` }}
+    >
       {icon}
     </div>
     <div className="flex-1">

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { IconAlerts } from '@/components/icons/TrakIcons';
 
 const ParentOnboarding = () => {
   const [searchParams] = useSearchParams();
@@ -39,7 +40,7 @@ const ParentOnboarding = () => {
     return (
       <div className="app-container flex flex-col items-center justify-center px-6 py-12 min-h-screen">
         <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
-          <span className="text-3xl">⚠️</span>
+          <IconAlerts size={28} color="hsl(var(--destructive))" />
         </div>
         <h1 className="text-2xl text-foreground mb-4">Invalid Invite</h1>
         <p className="text-muted-foreground text-center text-sm mb-6">
