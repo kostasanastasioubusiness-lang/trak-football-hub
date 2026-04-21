@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
+import { IconMatch } from '@/components/icons/TrakIcons'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import { trackEvent } from '@/lib/telemetry'
@@ -146,7 +147,7 @@ export default function PlayerProfilePage() {
       <div className="pt-3.5 pb-4 space-y-2.5">
         {/* Avatar + Identity */}
         <div className="text-center mb-6">
-          <div className="w-[72px] h-[72px] rounded-[22px] bg-[#202024] border border-[rgba(200,242,90,0.18)] mx-auto mb-3 flex items-center justify-center text-[32px]">⚽</div>
+          <div className="w-[72px] h-[72px] rounded-[22px] bg-[#202024] border border-[rgba(200,242,90,0.18)] mx-auto mb-3 flex items-center justify-center"><IconMatch size={32} color="#C8F25A" /></div>
           <p className="text-[20px] font-semibold text-white/88 tracking-tight" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
             {profile?.full_name}
           </p>

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
+import { IconAward } from '@/components/icons/TrakIcons'
 import { checkMedalEligibility } from '@/lib/medals'
 import { scoreToBand } from '@/lib/rating-engine'
 import type { MedalType } from '@/lib/types'
@@ -112,7 +113,7 @@ export default function PlayerMedals() {
         {latestMedal && (
           <div className="flex items-center gap-3.5 p-4 rounded-[18px]"
             style={{ background: 'rgba(200,242,90,0.06)', border: '1px solid rgba(200,242,90,0.18)' }}>
-            <span className="text-[32px]">⭐</span>
+            <IconAward size={32} color="#C8F25A" />
             <div>
               <p className="text-[15px] font-semibold text-[#C8F25A]">{latestMedal} unlocked!</p>
               <p className="text-[11px] text-white/45 mt-[3px]">Keep it up.</p>
