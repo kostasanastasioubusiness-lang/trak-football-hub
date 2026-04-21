@@ -25,7 +25,6 @@ import PlayerResult from "./pages/player/PlayerResult";
 import PlayerMatches from "./pages/player/PlayerMatches";
 import PlayerMatchDetail from "./pages/player/PlayerMatchDetail";
 import PlayerGoalsPage from "./pages/player/PlayerGoalsPage";
-import PlayerMedals from "./pages/player/PlayerMedals";
 import PlayerAddGoal from "./pages/player/PlayerAddGoal";
 import PlayerProfilePage from "./pages/player/PlayerProfilePage";
 import PlayerPassport from "./pages/player/PlayerPassport";
@@ -87,7 +86,6 @@ const App = () => (
             <Route path="/player/match/:id" element={<RouteGuard allowedRole="player"><PlayerMatchDetail /></RouteGuard>} />
             <Route path="/player/goals" element={<RouteGuard allowedRole="player"><PlayerGoalsPage /></RouteGuard>} />
             <Route path="/player/goals/add" element={<RouteGuard allowedRole="player"><PlayerAddGoal /></RouteGuard>} />
-            <Route path="/player/medals" element={<RouteGuard allowedRole="player"><PlayerMedals /></RouteGuard>} />
             <Route path="/player/profile" element={<RouteGuard allowedRole="player"><PlayerProfilePage /></RouteGuard>} />
             <Route path="/player/passport" element={<RouteGuard allowedRole="player"><PlayerPassport /></RouteGuard>} />
             <Route path="/player/card" element={<RouteGuard allowedRole="player"><PlayerCard /></RouteGuard>} />
