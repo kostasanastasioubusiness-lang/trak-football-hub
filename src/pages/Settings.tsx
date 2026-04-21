@@ -239,7 +239,10 @@ export default function Settings() {
 
         {/* Sign out */}
         <button
-          onClick={() => signOut()}
+          onClick={async () => {
+            await signOut()
+            navigate('/', { replace: true })
+          }}
           className="w-full py-3 rounded-lg mt-2"
           style={{
             background: 'transparent',
