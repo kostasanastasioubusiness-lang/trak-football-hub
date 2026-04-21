@@ -1,10 +1,10 @@
 import { NavLink } from 'react-router-dom'
-import { Shield, Users, Clipboard } from 'lucide-react'
+import { IconOverview, IconSquad, IconCoaches } from '@/components/icons/TrakIcons'
 
 const tabs = [
-  { to: '/club/home', label: 'Overview', Icon: Shield },
-  { to: '/club/squads', label: 'Squads', Icon: Users },
-  { to: '/club/coaches', label: 'Coaches', Icon: Clipboard },
+  { to: '/club/home', label: 'Overview', Icon: IconOverview },
+  { to: '/club/squads', label: 'Squads', Icon: IconSquad },
+  { to: '/club/coaches', label: 'Coaches', Icon: IconCoaches },
 ]
 
 export function ClubNavBar() {
@@ -24,7 +24,7 @@ export function ClubNavBar() {
               <>
                 <Icon
                   size={20}
-                  style={{ color: isActive ? '#C8F25A' : 'rgba(255,255,255,0.45)' }}
+                  color={isActive ? '#C8F25A' : 'rgba(255,255,255,0.45)'}
                 />
                 <span
                   style={{

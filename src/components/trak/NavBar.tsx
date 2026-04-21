@@ -1,32 +1,48 @@
 import type { Role } from '@/lib/types'
+import {
+  IconHome,
+  IconLog,
+  IconGoals,
+  IconRecognition,
+  IconProfile,
+  IconSquad,
+  IconSessions,
+  IconAssess,
+  IconMatch,
+  IconAlerts,
+  ACTIVE_COLOR,
+  DEFAULT_COLOR,
+} from '@/components/icons/TrakIcons'
+
+type IconComponent = (props: { size?: number; color?: string }) => JSX.Element
 
 interface NavItem {
   label: string
   path: string
-  emoji: string
+  Icon: IconComponent
 }
 
 function getNavItems(role: Role): NavItem[] {
   if (role === 'player') return [
-    { label: 'Home', path: '/player/home', emoji: '\u{1F3E0}' },
-    { label: 'Log', path: '/player/logchoose', emoji: '\u{270F}\u{FE0F}' },
-    { label: 'Goals', path: '/player/goals', emoji: '\u{1F3AF}' },
-    { label: 'Medals', path: '/player/medals', emoji: '\u{1F3C5}' },
-    { label: 'Profile', path: '/player/profile', emoji: '\u{1F464}' },
+    { label: 'Home', path: '/player/home', Icon: IconHome },
+    { label: 'Log', path: '/player/logchoose', Icon: IconLog },
+    { label: 'Goals', path: '/player/goals', Icon: IconGoals },
+    { label: 'Medals', path: '/player/medals', Icon: IconRecognition },
+    { label: 'Profile', path: '/player/profile', Icon: IconProfile },
   ]
   if (role === 'coach') return [
-    { label: 'Home', path: '/coach/home', emoji: '\u{1F3E0}' },
-    { label: 'Squad', path: '/coach/squad', emoji: '\u{1F465}' },
-    { label: 'Sessions', path: '/coach/sessions', emoji: '\u{1F4C5}' },
-    { label: 'Assess', path: '/coach/assess', emoji: '\u{2B50}' },
-    { label: 'Profile', path: '/coach/profile', emoji: '\u{1F464}' },
+    { label: 'Home', path: '/coach/home', Icon: IconHome },
+    { label: 'Squad', path: '/coach/squad', Icon: IconSquad },
+    { label: 'Sessions', path: '/coach/sessions', Icon: IconSessions },
+    { label: 'Assess', path: '/coach/assess', Icon: IconAssess },
+    { label: 'Profile', path: '/coach/profile', Icon: IconProfile },
   ]
   return [
-    { label: 'Home', path: '/parent/home', emoji: '\u{1F3E0}' },
-    { label: 'Matches', path: '/parent/matches', emoji: '\u{26BD}' },
-    { label: 'Goals', path: '/parent/goals', emoji: '\u{1F3AF}' },
-    { label: 'Alerts', path: '/parent/alerts', emoji: '\u{1F514}' },
-    { label: 'Settings', path: '/settings', emoji: '\u{2699}\u{FE0F}' },
+    { label: 'Home', path: '/parent/home', Icon: IconHome },
+    { label: 'Matches', path: '/parent/matches', Icon: IconMatch },
+    { label: 'Goals', path: '/parent/goals', Icon: IconGoals },
+    { label: 'Alerts', path: '/parent/alerts', Icon: IconAlerts },
+    { label: 'Settings', path: '/settings', Icon: IconProfile },
   ]
 }
 
@@ -50,19 +66,18 @@ export function NavBar({ role, activeTab, onNavigate }: NavBarProps) {
     >
       {items.map(item => {
         const isActive = activeTab === item.path
+        const Icon = item.Icon
         return (
           <button
             key={item.path}
             onClick={() => onNavigate(item.path)}
-            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all relative"
+            className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all relative"
             style={{
               background: isActive ? 'rgba(200,242,90,0.06)' : 'transparent',
               minWidth: 52,
             }}
           >
-            <span className="text-[16px] leading-none" style={{ filter: isActive ? 'none' : 'grayscale(1) opacity(0.4)' }}>
-              {item.emoji}
-            </span>
+            <Icon size={20} color={isActive ? ACTIVE_COLOR : DEFAULT_COLOR} />
             <span
               style={{
                 fontFamily: "'DM Mono', monospace",
