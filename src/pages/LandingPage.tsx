@@ -90,7 +90,7 @@ const LandingPage = () => {
             Already have an account? <span className="text-primary font-semibold">Sign in</span>
           </button>
 
-          {IS_DEV && <DevLoginPanel />}
+          <DevLoginPanel />
         </>
       ) : (
         <LoginForm onBack={() => setLoginMode(false)} />

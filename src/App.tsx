@@ -66,7 +66,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          {import.meta.env.DEV && <DevSwitcher />}
+          <DevSwitcher />
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
