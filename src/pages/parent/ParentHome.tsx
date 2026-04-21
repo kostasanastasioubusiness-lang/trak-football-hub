@@ -49,16 +49,20 @@ export default function ParentHome() {
       const { data: goalData } = await supabase.from('player_goals').select('*').eq('user_id', childId).eq('completed', false)
       if (goalData) setGoals(goalData)
 
-      // Fetch latest coach assessment
-      const { data: assessments } = await supabase.from('coach_assessments')
-        .select('*')
-        .eq('player_user_id', childId)
-        .order('assessed_at', { ascending: false })
-        .limit(1)
-      if (assessments?.length) {
-        setAssessment(assessments[0])
-        const { data: coachProfile } = await supabase.from('profiles').select('full_name').eq('user_id', assessments[0].coach_user_id).single()
-        if (coachProfile) setCoachName(coachProfile.full_name)
+      // Fetch latest coach assessment via squad_players link
+      const { data: squadRows } = await supabase.from('squad_players')
+        .select('id').eq('linked_player_id', childId)
+      if (squadRows?.length) {
+        const { data: assessments } = await supabase.from('coach_assessments')
+          .select('*')
+          .in('squad_player_id', squadRows.map((r: any) => r.id))
+          .order('created_at', { ascending: false })
+          .limit(1)
+        if (assessments?.length) {
+          setAssessment(assessments[0])
+          const { data: coachProfile } = await supabase.from('profiles').select('full_name').eq('user_id', assessments[0].coach_user_id).single()
+          if (coachProfile) setCoachName(coachProfile.full_name)
+        }
       }
 
       setLoading(false)
@@ -357,8 +361,8 @@ export default function ParentHome() {
                       className="text-[9px] text-white/22 mt-0.5 tracking-[0.04em]"
                       style={{ fontFamily: "'DM Mono', monospace" }}
                     >
-                      {assessment.assessed_at
-                        ? new Date(assessment.assessed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                      {assessment.created_at
+                        ? new Date(assessment.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                         : ''}
                     </p>
                   </div>
@@ -400,12 +404,12 @@ export default function ParentHome() {
                   ))}
                 </div>
 
-                {assessment.note && (
+                {assessment.private_note && (
                   <p
                     className="text-[11px] text-white/45 mt-4 italic leading-relaxed"
                     style={{ fontFamily: "'DM Sans', sans-serif" }}
                   >
-                    "{assessment.note}"
+                    "{assessment.private_note}"
                   </p>
                 )}
               </div>

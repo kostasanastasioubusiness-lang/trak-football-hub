@@ -3,10 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel, BandPill } from '@/components/trak'
+import { toast } from 'sonner'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import { calculateSquadAnalytics, type SquadAnalytics } from '@/lib/squad-analytics'
 import { trackEvent } from '@/lib/telemetry'
+import { generateCode } from '@/lib/invite-codes'
 
 const BAND_COLORS: Record<string, string> = {
   exceptional: '#C8F25A',
@@ -58,8 +60,14 @@ export default function CoachHomePage() {
     supabase.from('coach_details').select('current_club, team, coach_role').eq('user_id', user.id).maybeSingle()
       .then(({ data }) => setCoachDetails(data))
     supabase.from('profiles').select('invite_code').eq('user_id', user.id).maybeSingle()
-      .then(({ data }) => {
-        if (data?.invite_code) setInviteCode(data.invite_code)
+      .then(async ({ data }) => {
+        if (data?.invite_code) {
+          setInviteCode(`TRK-${data.invite_code}`)
+        } else {
+          const newCode = generateCode()
+          await supabase.from('profiles').update({ invite_code: newCode }).eq('user_id', user.id)
+          setInviteCode(`TRK-${newCode}`)
+        }
       })
   }, [user])
 
@@ -107,13 +115,6 @@ export default function CoachHomePage() {
           >
             TRAK
           </span>
-          <button
-            onClick={() => navigate('/')}
-            className="text-[10px] font-medium tracking-[0.08em] uppercase px-2.5 py-1 rounded-full border border-white/[0.07] text-white/30 active:scale-95 transition-transform"
-            style={{ fontFamily: "'DM Mono', monospace" }}
-          >
-            Switch
-          </button>
         </div>
 
         {/* Identity section */}
@@ -326,8 +327,12 @@ export default function CoachHomePage() {
               Sessions
             </span>
           </button>
-          <div
-            className="rounded-[10px] p-[11px_8px] text-center border"
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(inviteCode)
+              toast.success('Code copied!')
+            }}
+            className="rounded-[10px] p-[11px_8px] text-center border active:scale-95 transition-transform"
             style={{
               background: 'rgba(200,242,90,0.06)',
               borderColor: 'rgba(200,242,90,0.2)',
@@ -348,9 +353,9 @@ export default function CoachHomePage() {
               className="text-[8px] font-medium tracking-[0.1em] uppercase mt-[5px] block"
               style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.22)' }}
             >
-              My Code
+              Tap to copy
             </span>
-          </div>
+          </button>
         </div>
 
         {/* Quick Assess CTA */}

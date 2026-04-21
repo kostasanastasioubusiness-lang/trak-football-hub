@@ -43,6 +43,9 @@ import CoachPlayerProfilePage from "./pages/coach/CoachPlayerProfilePage";
 import CoachRecognition from "./pages/coach/CoachRecognition";
 import CoachAwardPlayer from "./pages/coach/CoachAwardPlayer";
 import CoachQuickAssess from "./pages/coach/CoachQuickAssess";
+import CoachAwardPlayer from "./pages/coach/CoachAwardPlayer"
+import DevSetupPage from "./pages/DevSetupPage"
+import { DevSwitcher } from "./components/trak/DevSwitcher";
 
 // Parent pages
 import ParentHome from "./pages/parent/ParentHome";

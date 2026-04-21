@@ -114,6 +114,7 @@ const PlayerOnboarding = () => {
   const [shirtNumber, setShirtNumber] = useState('');
 
   const [parentEmail, setParentEmail] = useState('');
+  const [coachCode, setCoachCode] = useState('');
 
   const handleStep1 = () => {
     if (!name || !dobDay || !dobMonth || !dobYear || !nationality || !email || !password || !confirmPassword) {
@@ -153,6 +154,7 @@ const PlayerOnboarding = () => {
           shirt_number: shirtNumber ? parseInt(shirtNumber, 10) : null,
         },
         parent_email: parentEmail || null,
+        coach_invite_code: coachCode.trim() || null,
       };
 
       const { user, error } = await signUp(email, password, pendingProfile);
@@ -234,7 +236,17 @@ const PlayerOnboarding = () => {
       {step === 3 && (
         <>
           <p className="text-sm text-muted-foreground mb-2">
-            Want to invite a parent to follow your journey? Enter their email below (optional).
+            Have a coach invite code? Enter it to link with your coach (optional).
+          </p>
+          <Input
+            placeholder="Coach code e.g. TRK-AB2K (optional)"
+            value={coachCode}
+            onChange={e => setCoachCode(e.target.value.toUpperCase())}
+            className="bg-card"
+            maxLength={8}
+          />
+          <p className="text-sm text-muted-foreground mt-3 mb-2">
+            Want to invite a parent? Enter their email below (optional).
           </p>
           <Input type="email" placeholder="Parent's email (optional)" value={parentEmail} onChange={e => setParentEmail(e.target.value)} className="bg-card" />
           <div className="flex gap-2 mt-2">

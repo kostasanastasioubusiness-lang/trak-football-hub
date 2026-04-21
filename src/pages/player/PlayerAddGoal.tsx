@@ -6,11 +6,11 @@ import { supabase } from '@/integrations/supabase/client'
 import { MobileShell, MetadataLabel, TrakCard } from '@/components/trak'
 
 const GOAL_TEMPLATES = [
-  { title: 'Log 10 matches', description: 'Track your first 10 matches to build a picture of your game.', target_value: 10, goal_type: 'matches_logged' },
-  { title: 'Reach Standout band', description: 'Push your average rating into the Standout performance band.', target_value: 1, goal_type: 'reach_band' },
-  { title: 'Score 5 goals', description: 'Find the net 5 times across your logged matches.', target_value: 5, goal_type: 'goals_scored' },
-  { title: 'Play 500 minutes', description: 'Accumulate 500 minutes of match time on the pitch.', target_value: 500, goal_type: 'minutes_played' },
-  { title: 'Get 3 assists', description: 'Set up 3 goals for your teammates.', target_value: 3, goal_type: 'assists_made' },
+  { title: 'Log 10 matches', description: 'Track your first 10 matches to build a picture of your game.', target_value: 10, goal_type: 'matches_logged', category: 'consistency' },
+  { title: 'Reach Standout band', description: 'Push your average rating into the Standout performance band.', target_value: 1, goal_type: 'reach_band', category: 'development' },
+  { title: 'Score 5 goals', description: 'Find the net 5 times across your logged matches.', target_value: 5, goal_type: 'goals_scored', category: 'performance' },
+  { title: 'Play 500 minutes', description: 'Accumulate 500 minutes of match time on the pitch.', target_value: 500, goal_type: 'minutes_played', category: 'consistency' },
+  { title: 'Get 3 assists', description: 'Set up 3 goals for your teammates.', target_value: 3, goal_type: 'assists_made', category: 'performance' },
 ]
 
 export default function PlayerAddGoal() {
@@ -25,7 +25,9 @@ export default function PlayerAddGoal() {
       user_id: user.id,
       goal_type: template.goal_type,
       target_value: template.target_value,
-      status: 'active',
+      category: template.category,
+      current_value: 0,
+      completed: false,
     })
     navigate('/player/goals')
   }

@@ -9,6 +9,7 @@ import { BANDS } from '@/lib/types'
 import type { BandType, SelfRatingFlag } from '@/lib/types'
 import { trackEvent } from '@/lib/telemetry'
 import { ChevronLeft, ChevronDown } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 
 /* ---------- helpers ---------- */
 
@@ -56,11 +57,12 @@ function OptPill({
 export default function CoachAssessPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   /* --- data --- */
   const [players, setPlayers] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
-  const [playerId, setPlayerId] = useState('')
+  const [playerId, setPlayerId] = useState((location.state as any)?.preselectedPlayerId || '')
   const [sessionId, setSessionId] = useState('')
   const [appearance, setAppearance] = useState<'started' | 'sub' | 'training'>('started')
   const [workRate, setWorkRate] = useState(5)
@@ -121,9 +123,8 @@ export default function CoachAssessPage() {
       technical,
       physical,
       coachability,
-      coach_rating: Math.round(avg * 10) / 10,
       private_note: note || null,
-      self_rating_flag: selfRatingFlag || null,
+      flag: selfRatingFlag || null,
     })
     trackEvent('assessment', { player_id: playerId, band })
     navigate('/coach/home')

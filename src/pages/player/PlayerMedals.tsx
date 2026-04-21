@@ -21,6 +21,10 @@ const AWARD_LABELS: Record<string, { label: string; emoji: string }> = {
   player_of_month: { label: 'Player of the Month', emoji: '🥇' },
   most_improved:   { label: 'Most Improved',        emoji: '📈' },
   top_scorer:      { label: 'Top Scorer',           emoji: '⚽' },
+  player_of_week: { label: 'Player of the Week', emoji: '🏆' },
+  player_of_month: { label: 'Player of the Month', emoji: '🥇' },
+  most_improved: { label: 'Most Improved', emoji: '📈' },
+  top_scorer: { label: 'Top Scorer', emoji: '⚽' },
 }
 
 export default function PlayerMedals() {
@@ -57,6 +61,8 @@ export default function PlayerMedals() {
         if (!squadRows?.length) return
         const { data: awardData } = await supabase.from('recognition_awards')
           .select('*').in('squad_player_id', squadRows.map((r: any) => r.id))
+          .select('*')
+          .in('squad_player_id', squadRows.map((r: any) => r.id))
           .order('created_at', { ascending: false })
         if (awardData?.length) {
           setAwards(awardData)
@@ -97,6 +103,19 @@ export default function PlayerMedals() {
                     {a.note && <p className="text-[11px] text-white/45 mt-1 italic">"{a.note}"</p>}
                   </div>
                   <span className="text-[9px] text-white/22 flex-shrink-0" style={{ fontFamily: "'DM Mono', monospace" }}>
+                    {a.awarded_for && (
+                      <p className="text-[10px] text-white/45 mt-0.5">{a.awarded_for}</p>
+                    )}
+                    <p className="text-[9px] text-white/22 mt-0.5 tracking-[0.04em]"
+                      style={{ fontFamily: "'DM Mono', monospace" }}>
+                      From {awardCoachNames[a.coach_user_id] || 'Coach'}
+                    </p>
+                    {a.note && (
+                      <p className="text-[11px] text-white/45 mt-1 italic">"{a.note}"</p>
+                    )}
+                  </div>
+                  <span className="text-[9px] text-white/22 flex-shrink-0"
+                    style={{ fontFamily: "'DM Mono', monospace" }}>
                     {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                   </span>
                 </div>

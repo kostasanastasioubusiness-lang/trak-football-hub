@@ -107,6 +107,7 @@ export default function PlayerLogForm() {
       goals: Number(posInputs.goals?.replace('+', '')) || 0,
       assists: Number(posInputs.assists?.replace('+', '')) || 0,
       computed_rating: computed,
+      opponent: opponent || null,
     }).select().single()
 
     if (data) {

@@ -50,25 +50,30 @@ export default function ParentAlerts() {
         })
       }
 
-      // Fetch recent coach assessments
-      const { data: assessments } = await supabase.from('coach_assessments')
-        .select('id, assessed_at, overall_band, coach_user_id')
-        .eq('player_user_id', childId)
-        .order('assessed_at', { ascending: false })
-        .limit(10)
+      // Fetch recent coach assessments via squad_players link
+      const { data: squadRows } = await supabase.from('squad_players')
+        .select('id').eq('linked_player_id', childId)
+      if (squadRows?.length) {
+        const { data: assessments } = await supabase.from('coach_assessments')
+          .select('id, created_at, coach_user_id, work_rate, tactical, attitude, technical, physical, coachability')
+          .in('squad_player_id', squadRows.map((r: any) => r.id))
+          .order('created_at', { ascending: false })
+          .limit(10)
 
-      if (assessments) {
-        for (const a of assessments) {
-          const aDate = new Date(a.assessed_at)
-          const { data: coachProfile } = await supabase.from('profiles').select('full_name').eq('user_id', a.coach_user_id).single()
-          generated.push({
-            id: `assess-${a.id}`,
-            type: 'coach_assessment',
-            title: 'New coach assessment',
-            description: `by ${coachProfile?.full_name || 'Coach'} \u00B7 ${a.overall_band || 'Steady'}`,
-            date: a.assessed_at,
-            isNew: aDate > cutoff,
-          })
+        if (assessments) {
+          for (const a of assessments) {
+            const aDate = new Date(a.created_at)
+            const avgScore = (a.work_rate + a.tactical + a.attitude + a.technical + a.physical + a.coachability) / 6
+            const { data: coachProfile } = await supabase.from('profiles').select('full_name').eq('user_id', a.coach_user_id).single()
+            generated.push({
+              id: `assess-${a.id}`,
+              type: 'coach_assessment',
+              title: 'New coach assessment',
+              description: `by ${coachProfile?.full_name || 'Coach'} \u00B7 ${scoreToBand(avgScore).charAt(0).toUpperCase() + scoreToBand(avgScore).slice(1)}`,
+              date: a.created_at,
+              isNew: aDate > cutoff,
+            })
+          }
         }
       }
 

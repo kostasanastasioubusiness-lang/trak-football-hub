@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { generateCode } from '@/lib/invite-codes';
 import type { User } from '@supabase/supabase-js';
 
 type UserRole = 'player' | 'coach' | 'parent';
@@ -22,6 +23,7 @@ interface PendingProfileData {
     coach_role: string;
   };
   parent_email?: string | null;
+  coach_invite_code?: string | null;
 }
 
 interface Profile {
@@ -66,6 +68,7 @@ const parsePendingProfile = (value: unknown): PendingProfileData | null => {
     player_details: data.player_details as PendingProfileData['player_details'] | undefined,
     coach_details: data.coach_details as PendingProfileData['coach_details'] | undefined,
     parent_email: typeof data.parent_email === 'string' ? data.parent_email : null,
+    coach_invite_code: typeof data.coach_invite_code === 'string' ? data.coach_invite_code : null,
   };
 };
 
@@ -133,6 +136,33 @@ async function writeProfileFromPendingData(userId: string, data: PendingProfileD
       coach_role: cd.coach_role,
     }, { onConflict: 'user_id' });
     if (coachError) throw coachError;
+
+    // Generate invite code for this coach if not already set
+    const { data: existingProfile } = await supabase
+      .from('profiles').select('invite_code').eq('user_id', userId).single();
+    if (!existingProfile?.invite_code) {
+      const newCode = generateCode();
+      await supabase.from('profiles').update({ invite_code: newCode }).eq('user_id', userId);
+    }
+  }
+
+  if (data.role === 'player' && data.coach_invite_code) {
+    const rawCode = data.coach_invite_code.replace(/^TRK-/i, '').toUpperCase();
+    const { data: coachProfile } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .eq('invite_code', rawCode)
+      .eq('role', 'coach')
+      .maybeSingle();
+    if (coachProfile) {
+      await supabase.from('squad_players').insert({
+        coach_user_id: coachProfile.user_id,
+        player_name: data.full_name,
+        position: data.player_details?.position || null,
+        shirt_number: data.player_details?.shirt_number || null,
+        linked_player_id: userId,
+      });
+    }
   }
 
   const { data: newProfile } = await supabase

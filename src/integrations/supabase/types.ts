@@ -161,6 +161,7 @@ export type Database = {
           goals: number
           id: string
           minutes_played: number
+          opponent: string | null
           opponent_score: number
           position: string
           self_rating: string | null
@@ -179,6 +180,7 @@ export type Database = {
           goals?: number
           id?: string
           minutes_played?: number
+          opponent?: string | null
           opponent_score?: number
           position: string
           self_rating?: string | null
@@ -197,6 +199,7 @@ export type Database = {
           goals?: number
           id?: string
           minutes_played?: number
+          opponent?: string | null
           opponent_score?: number
           position?: string
           self_rating?: string | null
@@ -303,21 +306,30 @@ export type Database = {
       }
       player_goals: {
         Row: {
+          category: string | null
+          completed: boolean | null
           created_at: string | null
+          current_value: number | null
           goal_type: string
           id: string
           target_value: number
           user_id: string
         }
         Insert: {
+          category?: string | null
+          completed?: boolean | null
           created_at?: string | null
+          current_value?: number | null
           goal_type: string
           id?: string
           target_value: number
           user_id: string
         }
         Update: {
+          category?: string | null
+          completed?: boolean | null
           created_at?: string | null
+          current_value?: number | null
           goal_type?: string
           id?: string
           target_value?: number
@@ -351,6 +363,7 @@ export type Database = {
           created_at: string | null
           full_name: string
           id: string
+          invite_code: string | null
           nationality: string | null
           role: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -359,6 +372,7 @@ export type Database = {
           created_at?: string | null
           full_name: string
           id?: string
+          invite_code?: string | null
           nationality?: string | null
           role: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -367,11 +381,50 @@ export type Database = {
           created_at?: string | null
           full_name?: string
           id?: string
+          invite_code?: string | null
           nationality?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           user_id?: string
         }
         Relationships: []
+      }
+      recognition_awards: {
+        Row: {
+          award_type: string
+          awarded_for: string | null
+          coach_user_id: string
+          created_at: string | null
+          id: string
+          note: string | null
+          squad_player_id: string
+        }
+        Insert: {
+          award_type: string
+          awarded_for?: string | null
+          coach_user_id: string
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          squad_player_id: string
+        }
+        Update: {
+          award_type?: string
+          awarded_for?: string | null
+          coach_user_id?: string
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          squad_player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recognition_awards_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       session_attendance: {
         Row: {

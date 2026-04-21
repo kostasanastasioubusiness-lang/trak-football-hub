@@ -7,6 +7,16 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { CircleDot, ClipboardList, Users } from 'lucide-react';
 
+const IS_DEV = import.meta.env.DEV;
+
+const DEV_ACCOUNTS = [
+  { role: 'coach',  label: 'Coach',  email: 'coach@trak.dev',  color: 'hsl(40,78%,60%)' },
+  { role: 'player', label: 'Player', email: 'player@trak.dev', color: '#C8F25A' },
+  { role: 'parent', label: 'Parent', email: 'parent@trak.dev', color: 'hsl(214,60%,57%)' },
+] as const;
+
+const DEV_PASSWORD = 'TrakDev123';
+
 const LandingPage = () => {
   const navigate = useNavigate();
   const [loginMode, setLoginMode] = useState(false);
@@ -79,6 +89,8 @@ const LandingPage = () => {
           >
             Already have an account? <span className="text-primary font-semibold">Sign in</span>
           </button>
+
+          {IS_DEV && <DevLoginPanel />}
         </>
       ) : (
         <LoginForm onBack={() => setLoginMode(false)} />
@@ -144,6 +156,57 @@ const LoginForm = ({ onBack }: { onBack: () => void }) => {
         ← Back to role selection
       </button>
     </form>
+  );
+};
+
+const DevLoginPanel = () => {
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+  const [busyRole, setBusyRole] = useState<string | null>(null);
+
+  const loginAs = async (account: typeof DEV_ACCOUNTS[number]) => {
+    setBusyRole(account.role);
+    await supabase.auth.signOut();
+    const { error } = await signIn(account.email, DEV_PASSWORD);
+    if (error) {
+      toast.error(`Dev login failed: ${error.message}`);
+      setBusyRole(null);
+    } else {
+      navigate(`/${account.role}/home`, { replace: true });
+    }
+  };
+
+  return (
+    <div className="mt-10 w-full">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="flex-1 h-px bg-white/[0.07]" />
+        <span className="text-[9px] font-medium tracking-[0.12em] text-white/25 uppercase"
+          style={{ fontFamily: "'DM Mono', monospace" }}>Dev quick-login</span>
+        <div className="flex-1 h-px bg-white/[0.07]" />
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {DEV_ACCOUNTS.map(account => (
+          <button
+            key={account.role}
+            onClick={() => loginAs(account)}
+            disabled={busyRole !== null}
+            className="rounded-[10px] py-3 text-center text-[12px] font-semibold transition-opacity disabled:opacity-50"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: `1.5px solid rgba(255,255,255,0.08)`,
+              color: account.color,
+            }}
+          >
+            {busyRole === account.role ? '...' : account.label}
+          </button>
+        ))}
+      </div>
+      <button onClick={() => navigate('/dev-setup')}
+        className="w-full text-[9px] text-white/25 hover:text-white/50 text-center mt-2 transition-colors"
+        style={{ fontFamily: "'DM Mono', monospace" }}>
+        First time? Run setup → /dev-setup
+      </button>
+    </div>
   );
 };
 

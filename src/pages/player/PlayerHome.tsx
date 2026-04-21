@@ -6,7 +6,6 @@ import { MobileShell, NavBar, BandPill, MetadataLabel } from '@/components/trak'
 import { CardSkeleton, MatchCardSkeleton, Skeleton } from '@/components/trak'
 import { BANDS, type BandType } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
-import { calculateStreak } from '@/lib/streaks'
 import { trackEvent } from '@/lib/telemetry'
 
 export default function PlayerHome() {
@@ -33,6 +32,10 @@ export default function PlayerHome() {
         const { data: assessments } = await supabase.from('coach_assessments')
           .select('*').in('squad_player_id', squadRows.map((r: any) => r.id))
           .order('created_at', { ascending: false }).limit(1)
+          .select('*')
+          .in('squad_player_id', squadRows.map((r: any) => r.id))
+          .order('created_at', { ascending: false })
+          .limit(1)
         if (assessments?.length) {
           setCoachAssessment(assessments[0])
           const { data: cp } = await supabase.from('profiles').select('full_name').eq('user_id', assessments[0].coach_user_id).single()
@@ -77,23 +80,6 @@ export default function PlayerHome() {
   })
   const isImproving = trendMatches.length >= 2 &&
     (trendMatches[trendMatches.length - 1]?.computed_rating || 0) > (trendMatches[0]?.computed_rating || 0)
-
-  // Streak
-  const streak = calculateStreak(matches)
-  const isAtRisk = streak.isActive && streak.current > 0 && !matches.some(m => {
-    const d = new Date(m.created_at)
-    const now = new Date()
-    const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7))
-    startOfWeek.setHours(0, 0, 0, 0)
-    return d >= startOfWeek
-  })
-
-  useEffect(() => {
-    if (streak.current > 0 || streak.best > 0) {
-      trackEvent('streak_viewed', { current: streak.current, best: streak.best })
-    }
-  }, [streak.current, streak.best])
 
   // Band summary abbreviations
   const bandAbbrev = [
@@ -238,34 +224,62 @@ export default function PlayerHome() {
           </div>
         )}
 
-        {/* Streak Badge */}
-        {(streak.current > 0 || streak.best > 0) && (
-          <div className="mt-3.5 flex items-center gap-2.5">
-            {streak.isActive ? (
-              <div className="flex items-center gap-2 rounded-[10px] py-[9px] px-3.5"
-                style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.12)' }}>
-                <span className="text-[18px] leading-none">&#x1F525;</span>
-                <span className="text-[15px] font-medium leading-none"
-                  style={{ fontFamily: "'DM Sans', sans-serif", color: '#C8F25A', letterSpacing: '-0.01em' }}>
-                  {streak.current} {streak.current === 1 ? 'week' : 'weeks'}
-                </span>
-                {isAtRisk && (
-                  <span className="text-[9px] font-medium tracking-[0.04em] text-[#C8F25A]/60 ml-1"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>
-                    Keep your streak alive!
-                  </span>
+        {/* Coach Assessment */}
+        {coachAssessment && (
+          <div className="mt-5">
+            <MetadataLabel text="LATEST COACH ASSESSMENT" />
+            <div className="relative rounded-[24px] p-5 mt-2.5 overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, #101012 0%, #0f0f12 100%)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="absolute -bottom-[40px] -right-[40px] w-[160px] h-[160px] rounded-full pointer-events-none"
+                style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.06) 0%, transparent 70%)' }} />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-[13px] font-medium text-white/88">{coachName || 'Coach'}</p>
+                    <p className="text-[9px] text-white/22 mt-0.5 tracking-[0.04em]"
+                      style={{ fontFamily: "'DM Mono', monospace" }}>
+                      {new Date(coachAssessment.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                  <BandPill band={scoreToBand(
+                    (coachAssessment.work_rate + coachAssessment.tactical + coachAssessment.attitude +
+                     coachAssessment.technical + coachAssessment.physical + coachAssessment.coachability) / 6
+                  )} />
+                </div>
+                <div className="space-y-3 mt-4">
+                  {[
+                    { label: 'Work Rate', score: coachAssessment.work_rate },
+                    { label: 'Tactical', score: coachAssessment.tactical },
+                    { label: 'Attitude', score: coachAssessment.attitude },
+                    { label: 'Technical', score: coachAssessment.technical },
+                    { label: 'Physical', score: coachAssessment.physical },
+                    { label: 'Coachability', score: coachAssessment.coachability },
+                  ].map(cat => (
+                    <div key={cat.label} className="flex items-center gap-2">
+                      <span className="w-[90px] flex-shrink-0 text-[9px] font-medium tracking-[0.12em] uppercase text-white/45"
+                        style={{ fontFamily: "'DM Mono', monospace" }}>{cat.label}</span>
+                      <div className="flex-1 h-1.5 rounded-full bg-[#202024] overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${((cat.score || 5) / 10) * 100}%`,
+                            backgroundColor: BANDS.find(b => b.word.toLowerCase() === scoreToBand(cat.score || 5))?.color,
+                          }} />
+                      </div>
+                      <span className="text-[11px] flex-shrink-0 w-[72px] text-right"
+                        style={{ color: BANDS.find(b => b.word.toLowerCase() === scoreToBand(cat.score || 5))?.color }}>
+                        {BANDS.find(b => b.word.toLowerCase() === scoreToBand(cat.score || 5))?.word}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {coachAssessment.private_note && (
+                  <p className="text-[11px] text-white/45 mt-4 italic leading-relaxed"
+                    style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                    "{coachAssessment.private_note}"
+                  </p>
                 )}
               </div>
-            ) : (
-              <div className="flex items-center gap-2 rounded-[10px] py-[9px] px-3.5"
-                style={{ background: 'rgba(0,0,0,0.35)' }}>
-                <span className="text-[18px] leading-none opacity-40">&#x1F525;</span>
-                <span className="text-[13px] font-medium leading-none text-white/22"
-                  style={{ fontFamily: "'DM Mono', monospace", letterSpacing: '0.02em' }}>
-                  Best: {streak.best}
-                </span>
-              </div>
-            )}
+            </div>
           </div>
         )}
 
