@@ -32,8 +32,9 @@ export default function CoachSessionsPage() {
       <div className="flex items-center justify-between px-5 py-[10px] border-b border-white/[0.07] shrink-0">
         <h1 className="text-[15px] font-semibold text-white/90">Sessions</h1>
         <button
-          onClick={() => navigate('/coach/sessions/add')}
+          onClick={() => navigate('/coach/sessions')}
           className="flex items-center justify-center w-8 h-8 rounded-[9px] bg-[#C8F25A] active:scale-95 transition-transform"
+          aria-label="New session"
         >
           <Plus size={16} className="text-black" strokeWidth={2.5} />
         </button>
