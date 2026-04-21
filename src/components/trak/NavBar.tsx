@@ -25,8 +25,7 @@ interface NavItem {
 function getNavItems(role: Role): NavItem[] {
   if (role === 'player') return [
     { label: 'Home', path: '/player/home', Icon: IconHome },
-    { label: 'Log', path: '/player/logchoose', Icon: IconLog },
-    { label: 'Goals', path: '/player/goals', Icon: IconGoals },
+    { label: 'Matches', path: '/player/matches', Icon: IconMatch },
     { label: 'Card', path: '/player/evolution', Icon: IconRecognition },
     { label: 'Profile', path: '/player/profile', Icon: IconProfile },
   ]
@@ -40,7 +39,6 @@ function getNavItems(role: Role): NavItem[] {
   return [
     { label: 'Home', path: '/parent/home', Icon: IconHome },
     { label: 'Matches', path: '/parent/matches', Icon: IconMatch },
-    { label: 'Goals', path: '/parent/goals', Icon: IconGoals },
     { label: 'Alerts', path: '/parent/alerts', Icon: IconAlerts },
     { label: 'Settings', path: '/settings', Icon: IconProfile },
   ]
