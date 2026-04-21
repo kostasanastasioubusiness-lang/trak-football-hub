@@ -6,6 +6,7 @@ const DEV_ACCOUNTS = [
   { role: 'coach',  label: 'Coach',  email: 'coach@trak.dev',  color: 'hsl(40,78%,60%)' },
   { role: 'player', label: 'Player', email: 'player@trak.dev', color: '#C8F25A' },
   { role: 'parent', label: 'Parent', email: 'parent@trak.dev', color: 'hsl(214,60%,57%)' },
+  { role: 'club',   label: 'Admin',  email: 'club@trak.dev',   color: 'rgba(255,255,255,0.7)' },
 ] as const
 
 export function DevSwitcher() {
@@ -15,6 +16,13 @@ export function DevSwitcher() {
 
   const switchTo = async (account: typeof DEV_ACCOUNTS[number]) => {
     setBusy(account.role)
+    if (account.role === 'club') {
+      await supabase.auth.signOut()
+      setOpen(false)
+      setBusy(null)
+      navigate('/club/home', { replace: true })
+      return
+    }
     await supabase.auth.signOut()
     const { error } = await supabase.auth.signInWithPassword({
       email: account.email,
