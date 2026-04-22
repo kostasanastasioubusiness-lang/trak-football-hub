@@ -1,4 +1,4 @@
-import React, { forwardRef, type SVGProps } from 'react'
+import React, { forwardRef } from 'react'
 
 interface IconProps {
   size?: number
@@ -6,62 +6,65 @@ interface IconProps {
   className?: string
 }
 
+const defaultColor = 'rgba(255,255,255,0.45)'
+const activeColor = '#C8F25A'
+
 type SvgRender = (p: { size: number; color: string; className?: string }) => React.ReactElement
 
 function makeIcon(defaults: { size?: number; color?: string }, render: SvgRender) {
-  return forwardRef<SVGSVGElement, IconProps>(function Icon(
+  const Inner = forwardRef<SVGSVGElement, IconProps>(function Icon(
     { size = defaults.size ?? 22, color = defaults.color ?? defaultColor, className },
     _ref,
   ) {
     return render({ size, color, className })
   })
+  // Cast to a plain function-component signature so existing IconComponent
+  // typings (which expect JSX.Element returns) keep working.
+  return Inner as unknown as (props: IconProps) => JSX.Element
 }
 
-const defaultColor = 'rgba(255,255,255,0.45)'
-const activeColor = '#C8F25A'
-
-export const IconHome = ({ size = 22, color = defaultColor, className }: IconProps) => (
+export const IconHome = makeIcon({}, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <path d="M2 9.5L11 2L20 9.5V20H14.5V14H7.5V20H2V9.5Z" stroke={color} strokeWidth="1.5" strokeLinejoin="round"/>
   </svg>
-)
+))
 
-export const IconLog = ({ size = 22, color = defaultColor, className }: IconProps) => (
+export const IconLog = makeIcon({}, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <rect x="2" y="2" width="18" height="18" rx="4" stroke={color} strokeWidth="1.5"/>
     <path d="M11 7V15M7 11H15" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
-)
+))
 
-export const IconGoals = ({ size = 22, color = defaultColor, className }: IconProps) => (
+export const IconGoals = makeIcon({}, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <circle cx="11" cy="11" r="9" stroke={color} strokeWidth="1.5"/>
     <circle cx="11" cy="11" r="5" stroke={color} strokeWidth="1.5" strokeOpacity="0.6"/>
     <circle cx="11" cy="11" r="2" fill={color}/>
   </svg>
-)
+))
 
-export const IconRecognition = ({ size = 22, color = defaultColor, className }: IconProps) => (
+export const IconRecognition = makeIcon({}, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <path d="M11 2L13.5 8H20L14.5 12L16.5 18.5L11 14.5L5.5 18.5L7.5 12L2 8H8.5L11 2Z" stroke={color} strokeWidth="1.5" strokeLinejoin="round"/>
   </svg>
-)
+))
 
-export const IconProfile = ({ size = 22, color = defaultColor, className }: IconProps) => (
+export const IconProfile = makeIcon({}, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <circle cx="11" cy="7.5" r="4" stroke={color} strokeWidth="1.5"/>
     <path d="M2 19.5C2 15.6 6 13 11 13C16 13 20 15.6 20 19.5" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
-)
+))
 
-export const IconSquad = ({ size = 22, color = defaultColor, className }: IconProps) => (
+export const IconSquad = makeIcon({}, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <circle cx="8" cy="7" r="3.5" stroke={color} strokeWidth="1.5"/>
     <circle cx="15" cy="7" r="3.5" stroke={color} strokeWidth="1.5"/>
     <path d="M1 19C1 15.7 4.1 13 8 13" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
     <path d="M8 19C8 15.7 11.1 13 15 13C18.9 13 22 15.7 22 19" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
-)
+))
 
 export const IconSessions = makeIcon({}, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
