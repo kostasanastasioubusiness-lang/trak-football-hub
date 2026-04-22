@@ -1,9 +1,20 @@
-import React from 'react'
+import React, { forwardRef, type SVGProps } from 'react'
 
 interface IconProps {
   size?: number
   color?: string
   className?: string
+}
+
+type SvgRender = (p: { size: number; color: string; className?: string }) => React.ReactElement
+
+function makeIcon(defaults: { size?: number; color?: string }, render: SvgRender) {
+  return forwardRef<SVGSVGElement, IconProps>(function Icon(
+    { size = defaults.size ?? 22, color = defaults.color ?? defaultColor, className },
+    _ref,
+  ) {
+    return render({ size, color, className })
+  })
 }
 
 const defaultColor = 'rgba(255,255,255,0.45)'
