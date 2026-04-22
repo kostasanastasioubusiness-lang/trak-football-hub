@@ -7,6 +7,7 @@ import { SliderInput } from '@/components/trak/SliderInput'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import type { BandType } from '@/lib/types'
+import { deriveCardStats } from '@/lib/cardStats'
 import { trackEvent } from '@/lib/telemetry'
 import { ChevronLeft, Check, MessageSquare } from 'lucide-react'
 
@@ -41,11 +42,12 @@ export default function CoachQuickAssess() {
   const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set())
 
   /* --- slider state --- */
-  const [consistency, setConsistency] = useState(5)
-  const [impact, setImpact] = useState(5)
-  const [workrate, setWorkrate] = useState(5)
-  const [technique, setTechnique] = useState(5)
-  const [spirit, setSpirit] = useState(5)
+  const [workRate, setWorkRate]         = useState(5)
+  const [tactical, setTactical]         = useState(5)
+  const [attitude, setAttitude]         = useState(5)
+  const [technical, setTechnical]       = useState(5)
+  const [physical, setPhysical]         = useState(5)
+  const [coachability, setCoachability] = useState(5)
 
   /* --- note --- */
   const [note, setNote] = useState('')
@@ -106,7 +108,7 @@ export default function CoachQuickAssess() {
   }, [user])
 
   /* --- computed --- */
-  const avg = (consistency + impact + workrate + technique + spirit) / 5
+  const avg = (workRate + tactical + attitude + technical + physical + coachability) / 6
   const band = scoreToBand(avg)
   const overallCfg = bandConfig(band)
   const currentPlayer = players[currentIdx] ?? null
@@ -115,11 +117,12 @@ export default function CoachQuickAssess() {
 
   /* --- reset sliders for new player --- */
   const resetSliders = () => {
-    setConsistency(5)
-    setImpact(5)
-    setWorkrate(5)
-    setTechnique(5)
-    setSpirit(5)
+    setWorkRate(5)
+    setTactical(5)
+    setAttitude(5)
+    setTechnical(5)
+    setPhysical(5)
+    setCoachability(5)
     setNote('')
     setNoteOpen(false)
   }
@@ -135,16 +138,21 @@ export default function CoachQuickAssess() {
     if (!user || !currentPlayer || saving) return
     setSaving(true)
 
+    const cardStats = deriveCardStats({ workRate, tactical, attitude, technical, physical, coachability })
     await supabase.from('coach_assessments').insert([{
       coach_user_id: user.id,
       squad_player_id: currentPlayer.id,
       session_id: null,
       appearance: 'training',
-      consistency,
-      impact,
-      workrate,
-      technique,
-      spirit,
+      // raw coach inputs
+      work_rate: workRate,
+      tactical,
+      attitude,
+      technical,
+      physical,
+      coachability,
+      // derived card stats
+      ...cardStats,
       coach_rating: Math.round(avg * 10) / 10,
       private_note: note || null,
     } as any])
@@ -319,11 +327,12 @@ export default function CoachQuickAssess() {
 
         {/* ---- 4. Sliders ---- */}
         <div className="rounded-[14px] bg-[rgba(0,0,0,0.25)] p-[14px_16px] space-y-5">
-          <SliderInput label="Consistency" value={consistency} onChange={setConsistency} />
-          <SliderInput label="Impact"      value={impact}      onChange={setImpact} />
-          <SliderInput label="Workrate"    value={workrate}    onChange={setWorkrate} />
-          <SliderInput label="Technique"   value={technique}   onChange={setTechnique} />
-          <SliderInput label="Spirit"      value={spirit}      onChange={setSpirit} />
+          <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} />
+          <SliderInput label="Tactical"     value={tactical}     onChange={setTactical} />
+          <SliderInput label="Attitude"     value={attitude}     onChange={setAttitude} />
+          <SliderInput label="Technical"    value={technical}    onChange={setTechnical} />
+          <SliderInput label="Physical"     value={physical}     onChange={setPhysical} />
+          <SliderInput label="Coachability" value={coachability} onChange={setCoachability} />
         </div>
 
         {/* ---- 5. Overall band preview ---- */}

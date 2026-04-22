@@ -6,7 +6,8 @@ import { MobileShell, BandPill, NavBar } from '@/components/trak'
 import { SliderInput } from '@/components/trak/SliderInput'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
-import type { BandType, SelfRatingFlag } from '@/lib/types'
+import type { BandType } from '@/lib/types'
+import { deriveCardStats } from '@/lib/cardStats'
 import { trackEvent } from '@/lib/telemetry'
 import { ChevronLeft, ChevronDown } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
@@ -65,13 +66,13 @@ export default function CoachAssessPage() {
   const [playerId, setPlayerId] = useState((location.state as any)?.preselectedPlayerId || '')
   const [sessionId, setSessionId] = useState('')
   const [appearance, setAppearance] = useState<'started' | 'sub' | 'training'>('started')
-  const [consistency, setConsistency] = useState(5)
-  const [impact, setImpact] = useState(5)
-  const [workrate, setWorkrate] = useState(5)
-  const [technique, setTechnique] = useState(5)
-  const [spirit, setSpirit] = useState(5)
+  const [workRate, setWorkRate]         = useState(5)
+  const [tactical, setTactical]         = useState(5)
+  const [attitude, setAttitude]         = useState(5)
+  const [technical, setTechnical]       = useState(5)
+  const [physical, setPhysical]         = useState(5)
+  const [coachability, setCoachability] = useState(5)
   const [note, setNote] = useState('')
-  const [selfRatingFlag, setSelfRatingFlag] = useState<SelfRatingFlag | ''>('')
   const [saving, setSaving] = useState(false)
 
   /* fetch squad players */
@@ -98,7 +99,7 @@ export default function CoachAssessPage() {
   }, [user])
 
   /* --- computed --- */
-  const avg = (consistency + impact + workrate + technique + spirit) / 5
+  const avg = (workRate + tactical + attitude + technical + physical + coachability) / 6
   const band = scoreToBand(avg)
   const overallCfg = bandConfig(band)
 
@@ -111,19 +112,23 @@ export default function CoachAssessPage() {
   const handleSave = async () => {
     if (!user || !playerId || saving) return
     setSaving(true)
+    const cardStats = deriveCardStats({ workRate, tactical, attitude, technical, physical, coachability })
     await supabase.from('coach_assessments').insert({
       coach_user_id: user.id,
       squad_player_id: playerId,
       session_id: sessionId || null,
       appearance,
-      consistency,
-      impact,
-      workrate,
-      technique,
-      spirit,
+      // raw coach inputs
+      work_rate: workRate,
+      tactical,
+      attitude,
+      technical,
+      physical,
+      coachability,
+      // derived card stats
+      ...cardStats,
       coach_rating: Math.round(avg * 10) / 10,
       private_note: note || null,
-      flag: selfRatingFlag || null,
     } as any)
     trackEvent('assessment', { player_id: playerId, band })
     navigate('/coach/home')
@@ -227,11 +232,12 @@ export default function CoachAssessPage() {
 
         {/* ---- 5. sliders in dark container ---- */}
         <div className="rounded-[14px] bg-[rgba(0,0,0,0.25)] p-[14px_16px] space-y-5">
-          <SliderInput label="Consistency" value={consistency} onChange={setConsistency} />
-          <SliderInput label="Impact"      value={impact}      onChange={setImpact} />
-          <SliderInput label="Workrate"    value={workrate}    onChange={setWorkrate} />
-          <SliderInput label="Technique"   value={technique}   onChange={setTechnique} />
-          <SliderInput label="Spirit"      value={spirit}      onChange={setSpirit} />
+          <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} />
+          <SliderInput label="Tactical"     value={tactical}     onChange={setTactical} />
+          <SliderInput label="Attitude"     value={attitude}     onChange={setAttitude} />
+          <SliderInput label="Technical"    value={technical}    onChange={setTechnical} />
+          <SliderInput label="Physical"     value={physical}     onChange={setPhysical} />
+          <SliderInput label="Coachability" value={coachability} onChange={setCoachability} />
         </div>
 
         {/* ---- 6. overall band card (amber glow) ---- */}
@@ -262,19 +268,7 @@ export default function CoachAssessPage() {
           </span>
         </div>
 
-        {/* ---- 7. self-rating accuracy ---- */}
-        <div className="space-y-1.5">
-          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
-            DOES THE PLAYER'S SELF-RATING FEEL ACCURATE?
-          </span>
-          <div className="grid grid-cols-3 gap-2">
-            <OptPill label="Fair" active={selfRatingFlag === 'fair'} onClick={() => setSelfRatingFlag('fair')} />
-            <OptPill label="Generous" active={selfRatingFlag === 'generous'} onClick={() => setSelfRatingFlag('generous')} />
-            <OptPill label="Way off" active={selfRatingFlag === 'way off'} onClick={() => setSelfRatingFlag('way off')} />
-          </div>
-        </div>
-
-        {/* ---- 8. private note ---- */}
+        {/* ---- 7. private note ---- */}
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
