@@ -273,12 +273,7 @@ export default function PlayerHome() {
                     </div>
                   ))}
                 </div>
-                {coachAssessment.private_note && (
-                  <p className="text-[11px] text-white/45 mt-4 italic leading-relaxed"
-                    style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                    "{coachAssessment.private_note}"
-                  </p>
-                )}
+                {/* Private coach notes are coach-only */}
               </div>
             </div>
           </div>

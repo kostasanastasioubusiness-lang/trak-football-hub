@@ -148,15 +148,11 @@ async function writeProfileFromPendingData(userId: string, data: PendingProfileD
 
   if (data.role === 'player' && data.coach_invite_code) {
     const rawCode = data.coach_invite_code.replace(/^TRK-/i, '').toUpperCase();
-    const { data: coachProfile } = await supabase
-      .from('profiles')
-      .select('user_id')
-      .eq('invite_code', rawCode)
-      .eq('role', 'coach')
-      .maybeSingle();
-    if (coachProfile) {
+    const { data: coachUserId } = await supabase
+      .rpc('get_coach_id_by_invite_code', { p_code: rawCode });
+    if (coachUserId) {
       await supabase.from('squad_players').insert({
-        coach_user_id: coachProfile.user_id,
+        coach_user_id: coachUserId as unknown as string,
         player_name: data.full_name,
         position: data.player_details?.position || null,
         shirt_number: data.player_details?.shirt_number || null,

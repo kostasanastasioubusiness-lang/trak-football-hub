@@ -117,11 +117,18 @@ export default function DevSetupPage() {
       update('Squad player link', 'done')
 
       update('3 coach assessments', 'running')
-      await supabase.from('coach_assessments').insert([
-        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 8, tactical: 7, attitude: 9, technical: 7, physical: 8, coachability: 8, private_note: 'Great attitude this week — pressed well in the first half.', flag: 'fair',     created_at: new Date(now - 1  * 86400000).toISOString() },
-        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 6, tactical: 6, attitude: 7, technical: 6, physical: 7, coachability: 7, private_note: 'Struggled away but kept working. Needs to improve positioning.', flag: 'generous', created_at: new Date(now - 8  * 86400000).toISOString() },
-        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 9, tactical: 8, attitude: 9, technical: 8, physical: 9, coachability: 9, private_note: 'Outstanding — best of the season. Real leadership on show.',   flag: 'fair',     created_at: new Date(now - 22 * 86400000).toISOString() },
-      ])
+      const seedAssessments = [
+        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 8, tactical: 7, attitude: 9, technical: 7, physical: 8, coachability: 8, flag: 'fair',     created_at: new Date(now - 1  * 86400000).toISOString(), _note: 'Great attitude this week — pressed well in the first half.' },
+        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 6, tactical: 6, attitude: 7, technical: 6, physical: 7, coachability: 7, flag: 'generous', created_at: new Date(now - 8  * 86400000).toISOString(), _note: 'Struggled away but kept working. Needs to improve positioning.' },
+        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 9, tactical: 8, attitude: 9, technical: 8, physical: 9, coachability: 9, flag: 'fair',     created_at: new Date(now - 22 * 86400000).toISOString(), _note: 'Outstanding — best of the season. Real leadership on show.' },
+      ]
+      for (const a of seedAssessments) {
+        const { _note, ...row } = a
+        const { data: ins } = await supabase.from('coach_assessments').insert(row as any).select('id').maybeSingle()
+        if (ins?.id) {
+          await supabase.from('coach_assessment_notes').insert({ assessment_id: ins.id, coach_user_id: coachId, note: _note })
+        }
+      }
       update('3 coach assessments', 'done')
 
       update('Player of the Week award', 'running')

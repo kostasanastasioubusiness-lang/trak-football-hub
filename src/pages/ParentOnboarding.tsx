@@ -72,9 +72,10 @@ const ParentOnboarding = () => {
         parent_user_id: user.id,
       });
 
-      // Mark invite as used - we use update via RPC or just leave it
-      // Since we can't update parent_invites (RLS only allows player), we'll handle this differently
-      // The invite is effectively "used" once the parent account exists
+      // Mark the invite as accepted so it can't be replayed
+      await supabase.from('parent_invites')
+        .update({ status: 'accepted' })
+        .eq('id', invite.id);
 
       toast.success('Account created! Check your email to verify.');
       navigate('/dashboard');

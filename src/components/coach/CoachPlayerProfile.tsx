@@ -12,6 +12,7 @@ const CoachPlayerProfile = () => {
   const navigate = useNavigate();
   const [player, setPlayer] = useState<any>(null);
   const [assessments, setAssessments] = useState<any[]>([]);
+  const [notesById, setNotesById] = useState<Record<string, string>>({});
   const [showRequest, setShowRequest] = useState(false);
   const [requestReason, setRequestReason] = useState('');
 
@@ -21,7 +22,18 @@ const CoachPlayerProfile = () => {
       .then(({ data }) => setPlayer(data));
     supabase.from('coach_assessments').select('*, coach_sessions(title, session_type)')
       .eq('squad_player_id', id).eq('coach_user_id', user.id).order('created_at', { ascending: false })
-      .then(({ data }) => setAssessments(data || []));
+      .then(async ({ data }) => {
+        const list = data || [];
+        setAssessments(list);
+        if (list.length) {
+          const { data: notes } = await supabase.from('coach_assessment_notes')
+            .select('assessment_id, note')
+            .in('assessment_id', list.map((a: any) => a.id));
+          const map: Record<string, string> = {};
+          notes?.forEach((n: any) => { map[n.assessment_id] = n.note });
+          setNotesById(map);
+        }
+      });
   }, [user, id]);
 
   const handleRequest = async () => {
@@ -127,8 +139,8 @@ const CoachPlayerProfile = () => {
                   <span key={c.l} className="text-[10px] text-muted-foreground">{c.l} <span className="text-foreground font-medium">{c.v}</span></span>
                 ))}
               </div>
-              {a.private_note && (
-                <p className="text-xs text-muted-foreground mt-2 border-l-2 border-coach-orange/40 pl-2 italic">{a.private_note}</p>
+              {notesById[a.id] && (
+                <p className="text-xs text-muted-foreground mt-2 border-l-2 border-coach-orange/40 pl-2 italic">{notesById[a.id]}</p>
               )}
             </div>
           ))}

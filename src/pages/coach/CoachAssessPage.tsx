@@ -113,7 +113,7 @@ export default function CoachAssessPage() {
     if (!user || !playerId || saving) return
     setSaving(true)
     const cardStats = deriveCardStats({ workRate, tactical, attitude, technical, physical, coachability })
-    await supabase.from('coach_assessments').insert({
+    const { data: inserted } = await supabase.from('coach_assessments').insert({
       coach_user_id: user.id,
       squad_player_id: playerId,
       session_id: sessionId || null,
@@ -128,8 +128,14 @@ export default function CoachAssessPage() {
       // derived card stats
       ...cardStats,
       coach_rating: Math.round(avg * 10) / 10,
-      private_note: note || null,
-    } as any)
+    } as any).select('id').maybeSingle()
+    if (inserted?.id && note.trim()) {
+      await supabase.from('coach_assessment_notes').insert({
+        assessment_id: inserted.id,
+        coach_user_id: user.id,
+        note: note.trim(),
+      })
+    }
     trackEvent('assessment', { player_id: playerId, band })
     navigate('/coach/home')
   }

@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      coach_assessment_notes: {
+        Row: {
+          assessment_id: string
+          coach_user_id: string
+          created_at: string
+          id: string
+          note: string
+        }
+        Insert: {
+          assessment_id: string
+          coach_user_id: string
+          created_at?: string
+          id?: string
+          note: string
+        }
+        Update: {
+          assessment_id?: string
+          coach_user_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_assessment_notes_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: true
+            referencedRelation: "coach_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_assessments: {
         Row: {
           appearance: string | null
@@ -27,7 +59,6 @@ export type Database = {
           id: string
           impact: number
           physical: number
-          private_note: string | null
           session_id: string | null
           spirit: number
           squad_player_id: string
@@ -49,7 +80,6 @@ export type Database = {
           id?: string
           impact?: number
           physical?: number
-          private_note?: string | null
           session_id?: string | null
           spirit?: number
           squad_player_id: string
@@ -71,7 +101,6 @@ export type Database = {
           id?: string
           impact?: number
           physical?: number
-          private_note?: string | null
           session_id?: string | null
           spirit?: number
           squad_player_id?: string
@@ -554,6 +583,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_coach_id_by_invite_code: { Args: { p_code: string }; Returns: string }
       get_parent_invite_by_token: {
         Args: { p_token: string }
         Returns: {
