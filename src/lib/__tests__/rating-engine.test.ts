@@ -134,8 +134,7 @@ describe('computeMatchScore', () => {
         attacking_threat: 'dangerous', holdup_play: 'average', pressing: 'medium',
       },
     })
-    // Under the new 0..10 band scale this score now sits in "steady".
-    expect(scoreToBand(score)).toBe('steady')
+    expect(scoreToBand(score)).toBe('good')
   })
 
   // DEF loss worked example
