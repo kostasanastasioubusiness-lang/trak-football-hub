@@ -8,7 +8,6 @@ import {
   IconProfile,
   IconSquad,
   IconSessions,
-  IconAssess,
   IconMatch,
   IconAlerts,
   ACTIVE_COLOR,
