@@ -45,16 +45,22 @@ const CoachAssess = () => {
     if (!user || !selectedPlayer) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from('coach_assessments').insert({
+      const { data: inserted, error } = await supabase.from('coach_assessments').insert({
         coach_user_id: user.id,
         squad_player_id: selectedPlayer,
         session_id: selectedSession || null,
         appearance: appearance || null,
         ...ratings,
         flag,
-        private_note: note || null,
-      });
+      } as any).select('id').maybeSingle();
       if (error) throw error;
+      if (inserted?.id && note.trim()) {
+        await supabase.from('coach_assessment_notes').insert({
+          assessment_id: inserted.id,
+          coach_user_id: user.id,
+          note: note.trim(),
+        });
+      }
       toast.success('Assessment saved!');
       navigate('/dashboard');
     } catch (err: any) {
