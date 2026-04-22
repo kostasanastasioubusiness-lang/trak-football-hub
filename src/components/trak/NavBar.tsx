@@ -8,7 +8,6 @@ import {
   IconProfile,
   IconSquad,
   IconSessions,
-  IconAssess,
   IconMatch,
   IconAlerts,
   ACTIVE_COLOR,
@@ -34,7 +33,6 @@ function getNavItems(role: Role): NavItem[] {
     { label: 'Home', path: '/coach/home', Icon: IconHome },
     { label: 'Squad', path: '/coach/squad', Icon: IconSquad },
     { label: 'Sessions', path: '/coach/sessions', Icon: IconSessions },
-    { label: 'Assess', path: '/coach/assess', Icon: IconAssess },
     { label: 'Profile', path: '/coach/profile', Icon: IconProfile },
   ]
   return [
