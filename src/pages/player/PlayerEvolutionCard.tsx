@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Flame, Sprout, Target, Lock, Check } from 'lucide-react'
 import { MobileShell } from '@/components/trak'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 
 /**
  * TRAK Player Evolution Card — visual mock (sample data)
@@ -18,23 +21,31 @@ const TIERS: Record<Tier, { ring: string; label: string; glow: string }> = {
   Icon:   { ring: 'rgba(255,255,255,0.85)', label: '#FFFFFF', glow: 'rgba(200,242,90,0.35)' },
 }
 
-// Sample player
-const PLAYER = {
-  initials: 'AK',
-  name: 'Andreas Kostas',
-  position: 'MID',
-  club: 'Panetolikos FC',
-  age: 'U16',
-  tier: 'Gold' as Tier,
-  ovr: 78,
-  stats: [
-    { key: 'CONSISTENCY', value: 82 },
-    { key: 'IMPACT',      value: 74 },
-    { key: 'WORKRATE',    value: 81 },
-    { key: 'TECHNIQUE',   value: 76 },
-    { key: 'SPIRIT',      value: 79 },
-  ],
+function tierFromOvr(ovr: number): Tier {
+  if (ovr >= 92) return 'Icon'
+  if (ovr >= 85) return 'Volt'
+  if (ovr >= 75) return 'Gold'
+  if (ovr >= 65) return 'Silver'
+  return 'Bronze'
 }
+
+function initialsOf(name: string) {
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+// Fallback when player has no assessments yet
+const FALLBACK_STATS = [
+  { key: 'CONSISTENCY', value: 50 },
+  { key: 'IMPACT',      value: 50 },
+  { key: 'WORKRATE',    value: 50 },
+  { key: 'TECHNIQUE',   value: 50 },
+  { key: 'SPIRIT',      value: 50 },
+]
 
 const EVOLUTIONS = [
   {
