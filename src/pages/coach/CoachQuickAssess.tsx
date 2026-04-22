@@ -139,7 +139,7 @@ export default function CoachQuickAssess() {
     setSaving(true)
 
     const cardStats = deriveCardStats({ workRate, tactical, attitude, technical, physical, coachability })
-    await supabase.from('coach_assessments').insert([{
+    const { data: inserted } = await supabase.from('coach_assessments').insert([{
       coach_user_id: user.id,
       squad_player_id: currentPlayer.id,
       session_id: null,
@@ -154,8 +154,14 @@ export default function CoachQuickAssess() {
       // derived card stats
       ...cardStats,
       coach_rating: Math.round(avg * 10) / 10,
-      private_note: note || null,
-    } as any])
+    } as any]).select('id').maybeSingle()
+    if (inserted?.id && note.trim()) {
+      await supabase.from('coach_assessment_notes').insert({
+        assessment_id: inserted.id,
+        coach_user_id: user.id,
+        note: note.trim(),
+      })
+    }
 
     setAssessedIds(prev => new Set(prev).add(currentPlayer.id))
     setSaving(false)
