@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Flame, Sprout, Target, Lock, Check } from 'lucide-react'
 import { MobileShell } from '@/components/trak'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 
 /**
  * TRAK Player Evolution Card — visual mock (sample data)
@@ -18,23 +21,31 @@ const TIERS: Record<Tier, { ring: string; label: string; glow: string }> = {
   Icon:   { ring: 'rgba(255,255,255,0.85)', label: '#FFFFFF', glow: 'rgba(200,242,90,0.35)' },
 }
 
-// Sample player
-const PLAYER = {
-  initials: 'AK',
-  name: 'Andreas Kostas',
-  position: 'MID',
-  club: 'Panetolikos FC',
-  age: 'U16',
-  tier: 'Gold' as Tier,
-  ovr: 78,
-  stats: [
-    { key: 'CONSISTENCY', value: 82 },
-    { key: 'IMPACT',      value: 74 },
-    { key: 'WORKRATE',    value: 81 },
-    { key: 'TECHNIQUE',   value: 76 },
-    { key: 'SPIRIT',      value: 79 },
-  ],
+function tierFromOvr(ovr: number): Tier {
+  if (ovr >= 92) return 'Icon'
+  if (ovr >= 85) return 'Volt'
+  if (ovr >= 75) return 'Gold'
+  if (ovr >= 65) return 'Silver'
+  return 'Bronze'
 }
+
+function initialsOf(name: string) {
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+// Fallback when player has no assessments yet
+const FALLBACK_STATS = [
+  { key: 'CONSISTENCY', value: 50 },
+  { key: 'IMPACT',      value: 50 },
+  { key: 'WORKRATE',    value: 50 },
+  { key: 'TECHNIQUE',   value: 50 },
+  { key: 'SPIRIT',      value: 50 },
+]
 
 const EVOLUTIONS = [
   {
@@ -68,7 +79,72 @@ const EVOLUTIONS = [
 
 export default function PlayerEvolutionCard() {
   const navigate = useNavigate()
-  const tier = TIERS[PLAYER.tier]
+  const { user } = useAuth()
+
+  const [name, setName] = useState('Player')
+  const [position, setPosition] = useState('—')
+  const [club, setClub] = useState('')
+  const [ageGroup, setAgeGroup] = useState('')
+  const [stats, setStats] = useState(FALLBACK_STATS)
+  const [hasAssessment, setHasAssessment] = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+    ;(async () => {
+      // 1. Profile + player details
+      const [{ data: profile }, { data: details }] = await Promise.all([
+        supabase.from('profiles').select('full_name').eq('user_id', user.id).maybeSingle(),
+        supabase.from('player_details').select('position, current_club, age_group').eq('user_id', user.id).maybeSingle(),
+      ])
+      if (profile?.full_name) setName(profile.full_name)
+      if (details?.position) setPosition(details.position.toUpperCase())
+      if (details?.current_club) setClub(details.current_club)
+      if (details?.age_group) setAgeGroup(details.age_group)
+
+      // 2. Find this player's squad_player rows (coaches who linked them)
+      const { data: squadRows } = await supabase
+        .from('squad_players')
+        .select('id')
+        .eq('linked_player_id', user.id)
+      const squadIds = (squadRows ?? []).map(r => r.id)
+      if (squadIds.length === 0) return
+
+      // 3. Pull recent assessments (newest first), average up to last 5
+      const { data: assessments } = await supabase
+        .from('coach_assessments')
+        .select('consistency, impact, workrate, technique, spirit, created_at')
+        .in('squad_player_id', squadIds)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (!assessments || assessments.length === 0) return
+
+      const n = assessments.length
+      const sums = { consistency: 0, impact: 0, workrate: 0, technique: 0, spirit: 0 }
+      for (const a of assessments as any[]) {
+        sums.consistency += a.consistency ?? 5
+        sums.impact      += a.impact      ?? 5
+        sums.workrate    += a.workrate    ?? 5
+        sums.technique   += a.technique   ?? 5
+        sums.spirit      += a.spirit      ?? 5
+      }
+      // 1-10 → 0-100 scale
+      const toOvr = (v: number) => Math.round((v / n) * 10)
+      setStats([
+        { key: 'CONSISTENCY', value: toOvr(sums.consistency) },
+        { key: 'IMPACT',      value: toOvr(sums.impact) },
+        { key: 'WORKRATE',    value: toOvr(sums.workrate) },
+        { key: 'TECHNIQUE',   value: toOvr(sums.technique) },
+        { key: 'SPIRIT',      value: toOvr(sums.spirit) },
+      ])
+      setHasAssessment(true)
+    })()
+  }, [user])
+
+  const ovr = Math.round(stats.reduce((s, x) => s + x.value, 0) / stats.length)
+  const tierName: Tier = hasAssessment ? tierFromOvr(ovr) : 'Bronze'
+  const tier = TIERS[tierName]
+  const initials = initialsOf(name)
 
   return (
     <MobileShell>
@@ -141,7 +217,7 @@ export default function PlayerEvolutionCard() {
                     letterSpacing: '-0.04em', color: '#FFFFFF',
                   }}
                 >
-                  {PLAYER.ovr}
+                  {ovr}
                 </div>
                 <div
                   className="mt-1"
@@ -151,7 +227,7 @@ export default function PlayerEvolutionCard() {
                     textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)',
                   }}
                 >
-                  {PLAYER.position} · {PLAYER.age}
+                  {position}{ageGroup ? ` · ${ageGroup}` : ''}
                 </div>
               </div>
 
@@ -167,7 +243,7 @@ export default function PlayerEvolutionCard() {
                     textTransform: 'uppercase', color: tier.label,
                   }}
                 >
-                  {PLAYER.tier} TIER
+                  {tierName} TIER
                 </span>
                 <span
                   style={{
@@ -193,7 +269,7 @@ export default function PlayerEvolutionCard() {
                   fontWeight: 300, fontSize: 22, color: '#C8F25A',
                 }}
               >
-                {PLAYER.initials}
+                {initials}
               </div>
               <div className="min-w-0">
                 <div
@@ -204,7 +280,7 @@ export default function PlayerEvolutionCard() {
                     letterSpacing: '-0.02em', color: '#FFFFFF',
                   }}
                 >
-                  {PLAYER.name}
+                  {name}
                 </div>
                 <div
                   className="truncate"
@@ -214,7 +290,7 @@ export default function PlayerEvolutionCard() {
                     textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
                   }}
                 >
-                  {PLAYER.club}
+                  {club || 'Unaffiliated'}
                 </div>
               </div>
             </div>
@@ -227,7 +303,7 @@ export default function PlayerEvolutionCard() {
 
             {/* Stats */}
             <div className="relative flex-1 flex flex-col gap-2.5">
-              {PLAYER.stats.map((s) => (
+              {stats.map((s) => (
                 <StatRow key={s.key} label={s.key} value={s.value} />
               ))}
             </div>

@@ -21,16 +21,21 @@ export type Database = {
           coach_rating: number | null
           coach_user_id: string
           coachability: number
+          consistency: number
           created_at: string | null
           flag: string | null
           id: string
+          impact: number
           physical: number
           private_note: string | null
           session_id: string | null
+          spirit: number
           squad_player_id: string
           tactical: number
           technical: number
+          technique: number
           work_rate: number
+          workrate: number
         }
         Insert: {
           appearance?: string | null
@@ -38,16 +43,21 @@ export type Database = {
           coach_rating?: number | null
           coach_user_id: string
           coachability?: number
+          consistency?: number
           created_at?: string | null
           flag?: string | null
           id?: string
+          impact?: number
           physical?: number
           private_note?: string | null
           session_id?: string | null
+          spirit?: number
           squad_player_id: string
           tactical?: number
           technical?: number
+          technique?: number
           work_rate?: number
+          workrate?: number
         }
         Update: {
           appearance?: string | null
@@ -55,16 +65,21 @@ export type Database = {
           coach_rating?: number | null
           coach_user_id?: string
           coachability?: number
+          consistency?: number
           created_at?: string | null
           flag?: string | null
           id?: string
+          impact?: number
           physical?: number
           private_note?: string | null
           session_id?: string | null
+          spirit?: number
           squad_player_id?: string
           tactical?: number
           technical?: number
+          technique?: number
           work_rate?: number
+          workrate?: number
         }
         Relationships: [
           {

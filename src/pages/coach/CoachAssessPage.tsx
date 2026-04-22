@@ -65,12 +65,11 @@ export default function CoachAssessPage() {
   const [playerId, setPlayerId] = useState((location.state as any)?.preselectedPlayerId || '')
   const [sessionId, setSessionId] = useState('')
   const [appearance, setAppearance] = useState<'started' | 'sub' | 'training'>('started')
-  const [workRate, setWorkRate] = useState(5)
-  const [tactical, setTactical] = useState(5)
-  const [attitude, setAttitude] = useState(5)
-  const [technical, setTechnical] = useState(5)
-  const [physical, setPhysical] = useState(5)
-  const [coachability, setCoachability] = useState(5)
+  const [consistency, setConsistency] = useState(5)
+  const [impact, setImpact] = useState(5)
+  const [workrate, setWorkrate] = useState(5)
+  const [technique, setTechnique] = useState(5)
+  const [spirit, setSpirit] = useState(5)
   const [note, setNote] = useState('')
   const [selfRatingFlag, setSelfRatingFlag] = useState<SelfRatingFlag | ''>('')
   const [saving, setSaving] = useState(false)
@@ -99,7 +98,7 @@ export default function CoachAssessPage() {
   }, [user])
 
   /* --- computed --- */
-  const avg = (workRate + tactical + attitude + technical + physical + coachability) / 6
+  const avg = (consistency + impact + workrate + technique + spirit) / 5
   const band = scoreToBand(avg)
   const overallCfg = bandConfig(band)
 
@@ -117,15 +116,15 @@ export default function CoachAssessPage() {
       squad_player_id: playerId,
       session_id: sessionId || null,
       appearance,
-      work_rate: workRate,
-      tactical,
-      attitude,
-      technical,
-      physical,
-      coachability,
+      consistency,
+      impact,
+      workrate,
+      technique,
+      spirit,
+      coach_rating: Math.round(avg * 10) / 10,
       private_note: note || null,
       flag: selfRatingFlag || null,
-    })
+    } as any)
     trackEvent('assessment', { player_id: playerId, band })
     navigate('/coach/home')
   }
@@ -228,12 +227,11 @@ export default function CoachAssessPage() {
 
         {/* ---- 5. sliders in dark container ---- */}
         <div className="rounded-[14px] bg-[rgba(0,0,0,0.25)] p-[14px_16px] space-y-5">
-          <SliderInput label="Work Rate" value={workRate} onChange={setWorkRate} />
-          <SliderInput label="Tactical" value={tactical} onChange={setTactical} />
-          <SliderInput label="Attitude" value={attitude} onChange={setAttitude} />
-          <SliderInput label="Technical" value={technical} onChange={setTechnical} />
-          <SliderInput label="Physical" value={physical} onChange={setPhysical} />
-          <SliderInput label="Coachability" value={coachability} onChange={setCoachability} />
+          <SliderInput label="Consistency" value={consistency} onChange={setConsistency} />
+          <SliderInput label="Impact"      value={impact}      onChange={setImpact} />
+          <SliderInput label="Workrate"    value={workrate}    onChange={setWorkrate} />
+          <SliderInput label="Technique"   value={technique}   onChange={setTechnique} />
+          <SliderInput label="Spirit"      value={spirit}      onChange={setSpirit} />
         </div>
 
         {/* ---- 6. overall band card (amber glow) ---- */}
