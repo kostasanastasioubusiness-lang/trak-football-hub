@@ -22,10 +22,11 @@ const TIERS: Record<Tier, { ring: string; label: string; glow: string }> = {
 }
 
 function tierFromOvr(ovr: number): Tier {
-  if (ovr >= 92) return 'Icon'
-  if (ovr >= 85) return 'Volt'
-  if (ovr >= 75) return 'Gold'
-  if (ovr >= 65) return 'Silver'
+  // OVR is 1..9 averaged then ×10, so the practical max is 90.
+  if (ovr >= 85) return 'Icon'
+  if (ovr >= 75) return 'Volt'
+  if (ovr >= 65) return 'Gold'
+  if (ovr >= 50) return 'Silver'
   return 'Bronze'
 }
 
