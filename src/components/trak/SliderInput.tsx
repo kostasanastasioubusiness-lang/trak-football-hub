@@ -14,8 +14,8 @@ function bandConfig(value: number) {
 
 export function SliderInput({ label, value, onChange }: SliderInputProps) {
   const cfg = bandConfig(value)
-  // 1..9 scale — 5 sits exactly at the centre of the track.
-  const pct = ((value - 1) / 8) * 100
+  // 0..10 scale — 5 sits exactly at the centre of the track.
+  const pct = (value / 10) * 100
 
   return (
     <div className="space-y-2">
@@ -49,8 +49,8 @@ export function SliderInput({ label, value, onChange }: SliderInputProps) {
         {/* invisible range input for interaction */}
         <input
           type="range"
-          min={1}
-          max={9}
+          min={0}
+          max={10}
           step={1}
           value={value}
           onChange={e => onChange(Number(e.target.value))}
