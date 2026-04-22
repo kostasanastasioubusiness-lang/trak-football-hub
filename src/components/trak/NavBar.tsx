@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import type { Role } from '@/lib/types'
 import {
   IconHome,
@@ -50,10 +51,12 @@ interface NavBarProps {
   onNavigate: (path: string) => void
 }
 
-export function NavBar({ role, activeTab, onNavigate }: NavBarProps) {
-  const items = getNavItems(role)
-  return (
-    <nav
+export const NavBar = forwardRef<HTMLElement, NavBarProps>(
+  function NavBar({ role, activeTab, onNavigate }, ref) {
+    const items = getNavItems(role)
+    return (
+      <nav
+      ref={ref}
       className="fixed bottom-0 w-full max-w-[430px] mx-auto left-1/2 -translate-x-1/2 flex justify-around items-center px-4 py-2 border-t border-white/[0.07] z-50"
       style={{
         background: 'rgba(10, 10, 11, 0.92)',
@@ -97,6 +100,7 @@ export function NavBar({ role, activeTab, onNavigate }: NavBarProps) {
           </button>
         )
       })}
-    </nav>
-  )
-}
+      </nav>
+    )
+  },
+)
