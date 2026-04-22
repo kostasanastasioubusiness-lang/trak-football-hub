@@ -17,12 +17,25 @@ export default function CoachPlayerProfilePage() {
   const navigate = useNavigate()
   const [player, setPlayer] = useState<any>(null)
   const [assessments, setAssessments] = useState<any[]>([])
+  const [notesById, setNotesById] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!id || !user) return
     supabase.from('squad_players').select('*').eq('id', id).single().then(({ data }) => setPlayer(data))
     supabase.from('coach_assessments').select('*').eq('squad_player_id', id).eq('coach_user_id', user.id)
-      .order('created_at', { ascending: false }).then(({ data }) => setAssessments(data || []))
+      .order('created_at', { ascending: false })
+      .then(async ({ data }) => {
+        const list = data || []
+        setAssessments(list)
+        if (list.length) {
+          const { data: notes } = await supabase.from('coach_assessment_notes')
+            .select('assessment_id, note')
+            .in('assessment_id', list.map((a: any) => a.id))
+          const map: Record<string, string> = {}
+          notes?.forEach((n: any) => { map[n.assessment_id] = n.note })
+          setNotesById(map)
+        }
+      })
   }, [id, user])
 
   if (!player) return (
@@ -95,9 +108,9 @@ export default function CoachPlayerProfilePage() {
               <CategoryBar label="Physical" score={latest.physical} />
               <CategoryBar label="Coachability" score={latest.coachability} />
             </div>
-            {latest.private_note && (
+            {notesById[latest.id] && (
               <p className="text-[11px] text-white/45 mt-3 italic"
-                style={{ fontFamily: "'DM Sans', sans-serif" }}>"{latest.private_note}"</p>
+                style={{ fontFamily: "'DM Sans', sans-serif" }}>"{notesById[latest.id]}"</p>
             )}
           </div>
         )}

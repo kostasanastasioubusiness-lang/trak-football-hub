@@ -404,14 +404,7 @@ export default function ParentHome() {
                   ))}
                 </div>
 
-                {assessment.private_note && (
-                  <p
-                    className="text-[11px] text-white/45 mt-4 italic leading-relaxed"
-                    style={{ fontFamily: "'DM Sans', sans-serif" }}
-                  >
-                    "{assessment.private_note}"
-                  </p>
-                )}
+                {/* Private coach notes are not visible to parents */}
               </div>
             </div>
           </div>
