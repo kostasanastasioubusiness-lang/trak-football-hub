@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import { BANDS } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
 
@@ -12,13 +13,14 @@ function bandConfig(value: number) {
   return BANDS.find(b => b.word.toLowerCase() === band) ?? BANDS[BANDS.length - 1]
 }
 
-export function SliderInput({ label, value, onChange }: SliderInputProps) {
-  const cfg = bandConfig(value)
-  // 0..10 scale — 5 sits exactly at the centre of the track.
-  const pct = (value / 10) * 100
+export const SliderInput = forwardRef<HTMLDivElement, SliderInputProps>(
+  function SliderInput({ label, value, onChange }, ref) {
+    const cfg = bandConfig(value)
+    // 0..10 scale — 5 sits exactly at the centre of the track.
+    const pct = (value / 10) * 100
 
-  return (
-    <div className="space-y-2">
+    return (
+      <div ref={ref} className="space-y-2">
       {/* label row: category left, band word right */}
       <div className="flex justify-between items-center">
         <span className="text-[12px] font-medium text-white/[0.88]">
@@ -58,6 +60,7 @@ export function SliderInput({ label, value, onChange }: SliderInputProps) {
           style={{ height: 20, top: -7 }}
         />
       </div>
-    </div>
-  )
-}
+      </div>
+    )
+  },
+)
