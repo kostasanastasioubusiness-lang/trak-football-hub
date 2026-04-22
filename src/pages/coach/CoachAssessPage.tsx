@@ -268,19 +268,7 @@ export default function CoachAssessPage() {
           </span>
         </div>
 
-        {/* ---- 7. self-rating accuracy ---- */}
-        <div className="space-y-1.5">
-          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
-            DOES THE PLAYER'S SELF-RATING FEEL ACCURATE?
-          </span>
-          <div className="grid grid-cols-3 gap-2">
-            <OptPill label="Fair" active={selfRatingFlag === 'fair'} onClick={() => setSelfRatingFlag('fair')} />
-            <OptPill label="Generous" active={selfRatingFlag === 'generous'} onClick={() => setSelfRatingFlag('generous')} />
-            <OptPill label="Way off" active={selfRatingFlag === 'way off'} onClick={() => setSelfRatingFlag('way off')} />
-          </div>
-        </div>
-
-        {/* ---- 8. private note ---- */}
+        {/* ---- 7. private note ---- */}
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
