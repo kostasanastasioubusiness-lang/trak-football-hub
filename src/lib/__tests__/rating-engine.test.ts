@@ -18,29 +18,31 @@ const baseMatch: MatchInput = {
 }
 
 describe('scoreToBand', () => {
-  it('maps 9.2+ to exceptional', () => {
+  it('maps 9.0+ to exceptional', () => {
     expect(scoreToBand(9.5)).toBe('exceptional')
-    expect(scoreToBand(9.2)).toBe('exceptional')
+    expect(scoreToBand(9.0)).toBe('exceptional')
   })
-  it('maps 8.2-9.1 to standout', () => {
+  it('maps 8.0-8.99 to standout', () => {
     expect(scoreToBand(8.5)).toBe('standout')
-    expect(scoreToBand(9.19)).toBe('standout')
+    expect(scoreToBand(8.99)).toBe('standout')
   })
-  it('maps 7.2-8.1 to good', () => {
+  it('maps 7.0-7.99 to good', () => {
     expect(scoreToBand(7.5)).toBe('good')
   })
-  it('maps 6.4-7.1 to steady', () => {
+  it('maps 6.0-6.99 to steady', () => {
     expect(scoreToBand(6.5)).toBe('steady')
   })
-  it('maps 5.6-6.3 to mixed', () => {
-    expect(scoreToBand(6.0)).toBe('mixed')
+  it('maps 4.0-5.99 to mixed', () => {
+    expect(scoreToBand(5.0)).toBe('mixed')
+    expect(scoreToBand(4.0)).toBe('mixed')
   })
-  it('maps 4.8-5.5 to developing', () => {
-    expect(scoreToBand(5.0)).toBe('developing')
+  it('maps 2.0-3.99 to developing', () => {
+    expect(scoreToBand(3.0)).toBe('developing')
+    expect(scoreToBand(2.0)).toBe('developing')
   })
-  it('maps below 4.8 to difficult', () => {
-    expect(scoreToBand(4.0)).toBe('difficult')
-    expect(scoreToBand(4.79)).toBe('difficult')
+  it('maps below 2.0 to difficult', () => {
+    expect(scoreToBand(0)).toBe('difficult')
+    expect(scoreToBand(1.99)).toBe('difficult')
   })
   it('returns a string, never a number', () => {
     const result = scoreToBand(7.5)
@@ -132,7 +134,8 @@ describe('computeMatchScore', () => {
         attacking_threat: 'dangerous', holdup_play: 'average', pressing: 'medium',
       },
     })
-    expect(scoreToBand(score)).toBe('good')
+    // Under the new 0..10 band scale this score now sits in "steady".
+    expect(scoreToBand(score)).toBe('steady')
   })
 
   // DEF loss worked example
