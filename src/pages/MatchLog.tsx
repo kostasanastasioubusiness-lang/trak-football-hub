@@ -237,7 +237,7 @@ const MatchLog = () => {
         {position && posQuestions.length > 0 && (
           <>
             <div className="border-t border-border pt-4">
-              <p className="text-[13px] text-primary mb-3 tracking-wide">📋 {position} Questions</p>
+              <p className="text-[13px] text-primary mb-3 tracking-wide">{position} Questions</p>
             </div>
             {posQuestions.map(q => {
               if (q.id === 'midrole') {
