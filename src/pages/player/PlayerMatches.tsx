@@ -6,7 +6,7 @@ import { MobileShell, NavBar, MatchCard, MetadataLabel } from '@/components/trak
 import { scoreToBand } from '@/lib/rating-engine'
 import type { BandType } from '@/lib/types'
 
-const COMPETITION_FILTERS = ['All', 'League', 'Cup', 'Tournament', 'Friendly']
+const COMPETITION_FILTERS = ['All', 'League', 'Tournament', 'Friendly']
 
 export default function PlayerMatches() {
   const { user } = useAuth()
