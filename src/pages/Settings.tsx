@@ -20,6 +20,11 @@ interface LocalSettings {
   notifyAssessment: boolean
   notifyRecognition: boolean
   notifyWeeklyTip: boolean
+  notifyMeetingRequest: boolean
+  notifyPlayerNeedsAttention: boolean
+  notifyChildAssessment: boolean
+  notifyChildRecognition: boolean
+  notifyChildAlert: boolean
   passportVisibility: PassportVisibility
   showInClubOverview: boolean
 }
@@ -28,6 +33,11 @@ const DEFAULTS: LocalSettings = {
   notifyAssessment: true,
   notifyRecognition: true,
   notifyWeeklyTip: true,
+  notifyMeetingRequest: true,
+  notifyPlayerNeedsAttention: true,
+  notifyChildAssessment: true,
+  notifyChildRecognition: true,
+  notifyChildAlert: true,
   passportVisibility: 'coach_only',
   showInClubOverview: true,
 }
@@ -170,7 +180,7 @@ export default function Settings() {
           />
         </Section>
 
-        {/* Connections (player only) */}
+        {/* Connections — player */}
         {role === 'player' && (
           <Section label="Connections">
             <Row
@@ -187,7 +197,7 @@ export default function Settings() {
             />
             <button
               onClick={() => toast('Open the relevant invite flow from your profile')}
-              className="mt-1 flex items-center gap-1.5"
+              className="mt-1 mb-3 flex items-center gap-1.5"
               style={{ fontSize: 13, color: '#C8F25A' }}
             >
               <Plus size={12} /> Add connection
@@ -195,47 +205,111 @@ export default function Settings() {
           </Section>
         )}
 
+        {/* Connections — parent */}
+        {role === 'parent' && (
+          <Section label="Linked child">
+            <Row
+              label="Player"
+              right={<ConnectionPill name="Not linked" onRemove={() => toast('No link to remove')} />}
+            />
+          </Section>
+        )}
+
+        {/* Connections — coach */}
+        {role === 'coach' && (
+          <Section label="Squad invite">
+            <Row
+              label="Invite code"
+              right={<Value>Manage from your profile</Value>}
+            />
+          </Section>
+        )}
+
         {/* Notifications */}
         <Section label="Notifications">
-          <ToggleRow
-            label="New coach assessment"
-            value={settings.notifyAssessment}
-            onChange={v => persist({ ...settings, notifyAssessment: v })}
-          />
-          <ToggleRow
-            label="Recognition awarded"
-            value={settings.notifyRecognition}
-            onChange={v => persist({ ...settings, notifyRecognition: v })}
-          />
-          <ToggleRow
-            label="Weekly tip"
-            value={settings.notifyWeeklyTip}
-            onChange={v => persist({ ...settings, notifyWeeklyTip: v })}
-          />
+          {role === 'player' && (
+            <>
+              <ToggleRow
+                label="New coach assessment"
+                value={settings.notifyAssessment}
+                onChange={v => persist({ ...settings, notifyAssessment: v })}
+              />
+              <ToggleRow
+                label="Recognition awarded"
+                value={settings.notifyRecognition}
+                onChange={v => persist({ ...settings, notifyRecognition: v })}
+              />
+              <ToggleRow
+                label="Weekly tip"
+                value={settings.notifyWeeklyTip}
+                onChange={v => persist({ ...settings, notifyWeeklyTip: v })}
+              />
+            </>
+          )}
+          {role === 'coach' && (
+            <>
+              <ToggleRow
+                label="Player needs attention"
+                value={settings.notifyPlayerNeedsAttention}
+                onChange={v => persist({ ...settings, notifyPlayerNeedsAttention: v })}
+              />
+              <ToggleRow
+                label="Meeting request updates"
+                value={settings.notifyMeetingRequest}
+                onChange={v => persist({ ...settings, notifyMeetingRequest: v })}
+              />
+              <ToggleRow
+                label="Weekly tip"
+                value={settings.notifyWeeklyTip}
+                onChange={v => persist({ ...settings, notifyWeeklyTip: v })}
+              />
+            </>
+          )}
+          {role === 'parent' && (
+            <>
+              <ToggleRow
+                label="New assessment for my child"
+                value={settings.notifyChildAssessment}
+                onChange={v => persist({ ...settings, notifyChildAssessment: v })}
+              />
+              <ToggleRow
+                label="Recognition for my child"
+                value={settings.notifyChildRecognition}
+                onChange={v => persist({ ...settings, notifyChildRecognition: v })}
+              />
+              <ToggleRow
+                label="Coach alerts about my child"
+                value={settings.notifyChildAlert}
+                onChange={v => persist({ ...settings, notifyChildAlert: v })}
+              />
+            </>
+          )}
         </Section>
 
-        {/* Privacy */}
-        <Section label="Privacy">
-          <Row
-            label="Who can see my passport"
-            right={
-              <Segmented
-                value={settings.passportVisibility}
-                options={[
-                  { value: 'coach_only', label: 'Coach only' },
-                  { value: 'link', label: 'Anyone with link' },
-                ]}
-                onChange={v => persist({ ...settings, passportVisibility: v as PassportVisibility })}
-              />
-            }
-            stack
-          />
-          <ToggleRow
-            label="Show my name in club overview"
-            value={settings.showInClubOverview}
-            onChange={v => persist({ ...settings, showInClubOverview: v })}
-          />
-        </Section>
+        {/* Privacy — player only */}
+        {role === 'player' && (
+          <Section label="Privacy">
+            <Row
+              label="Who can see my passport"
+              right={
+                <Segmented
+                  value={settings.passportVisibility}
+                  options={[
+                    { value: 'coach_only', label: 'Coach only' },
+                    { value: 'link', label: 'Anyone with link' },
+                  ]}
+                  onChange={v => persist({ ...settings, passportVisibility: v as PassportVisibility })}
+                />
+              }
+              stack
+            />
+            <ToggleRow
+              label="Show my name in club overview"
+              value={settings.showInClubOverview}
+              onChange={v => persist({ ...settings, showInClubOverview: v })}
+            />
+          </Section>
+        )}
 
         {/* Sign out */}
         <button
