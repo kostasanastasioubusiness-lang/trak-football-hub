@@ -59,6 +59,20 @@ export default function CoachProfilePage() {
           </p>
         </TrakCard>
 
+        {/* How TRAK works link */}
+        <button
+          onClick={() => navigate('/how-it-works')}
+          className="w-full flex items-center justify-between rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] text-left hover:bg-[#141416] transition-colors"
+        >
+          <div>
+            <MetadataLabel text="HOW TRAK WORKS" />
+            <p className="text-[12px] text-white/55 mt-1.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              Performance bands & rating engine
+            </p>
+          </div>
+          <ChevronRight size={18} className="text-white/40" />
+        </button>
+
         {/* Settings entry */}
         <button
           onClick={() => navigate('/settings')}
