@@ -42,6 +42,8 @@ const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfi
 const CoachRecognition = lazy(() => import("./pages/coach/CoachRecognition"));
 const CoachAwardPlayer = lazy(() => import("./pages/coach/CoachAwardPlayer"));
 const CoachQuickAssess = lazy(() => import("./pages/coach/CoachQuickAssess"));
+const CoachSchedule = lazy(() => import("./pages/coach/CoachSchedule"));
+const CoachAssistant = lazy(() => import("./pages/coach/CoachAssistant"));
 
 const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
 const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
@@ -110,6 +112,8 @@ const App = () => (
             <Route path="/coach/player/:id" element={<RouteGuard allowedRole="coach"><CoachPlayerProfilePage /></RouteGuard>} />
             <Route path="/coach/recognition" element={<RouteGuard allowedRole="coach"><CoachRecognition /></RouteGuard>} />
             <Route path="/coach/award" element={<RouteGuard allowedRole="coach"><CoachAwardPlayer /></RouteGuard>} />
+            <Route path="/coach/schedule" element={<RouteGuard allowedRole="coach"><CoachSchedule /></RouteGuard>} />
+            <Route path="/coach/assistant" element={<RouteGuard allowedRole="coach"><CoachAssistant /></RouteGuard>} />
 
             {/* Parent routes */}
             <Route path="/parent/home" element={<RouteGuard allowedRole="parent"><ParentHome /></RouteGuard>} />
