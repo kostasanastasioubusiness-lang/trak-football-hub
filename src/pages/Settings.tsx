@@ -261,11 +261,6 @@ export default function Settings() {
               }
               stack
             />
-            <ToggleRow
-              label="Show my name in club overview"
-              value={settings.showInClubOverview}
-              onChange={v => persist({ ...settings, showInClubOverview: v })}
-            />
           </Section>
         )}
 
