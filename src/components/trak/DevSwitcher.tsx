@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
+import { X, ArrowLeftRight } from 'lucide-react'
 
 const DEV_ACCOUNTS = [
   { role: 'coach',  label: 'Coach',  email: 'coach@trak.dev',  color: 'hsl(40,78%,60%)' },
@@ -64,14 +65,14 @@ export function DevSwitcher() {
       <div className="flex justify-end">
         <button
           onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] text-[10px] font-bold tracking-wider transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] text-[10px] font-bold tracking-wider transition-all"
           style={{
             background: open ? 'rgba(200,242,90,0.18)' : 'rgba(10,10,11,0.85)',
             border: `1px solid ${open ? 'rgba(200,242,90,0.45)' : 'rgba(255,255,255,0.14)'}`,
             color: open ? '#C8F25A' : 'rgba(255,255,255,0.35)',
             backdropFilter: 'blur(10px)',
           }}>
-          {open ? '✕ close' : '⇄ DEV'}
+          {open ? <><X size={10} /> close</> : <><ArrowLeftRight size={10} /> DEV</>}
         </button>
       </div>
     </div>
