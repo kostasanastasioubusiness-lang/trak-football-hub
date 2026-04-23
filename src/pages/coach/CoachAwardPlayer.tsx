@@ -14,15 +14,16 @@ const AWARD_TYPES: { value: string; label: string; icon: LucideIcon }[] = [
   { value: 'top_scorer', label: 'Top Scorer', icon: Target },
 ]
 
-function OptPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function OptPill({ label, icon: Icon, active, onClick }: { label: string; icon?: LucideIcon; active: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className="rounded-[10px] p-[11px_8px] text-center text-[13px] font-medium transition-colors"
+      className="rounded-[10px] p-[11px_8px] text-center text-[13px] font-medium transition-colors inline-flex items-center justify-center gap-1.5"
       style={{
         background: active ? 'rgba(200,242,90,0.12)' : '#0d0d0f',
         border: active ? '1.5px solid #C8F25A' : '1.5px solid rgba(255,255,255,0.06)',
         color: active ? '#C8F25A' : 'rgba(255,255,255,0.55)',
       }}>
+      {Icon && <Icon size={14} />}
       {label}
     </button>
   )
