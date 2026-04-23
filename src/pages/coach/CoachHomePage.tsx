@@ -400,12 +400,6 @@ export default function CoachHomePage() {
             className="rounded-[14px] border p-3.5 text-left active:scale-[0.98] transition-transform"
             style={{ background: '#101012', borderColor: 'rgba(255,255,255,0.07)' }}
           >
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <span style={{ fontSize: 14 }}>📅</span>
-              <span className="text-[8px] tracking-[0.12em] uppercase" style={{ fontFamily: "'DM Mono', monospace", color: '#C8F25A' }}>
-                AI
-              </span>
-            </div>
             <p className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.88)' }}>Smart Calendar</p>
             <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Paste a schedule, parse to events</p>
           </button>
@@ -414,12 +408,6 @@ export default function CoachHomePage() {
             className="rounded-[14px] border p-3.5 text-left active:scale-[0.98] transition-transform"
             style={{ background: '#101012', borderColor: 'rgba(255,255,255,0.07)' }}
           >
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <span style={{ fontSize: 14 }}>✨</span>
-              <span className="text-[8px] tracking-[0.12em] uppercase" style={{ fontFamily: "'DM Mono', monospace", color: '#C8F25A' }}>
-                AI
-              </span>
-            </div>
             <p className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.88)' }}>Coach Assistant</p>
             <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Drills & session ideas</p>
           </button>
