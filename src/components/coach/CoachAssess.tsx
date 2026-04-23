@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getRatingBand } from '@/lib/ratingBand';
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
+import { User as UserIcon, Check, AlertTriangle, X as XIcon } from 'lucide-react';
 
 const CATEGORIES = [
   { id: 'work_rate', label: 'Work Rate', hint: 'Pressing · tracking back · effort without the ball' },
@@ -93,7 +94,9 @@ const CoachAssess = () => {
 
       {selectedPlayerData && (
         <div className="bg-card border border-border rounded-[10px] p-3 mb-4 flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center text-lg">👦</div>
+          <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center">
+            <UserIcon size={18} className="text-muted-foreground" />
+          </div>
           <div>
             <p className="text-[15px] font-medium text-foreground">{selectedPlayerData.player_name}</p>
             <p className="text-[11px] text-muted-foreground">{selectedPlayerData.position} {selectedPlayerData.shirt_number ? `· #${selectedPlayerData.shirt_number}` : ''}</p>
@@ -109,7 +112,7 @@ const CoachAssess = () => {
           <option value="">Select a session...</option>
           {sessions.map(s => (
             <option key={s.id} value={s.id}>
-              {s.session_type === 'match' ? '⚽' : '🏃'} {s.title} — {new Date(s.session_date || s.created_at).toLocaleDateString()}
+              {s.title} — {new Date(s.session_date || s.created_at).toLocaleDateString()}
             </option>
           ))}
         </select>
@@ -164,17 +167,21 @@ const CoachAssess = () => {
       <div className="mb-4">
         <p className="section-label mb-2">Does the player's computed rating feel fair?</p>
         <div className="space-y-1.5">
-          {[
-            { k: 'fair', l: '✓ Fair — rating reflects the performance', cls: 'border-primary bg-primary/10 text-primary' },
-            { k: 'generous', l: '⚠️ Slightly generous', cls: 'border-gold bg-gold/10 text-gold' },
-            { k: 'off', l: '✕ Significantly off', cls: 'border-destructive bg-destructive/10 text-destructive' },
-          ].map(f => (
-            <button key={f.k} onClick={() => setFlag(f.k)}
-              className={`w-full text-left border rounded-lg px-3 py-2.5 text-xs font-medium transition-colors flex items-center gap-2
-                ${flag === f.k ? f.cls : 'border-border bg-secondary text-muted-foreground'}`}>
-              {f.l}
-            </button>
-          ))}
+          {([
+            { k: 'fair',     icon: Check,          l: 'Fair — rating reflects the performance', cls: 'border-primary bg-primary/10 text-primary' },
+            { k: 'generous', icon: AlertTriangle,  l: 'Slightly generous',                       cls: 'border-gold bg-gold/10 text-gold' },
+            { k: 'off',      icon: XIcon,          l: 'Significantly off',                       cls: 'border-destructive bg-destructive/10 text-destructive' },
+          ] as const).map(f => {
+            const Icon = f.icon;
+            return (
+              <button key={f.k} onClick={() => setFlag(f.k)}
+                className={`w-full text-left border rounded-lg px-3 py-2.5 text-xs font-medium transition-colors flex items-center gap-2
+                  ${flag === f.k ? f.cls : 'border-border bg-secondary text-muted-foreground'}`}>
+                <Icon size={13} />
+                {f.l}
+              </button>
+            );
+          })}
         </div>
       </div>
 
