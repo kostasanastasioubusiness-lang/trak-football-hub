@@ -5,10 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { IconMatch } from '@/components/icons/TrakIcons'
 import { ChevronRight } from 'lucide-react'
-import { scoreToBand } from '@/lib/rating-engine'
-import { BANDS } from '@/lib/types'
 import { trackEvent } from '@/lib/telemetry'
-import { calculateRecords, type PersonalRecords } from '@/lib/records'
 import RatingTrendChart from '@/components/player/RatingTrendChart'
 
 type TrendFilter = 'last5' | 'last10' | 'all'
@@ -18,33 +15,16 @@ export default function PlayerProfilePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [details, setDetails] = useState<any>(null)
-  const [stats, setStats] = useState({ matches: 0, goals: 0, assists: 0 })
   const [assessment, setAssessment] = useState<any>(null)
   const [matchHistory, setMatchHistory] = useState<{ created_at: string; computed_rating: number }[]>([])
   const [trendFilter, setTrendFilter] = useState<TrendFilter>('all')
-  const [records, setRecords] = useState<PersonalRecords | null>(null)
-  const [matchOpponents, setMatchOpponents] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!user) return
     supabase.from('player_details').select('*').eq('user_id', user.id).maybeSingle().then(({ data }) => setDetails(data))
-    supabase.from('matches').select('id, goals, assists, computed_rating, created_at, opponent').eq('user_id', user.id).order('created_at', { ascending: true }).then(({ data }) => {
+    supabase.from('matches').select('computed_rating, created_at').eq('user_id', user.id).order('created_at', { ascending: true }).then(({ data }) => {
       if (!data) return
-      setStats({
-        matches: data.length,
-        goals: data.reduce((s, m) => s + (m.goals || 0), 0),
-        assists: data.reduce((s, m) => s + (m.assists || 0), 0),
-      })
       setMatchHistory(data.map((m) => ({ created_at: m.created_at, computed_rating: m.computed_rating })))
-
-      // Build opponent lookup and calculate personal records
-      const opMap: Record<string, string> = {}
-      for (const m of data) {
-        if (m.opponent) opMap[m.id] = m.opponent
-      }
-      setMatchOpponents(opMap)
-      setRecords(calculateRecords(data))
-      trackEvent('records_viewed', {})
     })
     // Get latest coach assessment
     supabase.from('coach_assessments').select('*')
