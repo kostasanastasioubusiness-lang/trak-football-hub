@@ -117,7 +117,7 @@ export default function CoachAssistant() {
           </button>
           <div>
             <p className="text-[9px] tracking-[0.12em] uppercase" style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.35)' }}>
-              AI · Coach
+              Coach
             </p>
             <h1 className="text-[22px] leading-tight" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, color: 'rgba(255,255,255,0.88)' }}>
               Assistant
