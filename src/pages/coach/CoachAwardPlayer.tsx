@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
-import { ChevronLeft, ChevronDown } from 'lucide-react'
+import { ChevronLeft, ChevronDown, Trophy, Medal, TrendingUp, Target, type LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useLocation } from 'react-router-dom'
 
-const AWARD_TYPES = [
-  { value: 'player_of_week', label: 'Player of the Week', emoji: '🏆' },
-  { value: 'player_of_month', label: 'Player of the Month', emoji: '🥇' },
-  { value: 'most_improved', label: 'Most Improved', emoji: '📈' },
-  { value: 'top_scorer', label: 'Top Scorer', emoji: '⚽' },
+const AWARD_TYPES: { value: string; label: string; icon: LucideIcon }[] = [
+  { value: 'player_of_week', label: 'Player of the Week', icon: Trophy },
+  { value: 'player_of_month', label: 'Player of the Month', icon: Medal },
+  { value: 'most_improved', label: 'Most Improved', icon: TrendingUp },
+  { value: 'top_scorer', label: 'Top Scorer', icon: Target },
 ]
 
 function OptPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
