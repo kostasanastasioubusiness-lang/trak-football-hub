@@ -2,13 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, NavBar } from '@/components/trak'
+import { MobileShell, NavBar, BandPill, MetadataLabel, CategoryBar } from '@/components/trak'
+import { CardSkeleton, Skeleton } from '@/components/trak'
 import { BANDS, type BandType } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
-
-const SERIF = "'Fraunces', Georgia, serif"
-const SANS = "'DM Sans', sans-serif"
-const MONO = "'DM Mono', monospace"
 
 export default function ParentHome() {
   const { user } = useAuth()
@@ -17,9 +14,11 @@ export default function ParentHome() {
   const [childName, setChildName] = useState('')
   const [childDetails, setChildDetails] = useState<any>(null)
   const [matches, setMatches] = useState<any[]>([])
+  const [goals, setGoals] = useState<any[]>([])
   const [assessment, setAssessment] = useState<any>(null)
   const [coachName, setCoachName] = useState('')
   const [loading, setLoading] = useState(true)
+  const [wellnessToday, setWellnessToday] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -27,23 +26,38 @@ export default function ParentHome() {
       if (!links?.length) { setLoading(false); return }
       const childId = links[0].player_user_id
 
+      // Fetch child profile
       const { data: profile } = await supabase.from('profiles').select('full_name').eq('user_id', childId).single()
       if (profile) setChildName(profile.full_name)
 
+      // Fetch child player details
       const { data: details } = await supabase.from('player_details').select('position, current_club, age_group').eq('user_id', childId).maybeSingle()
       if (details) setChildDetails(details)
 
+      // Fetch matches
       const { data: matchData } = await supabase.from('matches')
         .select('id, team_score, opponent_score, competition, venue, minutes_played, computed_rating, created_at, position, goals, assists, opponent, body_condition')
         .eq('user_id', childId).order('created_at', { ascending: false })
-      if (matchData) setMatches(matchData)
+      if (matchData) {
+        setMatches(matchData)
+        if (matchData[0]?.body_condition) {
+          setWellnessToday(matchData[0].body_condition)
+        }
+      }
 
-      const { data: squadRows } = await supabase.from('squad_players').select('id').eq('linked_player_id', childId)
+      // Fetch goals
+      const { data: goalData } = await supabase.from('player_goals').select('*').eq('user_id', childId).eq('completed', false)
+      if (goalData) setGoals(goalData)
+
+      // Fetch latest coach assessment via squad_players link
+      const { data: squadRows } = await supabase.from('squad_players')
+        .select('id').eq('linked_player_id', childId)
       if (squadRows?.length) {
         const { data: assessments } = await supabase.from('coach_assessments')
           .select('*')
           .in('squad_player_id', squadRows.map((r: any) => r.id))
-          .order('created_at', { ascending: false }).limit(1)
+          .order('created_at', { ascending: false })
+          .limit(1)
         if (assessments?.length) {
           setAssessment(assessments[0])
           const { data: coachProfile } = await supabase.from('profiles').select('full_name').eq('user_id', assessments[0].coach_user_id).single()
@@ -55,313 +69,412 @@ export default function ParentHome() {
     })
   }, [user])
 
-  const firstName = childName?.split(' ')[0] || 'Your child'
+  /* ---------- derived data ---------- */
+
+  const getBandDistribution = () => {
+    const dist: Record<string, number> = {}
+    BANDS.forEach(b => { dist[b.word.toLowerCase()] = 0 })
+    matches.forEach(m => {
+      const band = scoreToBand(m.computed_rating || 6.5)
+      dist[band] = (dist[band] || 0) + 1
+    })
+    return dist
+  }
+
+  const getSeasonBand = (): BandType => {
+    if (matches.length === 0) return 'steady'
+    const dist = getBandDistribution()
+    let maxBand: BandType = 'steady'
+    let maxCount = 0
+    Object.entries(dist).forEach(([band, count]) => {
+      if (count > maxCount) { maxCount = count; maxBand = band as BandType }
+    })
+    return maxBand
+  }
+
+  const seasonBand = getSeasonBand()
+  const distribution = getBandDistribution()
   const lastMatch = matches[0]
-  const lastBand: BandType = lastMatch ? (scoreToBand(lastMatch.computed_rating || 6.5) as BandType) : 'steady'
-  const lastBandConfig = BANDS.find(b => b.word.toLowerCase() === lastBand)
 
-  const seasonAvg = matches.length
-    ? matches.reduce((s, m) => s + (m.computed_rating || 6.5), 0) / matches.length
-    : 0
-  const seasonBand: BandType = (matches.length ? scoreToBand(seasonAvg) : 'steady') as BandType
-  const seasonBandConfig = BANDS.find(b => b.word.toLowerCase() === seasonBand)
+  // Trend: last 5 match ratings
+  const trendMatches = matches.slice(0, 5).reverse()
+  const trendHeights = trendMatches.map(m => {
+    const r = m.computed_rating || 6.5
+    return Math.max(20, Math.min(100, ((r - 4) / 6) * 100))
+  })
+  const isImproving = trendMatches.length >= 2 &&
+    (trendMatches[trendMatches.length - 1]?.computed_rating || 0) > (trendMatches[0]?.computed_rating || 0)
 
-  const wins = matches.filter(m => m.team_score > m.opponent_score).length
-  const draws = matches.filter(m => m.team_score === m.opponent_score).length
-  const losses = matches.filter(m => m.team_score < m.opponent_score).length
-  const totalGoals = matches.reduce((s, m) => s + (m.goals || 0), 0)
-  const totalAssists = matches.reduce((s, m) => s + (m.assists || 0), 0)
+  const bandAbbrev = [
+    { key: 'exceptional', abbr: 'E', color: '#C8F25A' },
+    { key: 'standout', abbr: 'St', color: '#86efac' },
+    { key: 'good', abbr: 'G', color: '#4ade80' },
+    { key: 'steady', abbr: 'Sy', color: '#60a5fa' },
+    { key: 'mixed', abbr: 'M', color: '#fb923c' },
+    { key: 'developing', abbr: 'D', color: '#a78bfa' },
+  ]
 
-  const today = new Date()
-  const dateStr = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()
+  const wellnessLabel = wellnessToday === 'fresh' ? 'Feeling great'
+    : wellnessToday === 'good' ? 'Feeling good'
+    : wellnessToday === 'tired' ? 'Feeling tired'
+    : wellnessToday === 'knock' ? 'Carrying a knock'
+    : 'Not logged'
 
-  // Headline writer
-  const headline = (() => {
-    if (!lastMatch) return `${firstName}'s season is about to begin`
-    const result = lastMatch.team_score > lastMatch.opponent_score ? 'win'
-      : lastMatch.team_score < lastMatch.opponent_score ? 'loss' : 'draw'
-    if (lastMatch.goals >= 2) return `${firstName} stars with brace in ${lastMatch.team_score}\u2013${lastMatch.opponent_score} ${result}`
-    if (lastMatch.goals === 1) return `${firstName} on the scoresheet as side ${result === 'win' ? 'edge past' : result === 'draw' ? 'share spoils with' : 'fall to'} ${lastMatch.opponent || 'rivals'}`
-    if (lastBand === 'exceptional' || lastBand === 'standout') return `${firstName} delivers a ${lastBandConfig?.word.toLowerCase()} display`
-    if (result === 'win') return `${firstName}'s side claim ${lastMatch.team_score}\u2013${lastMatch.opponent_score} victory`
-    if (result === 'draw') return `Honours even as ${firstName}'s side draw ${lastMatch.team_score}\u2013${lastMatch.opponent_score}`
-    return `${firstName}'s side fall ${lastMatch.team_score}\u2013${lastMatch.opponent_score} to ${lastMatch.opponent || 'opponents'}`
-  })()
+  const wellnessEmoji = wellnessToday === 'fresh' || wellnessToday === 'good' ? '\uD83D\uDC9A'
+    : wellnessToday === 'tired' ? '\uD83D\uDFE1'
+    : wellnessToday === 'knock' ? '\uD83D\uDFE0'
+    : '\u2B1C'
 
-  const dek = lastMatch
-    ? `Coaches rated the performance ${lastBandConfig?.word.toLowerCase()}. ${firstName} played ${lastMatch.minutes_played || 90} minutes${lastMatch.position ? ` at ${lastMatch.position}` : ''}${lastMatch.goals ? `, scoring ${lastMatch.goals}` : ''}${lastMatch.assists ? ` and assisting ${lastMatch.assists}` : ''}.`
-    : `When ${firstName} logs their first match, the full report will run here on the front page.`
+  const assessmentCategories = assessment ? [
+    { label: 'Work Rate', score: assessment.work_rate },
+    { label: 'Tactical', score: assessment.tactical },
+    { label: 'Attitude', score: assessment.attitude },
+    { label: 'Technical', score: assessment.technical },
+    { label: 'Physical', score: assessment.physical },
+    { label: 'Coachability', score: assessment.coachability },
+  ] : []
+
+  /* ---------- loading skeleton ---------- */
 
   if (loading) return (
     <MobileShell>
-      <div className="pt-6 pb-4 space-y-6">
-        <div className="h-3 w-40 bg-white/[0.06] animate-pulse rounded" />
-        <div className="h-12 w-3/4 bg-white/[0.06] animate-pulse rounded" />
-        <div className="h-40 w-full bg-white/[0.04] animate-pulse rounded" />
+      <div className="pt-12 pb-4 space-y-6">
+        <CardSkeleton />
+        <Skeleton className="h-3 w-28" />
+        <CardSkeleton />
       </div>
       <NavBar role="parent" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )
+
+  /* ---------- render ---------- */
 
   return (
     <MobileShell>
-      <div className="pt-4 pb-6">
+      <div className="pt-3 pb-4">
 
-        {/* ── MASTHEAD ── */}
-        <div className="border-b-2 border-white/[0.88] pb-2.5 mb-2.5">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[9px] tracking-[0.18em] uppercase text-white/45" style={{ fontFamily: MONO }}>
-              Vol. 1 &middot; No. {matches.length || 1}
-            </span>
-            <button
-              onClick={() => {/* switch child */}}
-              className="text-[9px] tracking-[0.18em] uppercase text-white/45 underline-offset-2 hover:underline"
-              style={{ fontFamily: MONO }}
-            >
-              Switch desk
-            </button>
-          </div>
-          <h1
-            className="text-[44px] leading-[0.9] text-white/95"
-            style={{ fontFamily: SERIF, fontWeight: 600, letterSpacing: '-0.03em', fontStyle: 'italic' }}
+        {/* ── TRAK header row + Switch pill ── */}
+        <div className="flex items-center justify-between mb-1">
+          <span
+            className="text-[11px] font-medium tracking-[0.14em] uppercase text-white/20"
+            style={{ fontFamily: "'DM Mono', monospace" }}
           >
-            The Trak Times
-          </h1>
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-[9px] tracking-[0.18em] uppercase text-white/45" style={{ fontFamily: MONO }}>
-              {dateStr}
-            </span>
-            <span className="text-[9px] tracking-[0.18em] uppercase text-white/45" style={{ fontFamily: MONO }}>
-              {firstName} desk
-            </span>
-          </div>
-        </div>
-
-        {/* ── KICKER ── */}
-        <div className="flex items-center gap-2 mb-2">
-          <span className="inline-block w-1.5 h-1.5 bg-[#C8F25A]" />
-          <span className="text-[10px] tracking-[0.22em] uppercase text-[#C8F25A]" style={{ fontFamily: MONO, fontWeight: 500 }}>
-            {lastMatch ? 'Top story' : 'Coming soon'}
+            TRAK
           </span>
+          <button
+            onClick={() => {/* TODO: switch child */}}
+            className="h-6 px-3 rounded-full bg-white/[0.06] border border-white/[0.07] text-[9px] font-medium tracking-[0.06em] uppercase text-white/45"
+            style={{ fontFamily: "'DM Mono', monospace" }}
+          >
+            Switch
+          </button>
         </div>
 
-        {/* ── HEADLINE ── */}
-        <h2
-          className="text-[30px] leading-[1.05] text-white/95 mb-3"
-          style={{ fontFamily: SERIF, fontWeight: 600, letterSpacing: '-0.02em' }}
-        >
-          {headline}
-        </h2>
-
-        {/* ── DEK ── */}
-        <p
-          className="text-[15px] leading-[1.45] text-white/65 mb-3"
-          style={{ fontFamily: SERIF, fontWeight: 300 }}
-        >
-          {dek}
-        </p>
-
-        {/* ── BYLINE ── */}
-        {lastMatch && (
-          <div className="flex items-center gap-2 mb-4 pb-4 border-b border-white/[0.08]">
-            <div className="w-6 h-6 rounded-full bg-white/[0.08] flex items-center justify-center text-[10px] text-white/45" style={{ fontFamily: SERIF }}>
-              T
+        {/* ── Identity block: Following label + child name + pills ── */}
+        <div className="py-2.5 pb-4">
+          <p
+            className="text-[12px] mb-1"
+            style={{ fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.22)' }}
+          >
+            Following &#9660;
+          </p>
+          <p
+            className="text-[28px] text-white/88 leading-tight"
+            style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, letterSpacing: '-0.03em' }}
+          >
+            {childName || 'No child linked'}
+          </p>
+          {childDetails && (
+            <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+              {childDetails.position && (
+                <span
+                  className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
+                  style={{ fontFamily: "'DM Mono', monospace" }}
+                >
+                  {childDetails.position}
+                </span>
+              )}
+              {childDetails.current_club && (
+                <span
+                  className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
+                  style={{ fontFamily: "'DM Mono', monospace" }}
+                >
+                  {childDetails.current_club}{childDetails.age_group ? ` ${childDetails.age_group}` : ''}
+                </span>
+              )}
             </div>
+          )}
+        </div>
+
+        {/* ── Hero card: This season ── */}
+        <div
+          className="relative rounded-[24px] p-5 mb-3.5 overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #101012 0%, #0f0f12 100%)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          {/* Glow accent */}
+          <div
+            className="absolute -bottom-[60px] -right-[60px] w-[200px] h-[200px] rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.08) 0%, transparent 70%)' }}
+          />
+
+          <div className="flex items-start justify-between mb-4 relative z-10">
             <div>
-              <p className="text-[10px] tracking-[0.14em] uppercase text-white/45" style={{ fontFamily: MONO }}>
-                By Trak Match Desk
-              </p>
-              <p className="text-[10px] tracking-[0.14em] uppercase text-white/30" style={{ fontFamily: MONO }}>
-                Filed {new Date(lastMatch.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                {lastMatch.venue ? ` \u00B7 ${lastMatch.venue}` : ''}
-              </p>
+              <MetadataLabel text="THIS SEASON" />
+              {matches.length > 0 ? (
+                <>
+                  <p
+                    className="text-[52px] leading-none mt-2"
+                    style={{
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontWeight: 300,
+                      letterSpacing: '-0.04em',
+                      color: BANDS.find(b => b.word.toLowerCase() === seasonBand)?.color,
+                    }}
+                  >
+                    {BANDS.find(b => b.word.toLowerCase() === seasonBand)?.word}
+                  </p>
+                  {lastMatch && (
+                    <p
+                      className="text-[9px] text-white/22 mt-1.5 tracking-[0.04em]"
+                      style={{ fontFamily: "'DM Mono', monospace" }}
+                    >
+                      Last match &middot; vs {lastMatch.opponent || lastMatch.competition || 'Unknown'}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-white/45 text-sm mt-2">No matches logged yet.</p>
+              )}
             </div>
+
+            {/* Trend mini-chart (5 bars) */}
+            {trendHeights.length > 0 && (
+              <div className="text-right">
+                <p
+                  className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/22 mb-2"
+                  style={{ fontFamily: "'DM Mono', monospace" }}
+                >
+                  Trend
+                </p>
+                <div className="flex items-end gap-[3px] h-8 justify-end">
+                  {trendHeights.map((h, i) => (
+                    <div
+                      key={i}
+                      className="w-2.5 rounded-t"
+                      style={{
+                        height: `${h}%`,
+                        background: i >= trendHeights.length - 2
+                          ? (i === trendHeights.length - 1 ? '#C8F25A' : 'rgba(200,242,90,0.35)')
+                          : 'rgba(255,255,255,0.08)',
+                      }}
+                    />
+                  ))}
+                </div>
+                {isImproving && (
+                  <p
+                    className="text-[10px] font-medium text-[#C8F25A] mt-1.5"
+                    style={{ fontFamily: "'DM Mono', monospace" }}
+                  >
+                    &uarr; improving
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-        )}
 
-        {/* ── SCOREBOX (pull-quote style) ── */}
-        {lastMatch && (
-          <div className="mb-6 px-4 py-4 border-l-2 border-[#C8F25A] bg-white/[0.02]">
-            <p className="text-[9px] tracking-[0.18em] uppercase text-white/45 mb-2" style={{ fontFamily: MONO }}>
-              Final score &middot; {lastMatch.competition || 'Match'}
-            </p>
-            <div className="flex items-baseline gap-3">
-              <span className="text-[36px] leading-none text-white/95" style={{ fontFamily: SERIF, fontWeight: 600, letterSpacing: '-0.03em' }}>
-                {lastMatch.team_score}
-              </span>
-              <span className="text-[14px] text-white/45" style={{ fontFamily: SERIF, fontStyle: 'italic' }}>vs</span>
-              <span className="text-[36px] leading-none text-white/95" style={{ fontFamily: SERIF, fontWeight: 600, letterSpacing: '-0.03em' }}>
-                {lastMatch.opponent_score}
-              </span>
-              <span className="text-[12px] text-white/45 ml-2" style={{ fontFamily: SANS }}>
-                {lastMatch.opponent || 'Opponent'}
-              </span>
-            </div>
-            <div className="mt-2 inline-block px-2 py-0.5 rounded-sm" style={{ background: `${lastBandConfig?.color}22`, color: lastBandConfig?.color }}>
-              <span className="text-[10px] tracking-[0.14em] uppercase" style={{ fontFamily: MONO, fontWeight: 500 }}>
-                Rated: {lastBandConfig?.word}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* ── SECTION: SEASON IN NUMBERS ── */}
-        {matches.length > 0 && (
-          <section className="mb-6">
-            <SectionRule label="Season in numbers" />
-            <div className="grid grid-cols-3 gap-4 mt-3">
-              <Stat label="Form" value={seasonBandConfig?.word || '—'} valueColor={seasonBandConfig?.color} small />
-              <Stat label="Played" value={String(matches.length)} />
-              <Stat label="Record" value={`${wins}-${draws}-${losses}`} />
-              <Stat label="Goals" value={String(totalGoals)} />
-              <Stat label="Assists" value={String(totalAssists)} />
-              <Stat label="Position" value={childDetails?.position || '—'} small />
-            </div>
-          </section>
-        )}
-
-        {/* ── SECTION: COACH'S CORNER ── */}
-        {assessment && (
-          <section className="mb-6">
-            <SectionRule label="Coach's corner" />
-            <div className="mt-3">
-              <p className="text-[10px] tracking-[0.18em] uppercase text-white/45 mb-1.5" style={{ fontFamily: MONO }}>
-                Filed by {coachName || 'Coach'} &middot; {assessment.created_at ? new Date(assessment.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}
-              </p>
-              <h3
-                className="text-[20px] leading-[1.15] text-white/90 mb-3"
-                style={{ fontFamily: SERIF, fontWeight: 500, letterSpacing: '-0.01em' }}
-              >
-                Latest assessment scores {firstName} across six pillars
-              </h3>
-              <div className="space-y-2.5">
-                {[
-                  { label: 'Work Rate', score: assessment.work_rate },
-                  { label: 'Tactical', score: assessment.tactical },
-                  { label: 'Attitude', score: assessment.attitude },
-                  { label: 'Technical', score: assessment.technical },
-                  { label: 'Physical', score: assessment.physical },
-                  { label: 'Coachability', score: assessment.coachability },
-                ].map(cat => {
-                  const band = scoreToBand(cat.score || 6.5)
-                  const cfg = BANDS.find(b => b.word.toLowerCase() === band)!
-                  return (
-                    <div key={cat.label} className="flex items-center gap-3 py-1 border-b border-white/[0.05]">
-                      <span className="text-[11px] text-white/65 w-[100px] flex-shrink-0" style={{ fontFamily: SERIF, fontStyle: 'italic' }}>
-                        {cat.label}
-                      </span>
-                      <div className="flex-1 h-[3px] bg-white/[0.06] overflow-hidden">
-                        <div className="h-full" style={{ width: `${((cat.score || 6.5) / 10) * 100}%`, backgroundColor: cfg.color }} />
-                      </div>
-                      <span className="text-[10px] tracking-[0.12em] uppercase w-[80px] text-right flex-shrink-0" style={{ fontFamily: MONO, color: cfg.color }}>
-                        {cfg.word}
-                      </span>
-                    </div>
-                  )
-                })}
+          {/* Season bands summary strip */}
+          {matches.length > 0 && (
+            <div
+              className="flex items-center justify-between px-3 py-2.5 rounded-[10px] relative z-10"
+              style={{ background: 'rgba(0,0,0,0.3)' }}
+            >
+              <div className="flex items-center gap-[7px]">
+                <div className="w-[5px] h-[5px] rounded-full bg-white/20" />
+                <span
+                  className="text-[9px] font-medium tracking-[0.08em] uppercase text-white/22"
+                  style={{ fontFamily: "'DM Mono', monospace" }}
+                >
+                  Season bands
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                {bandAbbrev.filter(b => distribution[b.key] > 0).map(b => (
+                  <span
+                    key={b.key}
+                    className="text-xs"
+                    style={{ fontFamily: "'DM Sans', sans-serif", color: b.color }}
+                  >
+                    {distribution[b.key]} {b.abbr}
+                  </span>
+                ))}
               </div>
             </div>
-          </section>
+          )}
+        </div>
+
+        {/* ── Wellness strip ── */}
+        <div
+          className="rounded-[14px] p-4 mb-3.5 flex items-center gap-3"
+          style={{ background: 'rgba(0,0,0,0.35)', borderLeft: '3px solid #fb923c' }}
+        >
+          <span className="text-xl">{wellnessEmoji}</span>
+          <div>
+            <p
+              className="text-[13px] font-medium text-white/88"
+              style={{ fontFamily: "'DM Sans', sans-serif" }}
+            >
+              Wellness today
+            </p>
+            <p
+              className="text-[11px] mt-0.5"
+              style={{ fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.45)' }}
+            >
+              {wellnessLabel}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Latest Coach Assessment ── */}
+        {assessment && (
+          <div className="mt-5">
+            <MetadataLabel text="LATEST COACH ASSESSMENT" />
+            <div
+              className="relative rounded-[24px] p-5 mt-2.5 overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, #101012 0%, #0f0f12 100%)', border: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              <div
+                className="absolute -bottom-[40px] -right-[40px] w-[160px] h-[160px] rounded-full pointer-events-none"
+                style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.06) 0%, transparent 70%)' }}
+              />
+
+              <div className="relative z-10">
+                {/* Coach name + date + overall band */}
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p
+                      className="text-[13px] font-medium text-white/88"
+                      style={{ fontFamily: "'DM Sans', sans-serif" }}
+                    >
+                      {coachName || 'Coach'}
+                    </p>
+                    <p
+                      className="text-[9px] text-white/22 mt-0.5 tracking-[0.04em]"
+                      style={{ fontFamily: "'DM Mono', monospace" }}
+                    >
+                      {assessment.created_at
+                        ? new Date(assessment.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                        : ''}
+                    </p>
+                  </div>
+                  <BandPill band={assessment.overall_band || scoreToBand(
+                    ((assessment.work_rate || 0) + (assessment.tactical || 0) + (assessment.attitude || 0) +
+                     (assessment.technical || 0) + (assessment.physical || 0) + (assessment.coachability || 0)) / 6
+                  )} />
+                </div>
+
+                {/* 6 category bar rows */}
+                <div className="space-y-3 mt-4">
+                  {assessmentCategories.map(cat => (
+                    <div key={cat.label} className="flex items-center gap-2">
+                      <span
+                        className="w-[90px] flex-shrink-0 text-[9px] font-medium tracking-[0.12em] uppercase text-white/45"
+                        style={{ fontFamily: "'DM Mono', monospace" }}
+                      >
+                        {cat.label}
+                      </span>
+                      <div className="flex-1 h-1.5 rounded-full bg-[#202024] overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${((cat.score || 6.5) / 10) * 100}%`,
+                            backgroundColor: BANDS.find(b => b.word.toLowerCase() === scoreToBand(cat.score || 6.5))?.color,
+                          }}
+                        />
+                      </div>
+                      <span
+                        className="text-[11px] flex-shrink-0 w-[72px] text-right"
+                        style={{
+                          fontFamily: "'DM Sans', sans-serif",
+                          color: BANDS.find(b => b.word.toLowerCase() === scoreToBand(cat.score || 6.5))?.color,
+                        }}
+                      >
+                        {BANDS.find(b => b.word.toLowerCase() === scoreToBand(cat.score || 6.5))?.word}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Private coach notes are not visible to parents */}
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* ── SECTION: ALSO IN THIS EDITION (recent matches mini-feed) ── */}
-        {matches.length > 1 && (
-          <section className="mb-6">
-            <SectionRule label="Also in this edition" />
-            <div className="mt-3 space-y-4">
-              {matches.slice(1, 4).map((m, i) => {
-                const band = scoreToBand(m.computed_rating || 6.5)
-                const cfg = BANDS.find(b => b.word.toLowerCase() === band)!
-                const result = m.team_score > m.opponent_score ? 'Won' : m.team_score < m.opponent_score ? 'Lost' : 'Drew'
+        {/* ── Active Goals ── */}
+        {goals.length > 0 && (
+          <div className="mt-5">
+            <MetadataLabel text="ACTIVE GOALS" />
+            <div className="mt-2.5 space-y-2">
+              {goals.map(g => {
+                const progress = g.target_value ? Math.min((g.current_value || 0) / g.target_value * 100, 100) : 0
+                const catColor = g.category === 'performance' ? '#fb923c'
+                  : g.category === 'consistency' ? '#60a5fa'
+                  : g.category === 'development' ? 'rgba(255,255,255,0.45)'
+                  : '#a78bfa'
                 return (
-                  <button
-                    key={m.id}
-                    onClick={() => navigate('/parent/matches')}
-                    className="w-full text-left flex gap-3 pb-4 border-b border-white/[0.06] last:border-b-0"
+                  <div
+                    key={g.id}
+                    className="rounded-[14px] p-4"
+                    style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.05)' }}
                   >
-                    <span className="text-[28px] leading-none text-white/30 flex-shrink-0 w-7 pt-0.5" style={{ fontFamily: SERIF, fontWeight: 600 }}>
-                      {String(i + 2).padStart(2, '0')}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[9px] tracking-[0.18em] uppercase mb-1" style={{ fontFamily: MONO, color: cfg.color }}>
-                        {cfg.word} &middot; {m.competition || 'Match'}
-                      </p>
-                      <p className="text-[15px] leading-[1.2] text-white/85" style={{ fontFamily: SERIF, fontWeight: 500, letterSpacing: '-0.01em' }}>
-                        {result} {m.team_score}&ndash;{m.opponent_score} {result === 'Drew' ? 'with' : result === 'Won' ? 'against' : 'to'} {m.opponent || 'opponents'}
-                      </p>
-                      <p className="text-[10px] tracking-[0.14em] uppercase text-white/30 mt-1" style={{ fontFamily: MONO }}>
-                        {new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                  </button>
+                    <p
+                      className="text-[13px] font-medium text-white/88 mb-1.5"
+                      style={{ fontFamily: "'DM Sans', sans-serif" }}
+                    >
+                      {g.goal_type || g.title || 'Goal'}
+                    </p>
+                    {g.target_value && (
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <span
+                            className="text-[9px] text-white/22"
+                            style={{ fontFamily: "'DM Mono', monospace" }}
+                          >
+                            {Math.round(progress)}%
+                          </span>
+                          <span
+                            className="text-[9px] text-white/22"
+                            style={{ fontFamily: "'DM Mono', monospace" }}
+                          >
+                            {g.current_value || 0}/{g.target_value}
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-[#202024] overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${progress}%`, backgroundColor: catColor }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )
               })}
             </div>
-            <button
-              onClick={() => navigate('/parent/matches')}
-              className="mt-3 text-[11px] tracking-[0.16em] uppercase text-[#C8F25A] hover:underline underline-offset-2"
-              style={{ fontFamily: MONO, fontWeight: 500 }}
-            >
-              Read all match reports &rarr;
-            </button>
-          </section>
-        )}
-
-        {/* ── EMPTY STATE ── */}
-        {!childName && matches.length === 0 && (
-          <div className="mt-8 text-center py-10 border-y border-white/[0.08]">
-            <p className="text-[10px] tracking-[0.18em] uppercase text-white/45 mb-2" style={{ fontFamily: MONO }}>
-              Newsroom empty
-            </p>
-            <p className="text-[18px] leading-[1.3] text-white/75" style={{ fontFamily: SERIF, fontStyle: 'italic' }}>
-              Awaiting first dispatch from your child's invite
-            </p>
           </div>
         )}
 
-        {/* ── FOOTER colophon ── */}
-        <div className="mt-10 pt-4 border-t border-white/[0.08] text-center">
-          <p className="text-[9px] tracking-[0.18em] uppercase text-white/22" style={{ fontFamily: MONO }}>
-            The Trak Times &middot; Parent Edition
-          </p>
-        </div>
-
+        {/* ── Empty state ── */}
+        {!childName && matches.length === 0 && (
+          <div className="rounded-[14px] p-5 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
+            <p className="text-sm text-white/45" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              No child linked yet. Ask your child to send you a parent invite code.
+            </p>
+          </div>
+        )}
       </div>
 
       <NavBar role="parent" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
-  )
-}
-
-function SectionRule({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="text-[10px] tracking-[0.22em] uppercase text-white/65 whitespace-nowrap" style={{ fontFamily: MONO, fontWeight: 500 }}>
-        {label}
-      </span>
-      <div className="flex-1 h-px bg-white/[0.12]" />
-    </div>
-  )
-}
-
-function Stat({ label, value, valueColor, small }: { label: string; value: string; valueColor?: string; small?: boolean }) {
-  return (
-    <div className="border-l border-white/[0.1] pl-2.5">
-      <p className="text-[9px] tracking-[0.16em] uppercase text-white/45 mb-1" style={{ fontFamily: MONO }}>
-        {label}
-      </p>
-      <p
-        className={small ? 'text-[15px]' : 'text-[22px]'}
-        style={{
-          fontFamily: SERIF,
-          fontWeight: 600,
-          letterSpacing: '-0.02em',
-          lineHeight: 1,
-          color: valueColor || 'rgba(255,255,255,0.9)',
-        }}
-      >
-        {value}
-      </p>
-    </div>
   )
 }
