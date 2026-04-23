@@ -134,7 +134,7 @@ const MatchLog = () => {
         <Section label="Venue">
           <div className="grid grid-cols-2 gap-1.5">
             {VENUES.map(v => (
-              <SelectCard key={v} selected={venue === v} onClick={() => setVenue(v)} label={v === 'Home' ? '🏠 Home' : '✈️ Away'} />
+              <SelectCard key={v} selected={venue === v} onClick={() => setVenue(v)} label={v} />
             ))}
           </div>
         </Section>
