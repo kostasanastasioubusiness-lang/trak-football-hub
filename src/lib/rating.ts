@@ -23,7 +23,7 @@ export const AGE_GROUP_MAX_MINUTES: Record<string, number> = {
 };
 
 export const MATCH_AGE_GROUPS = ['U13', 'U14', 'U15/U16', 'U17/U18', 'U19+'] as const;
-export const COMPETITIONS = ['League', 'Cup', 'Tournament', 'Friendly'] as const;
+export const COMPETITIONS = ['League', 'Tournament', 'Friendly'] as const;
 export const VENUES = ['Home', 'Away'] as const;
 export const CARDS = ['None', 'Yellow', 'Red'] as const;
 export const BODY_CONDITIONS = [
