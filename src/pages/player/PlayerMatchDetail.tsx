@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { MobileShell, BandPill, MetadataLabel, NavBar } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
-import { BANDS } from '@/lib/types'
 import { ChevronLeft } from 'lucide-react'
 
 export default function PlayerMatchDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const location = useLocation()
   const [match, setMatch] = useState<any>(null)
 
   useEffect(() => {
@@ -26,7 +24,6 @@ export default function PlayerMatchDetail() {
   )
 
   const band = scoreToBand(match.computed_rating || 6.5)
-  const bandConfig = BANDS.find(b => b.word.toLowerCase() === band)!
   const resultLabel = match.team_score > match.opponent_score ? 'W'
     : match.team_score < match.opponent_score ? 'L' : 'D'
   const resultColor = resultLabel === 'W' ? '#4ade80' : resultLabel === 'L' ? '#f87171' : '#60a5fa'
