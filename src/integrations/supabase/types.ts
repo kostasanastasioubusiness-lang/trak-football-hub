@@ -127,6 +127,54 @@ export type Database = {
           },
         ]
       }
+      coach_calendar_events: {
+        Row: {
+          coach_user_id: string
+          created_at: string
+          ends_at: string | null
+          event_type: string
+          id: string
+          notes: string | null
+          opponent: string | null
+          published: boolean
+          source: string
+          starts_at: string
+          title: string
+          updated_at: string
+          venue: string | null
+        }
+        Insert: {
+          coach_user_id: string
+          created_at?: string
+          ends_at?: string | null
+          event_type?: string
+          id?: string
+          notes?: string | null
+          opponent?: string | null
+          published?: boolean
+          source?: string
+          starts_at: string
+          title: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Update: {
+          coach_user_id?: string
+          created_at?: string
+          ends_at?: string | null
+          event_type?: string
+          id?: string
+          notes?: string | null
+          opponent?: string | null
+          published?: boolean
+          source?: string
+          starts_at?: string
+          title?: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
       coach_details: {
         Row: {
           coach_role: string | null
