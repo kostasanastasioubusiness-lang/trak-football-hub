@@ -180,45 +180,21 @@ export default function Settings() {
         {/* Connections — player */}
         {role === 'player' && (
           <Section label="Connections">
-            <Row
-              label="Connected coach"
-              right={
-                <ConnectionPill name="Not connected" onRemove={() => toast('No connection to remove')} />
-              }
-            />
-            <Row
-              label="Connected parent"
-              right={
-                <ConnectionPill name="Not connected" onRemove={() => toast('No connection to remove')} />
-              }
-            />
-            <button
-              onClick={() => toast('Open the relevant invite flow from your profile')}
-              className="mt-1 mb-3 flex items-center gap-1.5"
-              style={{ fontSize: 13, color: '#C8F25A' }}
-            >
-              <Plus size={12} /> Add connection
-            </button>
+            <ConnectionRow label="Coach" status="none" />
+            <ConnectionRow label="Parent" status="none" />
+            <div className="py-3" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+              Share your invite code from your profile to connect with a coach or parent.
+            </div>
           </Section>
         )}
 
         {/* Connections — parent */}
         {role === 'parent' && (
           <Section label="Linked child">
-            <Row
-              label="Player"
-              right={<ConnectionPill name="Not linked" onRemove={() => toast('No link to remove')} />}
-            />
-          </Section>
-        )}
-
-        {/* Connections — coach */}
-        {role === 'coach' && (
-          <Section label="Squad invite">
-            <Row
-              label="Invite code"
-              right={<Value>Manage from your profile</Value>}
-            />
+            <ConnectionRow label="Player" status="none" />
+            <div className="py-3" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+              Children are linked using the invite code shared by your child. Use a new code to link another player.
+            </div>
           </Section>
         )}
 
@@ -227,57 +203,42 @@ export default function Settings() {
           {role === 'player' && (
             <>
               <ToggleRow
-                label="New coach assessment"
-                value={settings.notifyAssessment}
-                onChange={v => persist({ ...settings, notifyAssessment: v })}
+                label="Match updates"
+                value={settings.notifyMatchUpdates}
+                onChange={v => persist({ ...settings, notifyMatchUpdates: v })}
               />
               <ToggleRow
-                label="Recognition awarded"
-                value={settings.notifyRecognition}
-                onChange={v => persist({ ...settings, notifyRecognition: v })}
-              />
-              <ToggleRow
-                label="Weekly tip"
-                value={settings.notifyWeeklyTip}
-                onChange={v => persist({ ...settings, notifyWeeklyTip: v })}
+                label="Coach feedback"
+                value={settings.notifyCoachFeedback}
+                onChange={v => persist({ ...settings, notifyCoachFeedback: v })}
               />
             </>
           )}
           {role === 'coach' && (
             <>
               <ToggleRow
-                label="Player needs attention"
-                value={settings.notifyPlayerNeedsAttention}
-                onChange={v => persist({ ...settings, notifyPlayerNeedsAttention: v })}
+                label="Squad updates"
+                value={settings.notifySquadUpdates}
+                onChange={v => persist({ ...settings, notifySquadUpdates: v })}
               />
               <ToggleRow
-                label="Meeting request updates"
-                value={settings.notifyMeetingRequest}
-                onChange={v => persist({ ...settings, notifyMeetingRequest: v })}
-              />
-              <ToggleRow
-                label="Weekly tip"
-                value={settings.notifyWeeklyTip}
-                onChange={v => persist({ ...settings, notifyWeeklyTip: v })}
+                label="Meeting requests"
+                value={settings.notifyMeetingRequests}
+                onChange={v => persist({ ...settings, notifyMeetingRequests: v })}
               />
             </>
           )}
           {role === 'parent' && (
             <>
               <ToggleRow
-                label="New assessment for my child"
-                value={settings.notifyChildAssessment}
-                onChange={v => persist({ ...settings, notifyChildAssessment: v })}
+                label="Match updates"
+                value={settings.notifyChildMatchUpdates}
+                onChange={v => persist({ ...settings, notifyChildMatchUpdates: v })}
               />
               <ToggleRow
-                label="Recognition for my child"
-                value={settings.notifyChildRecognition}
-                onChange={v => persist({ ...settings, notifyChildRecognition: v })}
-              />
-              <ToggleRow
-                label="Coach alerts about my child"
-                value={settings.notifyChildAlert}
-                onChange={v => persist({ ...settings, notifyChildAlert: v })}
+                label="Coach feedback"
+                value={settings.notifyChildCoachFeedback}
+                onChange={v => persist({ ...settings, notifyChildCoachFeedback: v })}
               />
             </>
           )}
