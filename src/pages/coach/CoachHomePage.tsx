@@ -257,23 +257,27 @@ export default function CoachHomePage() {
             </div>
             <div className="flex items-center gap-2.5">
               {bandDist.star > 0 && (
-                <span className="text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#C8F25A' }}>
-                  {bandDist.star} ★
+                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#C8F25A' }}>
+                  {bandDist.star}
+                  <Star size={11} strokeWidth={2} fill="#C8F25A" />
                 </span>
               )}
               {bandDist.check > 0 && (
-                <span className="text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#4ade80' }}>
-                  {bandDist.check} ✓
+                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#4ade80' }}>
+                  {bandDist.check}
+                  <Check size={11} strokeWidth={2.5} />
                 </span>
               )}
               {bandDist.circle > 0 && (
-                <span className="text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#fb923c' }}>
-                  {bandDist.circle} ○
+                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#fb923c' }}>
+                  {bandDist.circle}
+                  <Circle size={10} strokeWidth={2} />
                 </span>
               )}
               {bandDist.dash > 0 && (
-                <span className="text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#60a5fa' }}>
-                  {bandDist.dash} —
+                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#60a5fa' }}>
+                  {bandDist.dash}
+                  <Minus size={11} strokeWidth={2.5} />
                 </span>
               )}
             </div>
