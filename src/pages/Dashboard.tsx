@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 import PlayerHome from '@/pages/player/PlayerHome';
 import CoachHomePage from '@/pages/coach/CoachHomePage';
+import { Users } from 'lucide-react';
 
 const Dashboard = () => {
   const { user, profile, loading, signOut } = useAuth();
