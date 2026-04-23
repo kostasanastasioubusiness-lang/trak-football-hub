@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -8,51 +9,60 @@ import { RouteGuard } from "@/components/layout/RouteGuard";
 import { ErrorBoundary } from "@/components/trak/ErrorBoundary";
 import { DevSwitcher } from "@/components/trak/DevSwitcher";
 
-// Existing pages
+// Landing eagerly loaded so the first paint is instant
 import LandingPage from "./pages/LandingPage";
-import OnboardingPage from "./pages/OnboardingPage";
-import ParentInfoPage from "./pages/ParentInfoPage";
-import ParentOnboarding from "./pages/ParentOnboarding";
 import NotFound from "./pages/NotFound";
-import Settings from "./pages/Settings";
-import DevSetupPage from "./pages/DevSetupPage";
 
-// Player pages
-import PlayerHome from "./pages/player/PlayerHome";
-import PlayerMatches from "./pages/player/PlayerMatches";
-import PlayerMatchDetail from "./pages/player/PlayerMatchDetail";
-import PlayerProfilePage from "./pages/player/PlayerProfilePage";
-import PlayerPassport from "./pages/player/PlayerPassport";
-import PlayerCard from "./pages/player/PlayerCard";
-import PlayerEvolutionCard from "./pages/player/PlayerEvolutionCard";
+// Lazy-loaded routes — split bundles so navigating between sections is fast
+const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
+const ParentInfoPage = lazy(() => import("./pages/ParentInfoPage"));
+const ParentOnboarding = lazy(() => import("./pages/ParentOnboarding"));
+const Settings = lazy(() => import("./pages/Settings"));
+const DevSetupPage = lazy(() => import("./pages/DevSetupPage"));
 
-// Coach pages
-import CoachHomePage from "./pages/coach/CoachHomePage";
-import CoachSquadPage from "./pages/coach/CoachSquadPage";
-import CoachAddPlayer from "./pages/coach/CoachAddPlayer";
-import CoachAssessPage from "./pages/coach/CoachAssessPage";
-import CoachSessionsPage from "./pages/coach/CoachSessionsPage";
-import CoachAddSession from "./pages/coach/CoachAddSession";
-import CoachSessionsChooser from "./pages/coach/CoachSessionsChooser";
-import CoachQuickMatchLog from "./pages/coach/CoachQuickMatchLog";
-import CoachProfilePage from "./pages/coach/CoachProfilePage";
-import CoachPlayerProfilePage from "./pages/coach/CoachPlayerProfilePage";
-import CoachRecognition from "./pages/coach/CoachRecognition";
-import CoachAwardPlayer from "./pages/coach/CoachAwardPlayer";
-import CoachQuickAssess from "./pages/coach/CoachQuickAssess";
+const PlayerHome = lazy(() => import("./pages/player/PlayerHome"));
+const PlayerMatches = lazy(() => import("./pages/player/PlayerMatches"));
+const PlayerMatchDetail = lazy(() => import("./pages/player/PlayerMatchDetail"));
+const PlayerProfilePage = lazy(() => import("./pages/player/PlayerProfilePage"));
+const PlayerPassport = lazy(() => import("./pages/player/PlayerPassport"));
+const PlayerCard = lazy(() => import("./pages/player/PlayerCard"));
+const PlayerEvolutionCard = lazy(() => import("./pages/player/PlayerEvolutionCard"));
 
-// Parent pages
-import ParentHome from "./pages/parent/ParentHome";
-import ParentMatches from "./pages/parent/ParentMatches";
-import ParentAlerts from "./pages/parent/ParentAlerts";
-import ParentOnboardingFlow from "./pages/parent/ParentOnboardingFlow";
+const CoachHomePage = lazy(() => import("./pages/coach/CoachHomePage"));
+const CoachSquadPage = lazy(() => import("./pages/coach/CoachSquadPage"));
+const CoachAddPlayer = lazy(() => import("./pages/coach/CoachAddPlayer"));
+const CoachAssessPage = lazy(() => import("./pages/coach/CoachAssessPage"));
+const CoachSessionsPage = lazy(() => import("./pages/coach/CoachSessionsPage"));
+const CoachAddSession = lazy(() => import("./pages/coach/CoachAddSession"));
+const CoachSessionsChooser = lazy(() => import("./pages/coach/CoachSessionsChooser"));
+const CoachQuickMatchLog = lazy(() => import("./pages/coach/CoachQuickMatchLog"));
+const CoachProfilePage = lazy(() => import("./pages/coach/CoachProfilePage"));
+const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfilePage"));
+const CoachRecognition = lazy(() => import("./pages/coach/CoachRecognition"));
+const CoachAwardPlayer = lazy(() => import("./pages/coach/CoachAwardPlayer"));
+const CoachQuickAssess = lazy(() => import("./pages/coach/CoachQuickAssess"));
 
-// Club pages
-import ClubHome from "./pages/club/ClubHome";
-import ClubSquads from "./pages/club/ClubSquads";
-import ClubCoaches from "./pages/club/ClubCoaches";
+const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
+const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
+const ParentAlerts = lazy(() => import("./pages/parent/ParentAlerts"));
+const ParentOnboardingFlow = lazy(() => import("./pages/parent/ParentOnboardingFlow"));
 
-const queryClient = new QueryClient();
+const ClubHome = lazy(() => import("./pages/club/ClubHome"));
+const ClubSquads = lazy(() => import("./pages/club/ClubSquads"));
+const ClubCoaches = lazy(() => import("./pages/club/ClubCoaches"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+const RouteFallback = () => <div className="min-h-screen bg-[#0A0A0B]" />;
 
 const App = () => (
   <ErrorBoundary>
@@ -63,6 +73,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <DevSwitcher />
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
@@ -113,6 +124,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
