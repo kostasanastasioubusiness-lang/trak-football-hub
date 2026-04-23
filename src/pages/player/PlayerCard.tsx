@@ -1,7 +1,8 @@
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Share2, Download } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Share2, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { BAND_COLORS, type Band } from '@/lib/clubMock'
+import { NavBar } from '@/components/trak'
 
 const CARD = {
   initials: 'AK',
@@ -17,6 +18,7 @@ const CARD = {
 
 export default function PlayerCard() {
   const navigate = useNavigate()
+  const location = useLocation()
   const bandColor = BAND_COLORS[CARD.band]
 
   const onShare = async () => {
@@ -43,25 +45,9 @@ export default function PlayerCard() {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col pb-24"
       style={{ background: '#0A0A0B', fontFamily: "'DM Sans', sans-serif" }}
     >
-      {/* Back button */}
-      <div className="mx-auto w-full max-w-[430px] px-5 pt-5">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center justify-center"
-          style={{
-            width: 36, height: 36, borderRadius: 999,
-            background: '#101012', border: '1px solid rgba(255,255,255,0.07)',
-            color: 'rgba(255,255,255,0.88)',
-          }}
-          aria-label="Back"
-        >
-          <ArrowLeft size={16} />
-        </button>
-      </div>
-
       {/* Centered card area */}
       <div className="flex-1 flex flex-col items-center justify-center px-5 py-8 gap-6">
         {/* The shareable card — 400x400 */}
@@ -223,6 +209,7 @@ export default function PlayerCard() {
           </button>
         </div>
       </div>
+      <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
     </div>
   )
 }
