@@ -188,7 +188,7 @@ const MatchLog = () => {
         <Section label="Body Condition">
           <div className="grid grid-cols-4 gap-1.5">
             {BODY_CONDITIONS.map(bc => (
-              <SelectCard key={bc.label} selected={bodyCondition === bc.label} onClick={() => setBodyCondition(bc.label)} label={`${bc.emoji}\n${bc.label}`} />
+              <SelectCard key={bc.label} selected={bodyCondition === bc.label} onClick={() => setBodyCondition(bc.label)} label={bc.label} />
             ))}
           </div>
         </Section>
