@@ -120,7 +120,7 @@ export default function CoachAwardPlayer() {
           <MetadataLabel text="AWARD TYPE" />
           <div className="grid grid-cols-2 gap-2">
             {AWARD_TYPES.map(a => (
-              <OptPill key={a.value} label={`${a.emoji} ${a.label}`} active={awardType === a.value}
+              <OptPill key={a.value} label={a.label} icon={a.icon} active={awardType === a.value}
                 onClick={() => setAwardType(a.value)} />
             ))}
           </div>
@@ -130,7 +130,7 @@ export default function CoachAwardPlayer() {
         {selectedAward && (
           <div className="flex items-center gap-3 p-4 rounded-[14px]"
             style={{ background: 'rgba(200,242,90,0.06)', border: '1px solid rgba(200,242,90,0.18)' }}>
-            <span className="text-2xl">{selectedAward.emoji}</span>
+            <selectedAward.icon size={22} color="#C8F25A" />
             <p className="text-[14px] font-semibold text-[#C8F25A]">{selectedAward.label}</p>
           </div>
         )}
