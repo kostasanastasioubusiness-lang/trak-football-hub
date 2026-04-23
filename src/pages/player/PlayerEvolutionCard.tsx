@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Flame, Sprout, Target, Lock, Check } from 'lucide-react'
-import { MobileShell } from '@/components/trak'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Flame, Sprout, Target, Lock, Check } from 'lucide-react'
+import { MobileShell, NavBar } from '@/components/trak'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -80,6 +80,7 @@ const EVOLUTIONS = [
 
 export default function PlayerEvolutionCard() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
 
   const [name, setName] = useState('Player')
@@ -150,19 +151,7 @@ export default function PlayerEvolutionCard() {
   return (
     <MobileShell>
       {/* Top bar */}
-      <div className="pt-5 pb-3 flex items-center justify-between">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center justify-center"
-          style={{
-            width: 36, height: 36, borderRadius: 999,
-            background: '#101012', border: '1px solid rgba(255,255,255,0.07)',
-            color: 'rgba(255,255,255,0.88)',
-          }}
-          aria-label="Back"
-        >
-          <ArrowLeft size={16} />
-        </button>
+      <div className="pt-5 pb-3 flex items-center justify-center">
         <span
           style={{
             fontFamily: "'DM Mono', monospace",
@@ -172,7 +161,6 @@ export default function PlayerEvolutionCard() {
         >
           EVOLUTION CARD
         </span>
-        <div style={{ width: 36 }} />
       </div>
 
       {/* THE CARD */}
@@ -355,6 +343,7 @@ export default function PlayerEvolutionCard() {
           ))}
         </div>
       </div>
+      <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )
 }
