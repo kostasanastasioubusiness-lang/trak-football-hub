@@ -27,6 +27,7 @@ const PlayerProfilePage = lazy(() => import("./pages/player/PlayerProfilePage"))
 const PlayerPassport = lazy(() => import("./pages/player/PlayerPassport"));
 const PlayerCard = lazy(() => import("./pages/player/PlayerCard"));
 const PlayerEvolutionCard = lazy(() => import("./pages/player/PlayerEvolutionCard"));
+const HowTrakWorks = lazy(() => import("./pages/HowTrakWorks"));
 
 const CoachHomePage = lazy(() => import("./pages/coach/CoachHomePage"));
 const CoachSquadPage = lazy(() => import("./pages/coach/CoachSquadPage"));
@@ -92,6 +93,7 @@ const App = () => (
             <Route path="/player/passport" element={<RouteGuard allowedRole="player"><PlayerPassport /></RouteGuard>} />
             <Route path="/player/card" element={<RouteGuard allowedRole="player"><PlayerCard /></RouteGuard>} />
             <Route path="/player/evolution" element={<RouteGuard allowedRole="player"><PlayerEvolutionCard /></RouteGuard>} />
+            <Route path="/how-it-works" element={<HowTrakWorks />} />
 
             {/* Coach routes */}
             <Route path="/coach/home" element={<RouteGuard allowedRole="coach"><CoachHomePage /></RouteGuard>} />

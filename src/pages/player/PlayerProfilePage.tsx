@@ -4,31 +4,12 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { IconMatch } from '@/components/icons/TrakIcons'
+import { ChevronRight } from 'lucide-react'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import { trackEvent } from '@/lib/telemetry'
 import { calculateRecords, type PersonalRecords } from '@/lib/records'
 import RatingTrendChart from '@/components/player/RatingTrendChart'
-
-const BAND_DESCRIPTIONS: Record<string, string> = {
-  exceptional: 'Outstanding — everything clicked',
-  standout: 'Excellent — clearly above the norm',
-  good: 'Solid positive — contributing well',
-  steady: 'Reliable — did the job',
-  mixed: 'Moments and struggles — inconsistent',
-  developing: 'Below target — room to grow',
-  difficult: 'Tough match — part of the journey',
-}
-
-const BAND_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  exceptional: { bg: 'rgba(200,242,90,0.15)', text: '#C8F25A', border: 'rgba(200,242,90,0.3)' },
-  standout: { bg: 'rgba(134,239,172,0.13)', text: '#86efac', border: 'rgba(134,239,172,0.26)' },
-  good: { bg: 'rgba(74,222,128,0.13)', text: '#4ade80', border: 'rgba(74,222,128,0.24)' },
-  steady: { bg: 'rgba(96,165,250,0.13)', text: '#60a5fa', border: 'rgba(96,165,250,0.24)' },
-  mixed: { bg: 'rgba(251,146,60,0.13)', text: '#fb923c', border: 'rgba(251,146,60,0.24)' },
-  developing: { bg: 'rgba(167,139,250,0.13)', text: '#a78bfa', border: 'rgba(167,139,250,0.24)' },
-  difficult: { bg: 'rgba(255,255,255,0.06)', text: 'rgba(255,255,255,0.4)', border: 'rgba(255,255,255,0.1)' },
-}
 
 type TrendFilter = 'last5' | 'last10' | 'all'
 
@@ -166,25 +147,19 @@ export default function PlayerProfilePage() {
           </div>
         </div>
 
-        {/* Band Legend */}
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
-          <MetadataLabel text="PERFORMANCE BANDS" />
-          <div className="mt-3 space-y-[7px]">
-            {BANDS.map(b => {
-              const key = b.word.toLowerCase()
-              const colors = BAND_COLORS[key]
-              return (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="inline-flex items-center justify-center h-6 px-2.5 rounded-lg text-[11px] font-semibold"
-                    style={{ background: colors?.bg, color: colors?.text, border: `1px solid ${colors?.border}` }}>
-                    {b.word}
-                  </span>
-                  <span className="text-[10px] text-white/22">{BAND_DESCRIPTIONS[key]}</span>
-                </div>
-              )
-            })}
+        {/* How TRAK works link */}
+        <button
+          onClick={() => navigate('/how-it-works')}
+          className="w-full flex items-center justify-between rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] text-left hover:bg-[#141416] transition-colors"
+        >
+          <div>
+            <MetadataLabel text="HOW TRAK WORKS" />
+            <p className="text-[12px] text-white/55 mt-1.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              Performance bands & rating engine
+            </p>
           </div>
-        </div>
+          <ChevronRight size={18} className="text-white/40" />
+        </button>
 
         {/* Season Summary */}
         <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
