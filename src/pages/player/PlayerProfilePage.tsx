@@ -11,7 +11,7 @@ import RatingTrendChart from '@/components/player/RatingTrendChart'
 type TrendFilter = 'last5' | 'last10' | 'all'
 
 export default function PlayerProfilePage() {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [details, setDetails] = useState<any>(null)
@@ -194,11 +194,6 @@ export default function PlayerProfilePage() {
           </div>
         )}
 
-        {/* Sign Out */}
-        <button onClick={async () => { await signOut(); navigate('/') }}
-          className="text-sm text-white/22 hover:text-white/45 transition-colors pt-4 block mx-auto">
-          Sign Out
-        </button>
       </div>
       <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
