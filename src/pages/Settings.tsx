@@ -20,6 +20,11 @@ interface LocalSettings {
   notifyAssessment: boolean
   notifyRecognition: boolean
   notifyWeeklyTip: boolean
+  notifyMeetingRequest: boolean
+  notifyPlayerNeedsAttention: boolean
+  notifyChildAssessment: boolean
+  notifyChildRecognition: boolean
+  notifyChildAlert: boolean
   passportVisibility: PassportVisibility
   showInClubOverview: boolean
 }
@@ -28,6 +33,11 @@ const DEFAULTS: LocalSettings = {
   notifyAssessment: true,
   notifyRecognition: true,
   notifyWeeklyTip: true,
+  notifyMeetingRequest: true,
+  notifyPlayerNeedsAttention: true,
+  notifyChildAssessment: true,
+  notifyChildRecognition: true,
+  notifyChildAlert: true,
   passportVisibility: 'coach_only',
   showInClubOverview: true,
 }
