@@ -380,7 +380,7 @@ export default function CoachHomePage() {
             />
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[16px] leading-none">&#9889;</span>
+                <Zap size={16} color="#C8F25A" fill="#C8F25A" strokeWidth={1.5} />
                 <span
                   className="text-[14px] font-semibold"
                   style={{ color: '#C8F25A', fontFamily: "'DM Sans', sans-serif" }}
