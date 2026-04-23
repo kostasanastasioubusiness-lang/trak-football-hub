@@ -30,16 +30,15 @@ export default function PlayerHome() {
     supabase.from('squad_players').select('id').eq('linked_player_id', user.id)
       .then(async ({ data: squadRows }) => {
         if (!squadRows?.length) return
+        const ids = squadRows.map((r: any) => r.id)
         const { data: assessments } = await supabase.from('coach_assessments')
-          .select('*').in('squad_player_id', squadRows.map((r: any) => r.id))
-          .order('created_at', { ascending: false }).limit(1)
           .select('*')
-          .in('squad_player_id', squadRows.map((r: any) => r.id))
+          .in('squad_player_id', ids)
           .order('created_at', { ascending: false })
           .limit(1)
         if (assessments?.length) {
           setCoachAssessment(assessments[0])
-          const { data: cp } = await supabase.from('profiles').select('full_name').eq('user_id', assessments[0].coach_user_id).single()
+          const { data: cp } = await supabase.from('profiles').select('full_name').eq('user_id', assessments[0].coach_user_id).maybeSingle()
           if (cp) setCoachName(cp.full_name)
         }
       })

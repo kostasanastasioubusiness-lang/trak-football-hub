@@ -57,10 +57,9 @@ export const NavBar = forwardRef<HTMLElement, NavBarProps>(
       ref={ref}
       className="fixed bottom-0 w-full max-w-[430px] mx-auto left-1/2 -translate-x-1/2 flex justify-around items-center px-4 py-2 border-t border-white/[0.07] z-50"
       style={{
-        background: 'rgba(10, 10, 11, 0.92)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        background: 'rgba(10, 10, 11, 0.96)',
         paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
+        willChange: 'auto',
       }}
     >
       {items.map(item => {
