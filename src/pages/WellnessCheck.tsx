@@ -3,26 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Moon, Smile, Meh, Frown, Zap, Battery, BatteryLow, MinusCircle, Laugh, type LucideIcon } from 'lucide-react';
 
-const SLEEP_OPTIONS = [
-  { emoji: '😴', label: 'Great', value: 'great' },
-  { emoji: '🙂', label: 'Good', value: 'good' },
-  { emoji: '😐', label: 'OK', value: 'ok' },
-  { emoji: '😩', label: 'Poor', value: 'poor' },
+type WellOpt = { icon: LucideIcon; label: string; value: string };
+
+const SLEEP_OPTIONS: WellOpt[] = [
+  { icon: Moon,  label: 'Great', value: 'great' },
+  { icon: Smile, label: 'Good',  value: 'good' },
+  { icon: Meh,   label: 'OK',    value: 'ok' },
+  { icon: Frown, label: 'Poor',  value: 'poor' },
 ];
 
-const ENERGY_OPTIONS = [
-  { emoji: '⚡', label: 'High', value: 'high' },
-  { emoji: '🔋', label: 'Good', value: 'good' },
-  { emoji: '🪫', label: 'Low', value: 'low' },
-  { emoji: '😶', label: 'Drained', value: 'drained' },
+const ENERGY_OPTIONS: WellOpt[] = [
+  { icon: Zap,         label: 'High',    value: 'high' },
+  { icon: Battery,     label: 'Good',    value: 'good' },
+  { icon: BatteryLow,  label: 'Low',     value: 'low' },
+  { icon: MinusCircle, label: 'Drained', value: 'drained' },
 ];
 
-const MOOD_OPTIONS = [
-  { emoji: '😁', label: 'Great', value: 'great' },
-  { emoji: '🙂', label: 'Good', value: 'good' },
-  { emoji: '😐', label: 'Meh', value: 'meh' },
-  { emoji: '😔', label: 'Low', value: 'low' },
+const MOOD_OPTIONS: WellOpt[] = [
+  { icon: Laugh, label: 'Great', value: 'great' },
+  { icon: Smile, label: 'Good',  value: 'good' },
+  { icon: Meh,   label: 'Meh',   value: 'meh' },
+  { icon: Frown, label: 'Low',   value: 'low' },
 ];
 
 const WellnessCheck = () => {
@@ -48,7 +51,7 @@ const WellnessCheck = () => {
         notes: notes || null,
       });
       if (error) throw error;
-      toast.success('Wellness logged! 💪');
+      toast.success('Wellness logged!');
       navigate('/dashboard');
     } catch (err: any) {
       toast.error(err.message || 'Failed to save');
@@ -68,17 +71,17 @@ const WellnessCheck = () => {
 
       {/* Sleep Quality */}
       <Section label="Sleep Quality">
-        <EmojiGrid options={SLEEP_OPTIONS} selected={sleep} onSelect={setSleep} />
+        <IconGrid options={SLEEP_OPTIONS} selected={sleep} onSelect={setSleep} />
       </Section>
 
       {/* Energy Level */}
       <Section label="Energy Level">
-        <EmojiGrid options={ENERGY_OPTIONS} selected={energy} onSelect={setEnergy} />
+        <IconGrid options={ENERGY_OPTIONS} selected={energy} onSelect={setEnergy} />
       </Section>
 
       {/* Mood */}
       <Section label="Mood">
-        <EmojiGrid options={MOOD_OPTIONS} selected={mood} onSelect={setMood} />
+        <IconGrid options={MOOD_OPTIONS} selected={mood} onSelect={setMood} />
       </Section>
 
       {/* Notes */}
