@@ -2,8 +2,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
-import PlayerHome from '@/components/player/PlayerHome';
-import CoachHome from '@/components/coach/CoachHome';
+import PlayerHome from '@/pages/player/PlayerHome';
+import CoachHomePage from '@/pages/coach/CoachHomePage';
 
 const Dashboard = () => {
   const { user, profile, loading, signOut } = useAuth();
@@ -54,7 +54,7 @@ const Dashboard = () => {
   }
 
   if (profile.role === 'player') return <PlayerHome />;
-  if (profile.role === 'coach') return <CoachHome />;
+  if (profile.role === 'coach') return <CoachHomePage />;
 
   // Parent placeholder
   return (

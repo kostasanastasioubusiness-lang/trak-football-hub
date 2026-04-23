@@ -4,14 +4,14 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { IconMatch } from '@/components/icons/TrakIcons'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
 import { trackEvent } from '@/lib/telemetry'
 import RatingTrendChart from '@/components/player/RatingTrendChart'
 
 type TrendFilter = 'last5' | 'last10' | 'all'
 
 export default function PlayerProfilePage() {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [details, setDetails] = useState<any>(null)
@@ -118,6 +118,25 @@ export default function PlayerProfilePage() {
           <ChevronRight size={18} className="text-white/40" />
         </button>
 
+        {/* Settings entry */}
+        <button
+          onClick={() => navigate('/settings')}
+          className="w-full flex items-center justify-between rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] text-left hover:bg-[#141416] transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center">
+              <SettingsIcon size={16} className="text-white/55" />
+            </div>
+            <div>
+              <MetadataLabel text="SETTINGS" />
+              <p className="text-[12px] text-white/55 mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                Account, notifications, privacy
+              </p>
+            </div>
+          </div>
+          <ChevronRight size={18} className="text-white/40" />
+        </button>
+
         {/* Performance Trend */}
         <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
           <MetadataLabel text="PERFORMANCE TREND" />
@@ -175,11 +194,6 @@ export default function PlayerProfilePage() {
           </div>
         )}
 
-        {/* Sign Out */}
-        <button onClick={async () => { await signOut(); navigate('/') }}
-          className="text-sm text-white/22 hover:text-white/45 transition-colors pt-4 block mx-auto">
-          Sign Out
-        </button>
       </div>
       <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
