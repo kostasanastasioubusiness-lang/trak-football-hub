@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
-import { ArrowLeft, Pencil, Check, X, Plus } from 'lucide-react'
+import { ArrowLeft, Pencil, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
@@ -17,29 +17,26 @@ const nameSchema = z
 const STORAGE_KEY = 'trak.settings.v1'
 
 interface LocalSettings {
-  notifyAssessment: boolean
-  notifyRecognition: boolean
-  notifyWeeklyTip: boolean
-  notifyMeetingRequest: boolean
-  notifyPlayerNeedsAttention: boolean
-  notifyChildAssessment: boolean
-  notifyChildRecognition: boolean
-  notifyChildAlert: boolean
+  // Player
+  notifyMatchUpdates: boolean
+  notifyCoachFeedback: boolean
+  // Coach
+  notifySquadUpdates: boolean
+  notifyMeetingRequests: boolean
+  // Parent
+  notifyChildMatchUpdates: boolean
+  notifyChildCoachFeedback: boolean
   passportVisibility: PassportVisibility
-  showInClubOverview: boolean
 }
 
 const DEFAULTS: LocalSettings = {
-  notifyAssessment: true,
-  notifyRecognition: true,
-  notifyWeeklyTip: true,
-  notifyMeetingRequest: true,
-  notifyPlayerNeedsAttention: true,
-  notifyChildAssessment: true,
-  notifyChildRecognition: true,
-  notifyChildAlert: true,
+  notifyMatchUpdates: true,
+  notifyCoachFeedback: true,
+  notifySquadUpdates: true,
+  notifyMeetingRequests: true,
+  notifyChildMatchUpdates: true,
+  notifyChildCoachFeedback: true,
   passportVisibility: 'coach_only',
-  showInClubOverview: true,
 }
 
 function loadLocal(): LocalSettings {
@@ -183,45 +180,21 @@ export default function Settings() {
         {/* Connections — player */}
         {role === 'player' && (
           <Section label="Connections">
-            <Row
-              label="Connected coach"
-              right={
-                <ConnectionPill name="Not connected" onRemove={() => toast('No connection to remove')} />
-              }
-            />
-            <Row
-              label="Connected parent"
-              right={
-                <ConnectionPill name="Not connected" onRemove={() => toast('No connection to remove')} />
-              }
-            />
-            <button
-              onClick={() => toast('Open the relevant invite flow from your profile')}
-              className="mt-1 mb-3 flex items-center gap-1.5"
-              style={{ fontSize: 13, color: '#C8F25A' }}
-            >
-              <Plus size={12} /> Add connection
-            </button>
+            <ConnectionRow label="Coach" status="none" />
+            <ConnectionRow label="Parent" status="none" />
+            <div className="py-3" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+              Share your invite code from your profile to connect with a coach or parent.
+            </div>
           </Section>
         )}
 
         {/* Connections — parent */}
         {role === 'parent' && (
           <Section label="Linked child">
-            <Row
-              label="Player"
-              right={<ConnectionPill name="Not linked" onRemove={() => toast('No link to remove')} />}
-            />
-          </Section>
-        )}
-
-        {/* Connections — coach */}
-        {role === 'coach' && (
-          <Section label="Squad invite">
-            <Row
-              label="Invite code"
-              right={<Value>Manage from your profile</Value>}
-            />
+            <ConnectionRow label="Player" status="none" />
+            <div className="py-3" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+              Children are linked using the invite code shared by your child. Use a new code to link another player.
+            </div>
           </Section>
         )}
 
@@ -230,57 +203,42 @@ export default function Settings() {
           {role === 'player' && (
             <>
               <ToggleRow
-                label="New coach assessment"
-                value={settings.notifyAssessment}
-                onChange={v => persist({ ...settings, notifyAssessment: v })}
+                label="Match updates"
+                value={settings.notifyMatchUpdates}
+                onChange={v => persist({ ...settings, notifyMatchUpdates: v })}
               />
               <ToggleRow
-                label="Recognition awarded"
-                value={settings.notifyRecognition}
-                onChange={v => persist({ ...settings, notifyRecognition: v })}
-              />
-              <ToggleRow
-                label="Weekly tip"
-                value={settings.notifyWeeklyTip}
-                onChange={v => persist({ ...settings, notifyWeeklyTip: v })}
+                label="Coach feedback"
+                value={settings.notifyCoachFeedback}
+                onChange={v => persist({ ...settings, notifyCoachFeedback: v })}
               />
             </>
           )}
           {role === 'coach' && (
             <>
               <ToggleRow
-                label="Player needs attention"
-                value={settings.notifyPlayerNeedsAttention}
-                onChange={v => persist({ ...settings, notifyPlayerNeedsAttention: v })}
+                label="Squad updates"
+                value={settings.notifySquadUpdates}
+                onChange={v => persist({ ...settings, notifySquadUpdates: v })}
               />
               <ToggleRow
-                label="Meeting request updates"
-                value={settings.notifyMeetingRequest}
-                onChange={v => persist({ ...settings, notifyMeetingRequest: v })}
-              />
-              <ToggleRow
-                label="Weekly tip"
-                value={settings.notifyWeeklyTip}
-                onChange={v => persist({ ...settings, notifyWeeklyTip: v })}
+                label="Meeting requests"
+                value={settings.notifyMeetingRequests}
+                onChange={v => persist({ ...settings, notifyMeetingRequests: v })}
               />
             </>
           )}
           {role === 'parent' && (
             <>
               <ToggleRow
-                label="New assessment for my child"
-                value={settings.notifyChildAssessment}
-                onChange={v => persist({ ...settings, notifyChildAssessment: v })}
+                label="Match updates"
+                value={settings.notifyChildMatchUpdates}
+                onChange={v => persist({ ...settings, notifyChildMatchUpdates: v })}
               />
               <ToggleRow
-                label="Recognition for my child"
-                value={settings.notifyChildRecognition}
-                onChange={v => persist({ ...settings, notifyChildRecognition: v })}
-              />
-              <ToggleRow
-                label="Coach alerts about my child"
-                value={settings.notifyChildAlert}
-                onChange={v => persist({ ...settings, notifyChildAlert: v })}
+                label="Coach feedback"
+                value={settings.notifyChildCoachFeedback}
+                onChange={v => persist({ ...settings, notifyChildCoachFeedback: v })}
               />
             </>
           )}
@@ -302,11 +260,6 @@ export default function Settings() {
                 />
               }
               stack
-            />
-            <ToggleRow
-              label="Show my name in club overview"
-              value={settings.showInClubOverview}
-              onChange={v => persist({ ...settings, showInClubOverview: v })}
             />
           </Section>
         )}
@@ -479,22 +432,69 @@ function Segmented({
   )
 }
 
-function ConnectionPill({ name, onRemove }: { name: string; onRemove: () => void }) {
+function ConnectionRow({
+  label,
+  status,
+  name,
+  onRemove,
+}: {
+  label: string
+  status: 'connected' | 'none'
+  name?: string
+  onRemove?: () => void
+}) {
+  const connected = status === 'connected'
   return (
-    <div className="flex items-center gap-2">
-      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.78)' }}>{name}</span>
-      <button
-        onClick={onRemove}
-        style={{
-          fontFamily: "'DM Mono', monospace",
-          fontSize: 9,
-          textTransform: 'uppercase',
-          letterSpacing: '0.12em',
-          color: 'rgba(255,255,255,0.4)',
-        }}
-      >
-        Remove
-      </button>
+    <div
+      className="py-3.5 flex items-center justify-between gap-3"
+      style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 999,
+            background: connected ? '#C8F25A' : 'rgba(255,255,255,0.15)',
+            flexShrink: 0,
+          }}
+        />
+        <div className="min-w-0">
+          <div
+            style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 9,
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+              color: 'rgba(255,255,255,0.45)',
+            }}
+          >
+            {label}
+          </div>
+          <div
+            className="truncate"
+            style={{ fontSize: 13, color: connected ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.4)' }}
+          >
+            {connected ? name : 'Not connected'}
+          </div>
+        </div>
+      </div>
+      {connected && onRemove && (
+        <button
+          onClick={onRemove}
+          style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: 9,
+            textTransform: 'uppercase',
+            letterSpacing: '0.12em',
+            color: 'rgba(255,255,255,0.4)',
+            flexShrink: 0,
+          }}
+        >
+          Remove
+        </button>
+      )}
     </div>
   )
 }
