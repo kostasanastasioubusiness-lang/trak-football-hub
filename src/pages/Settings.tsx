@@ -432,22 +432,69 @@ function Segmented({
   )
 }
 
-function ConnectionPill({ name, onRemove }: { name: string; onRemove: () => void }) {
+function ConnectionRow({
+  label,
+  status,
+  name,
+  onRemove,
+}: {
+  label: string
+  status: 'connected' | 'none'
+  name?: string
+  onRemove?: () => void
+}) {
+  const connected = status === 'connected'
   return (
-    <div className="flex items-center gap-2">
-      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.78)' }}>{name}</span>
-      <button
-        onClick={onRemove}
-        style={{
-          fontFamily: "'DM Mono', monospace",
-          fontSize: 9,
-          textTransform: 'uppercase',
-          letterSpacing: '0.12em',
-          color: 'rgba(255,255,255,0.4)',
-        }}
-      >
-        Remove
-      </button>
+    <div
+      className="py-3.5 flex items-center justify-between gap-3"
+      style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 999,
+            background: connected ? '#C8F25A' : 'rgba(255,255,255,0.15)',
+            flexShrink: 0,
+          }}
+        />
+        <div className="min-w-0">
+          <div
+            style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 9,
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+              color: 'rgba(255,255,255,0.45)',
+            }}
+          >
+            {label}
+          </div>
+          <div
+            className="truncate"
+            style={{ fontSize: 13, color: connected ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.4)' }}
+          >
+            {connected ? name : 'Not connected'}
+          </div>
+        </div>
+      </div>
+      {connected && onRemove && (
+        <button
+          onClick={onRemove}
+          style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: 9,
+            textTransform: 'uppercase',
+            letterSpacing: '0.12em',
+            color: 'rgba(255,255,255,0.4)',
+            flexShrink: 0,
+          }}
+        >
+          Remove
+        </button>
+      )}
     </div>
   )
 }
