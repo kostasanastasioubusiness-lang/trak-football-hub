@@ -32,29 +32,21 @@ export default function ParentProfilePage() {
 
   return (
     <MobileShell>
-      <div className="border-b-2 border-white/[0.88] pt-4 pb-2 mb-3">
-        <p className="text-[9px] tracking-[0.22em] uppercase text-white/45 mb-1" style={{ fontFamily: "'DM Mono', monospace" }}>
-          The Trak Times &middot; Subscriber
-        </p>
-        <h1 className="text-[34px] leading-[0.95] text-white/95" style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 600, letterSpacing: '-0.03em', fontStyle: 'italic' }}>
-          Your Desk
-        </h1>
+      <div className="flex items-center justify-between pt-3 pb-2 border-b border-white/[0.07]">
+        <span className="text-[16px] font-medium text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>Profile</span>
       </div>
 
-      <div className="pt-2 pb-4 space-y-2.5">
-        {/* Subscriber card */}
-        <div className="text-center mb-6 py-4 border-b border-white/[0.08]">
-          <div className="w-[64px] h-[64px] rounded-full bg-white/[0.04] border border-white/[0.1] mx-auto mb-3 flex items-center justify-center">
-            <IconProfile size={28} color="#C8F25A" />
+      <div className="pt-3.5 pb-4 space-y-2.5">
+        {/* Avatar + Identity */}
+        <div className="text-center mb-6">
+          <div className="w-[72px] h-[72px] rounded-[22px] bg-[#202024] border border-[rgba(200,242,90,0.18)] mx-auto mb-3 flex items-center justify-center">
+            <IconProfile size={32} color="#C8F25A" />
           </div>
-          <p className="text-[10px] tracking-[0.22em] uppercase text-white/45 mb-1" style={{ fontFamily: "'DM Mono', monospace" }}>
-            Subscriber
-          </p>
-          <p className="text-[24px] text-white/95 leading-tight" style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 600, letterSpacing: '-0.02em' }}>
+          <p className="text-[20px] font-semibold text-white/88 tracking-tight" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
             {profile?.full_name || 'Parent'}
           </p>
-          <p className="text-[12px] text-white/55 mt-1" style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: 'italic' }}>
-            {childName ? `Following the ${childName} desk` : 'No desk subscribed yet'}
+          <p className="text-[11px] text-white/45 mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            {childName ? `Following ${childName}` : 'No child linked yet'}
           </p>
         </div>
 
