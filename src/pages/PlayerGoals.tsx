@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Target, Award, Star, Trophy, Shield, Goal, Home, ClipboardList, PlaySquare, Brain, User, X, Check, type LucideIcon } from 'lucide-react';
 
-const GOAL_PRESETS = [
-  { type: 'goals_scored', label: 'Goals Scored', emoji: '⚽' },
-  { type: 'assists', label: 'Assists', emoji: '🅰️' },
-  { type: 'matches_played', label: 'Matches Played', emoji: '🏟️' },
-  { type: 'avg_rating', label: 'Average Rating', emoji: '⭐' },
-  { type: 'wins', label: 'Wins', emoji: '🏆' },
-  { type: 'clean_sheets', label: 'Clean Sheets (GK)', emoji: '🧤' },
+const GOAL_PRESETS: { type: string; label: string; icon: LucideIcon }[] = [
+  { type: 'goals_scored',   label: 'Goals Scored',       icon: Goal },
+  { type: 'assists',        label: 'Assists',            icon: Award },
+  { type: 'matches_played', label: 'Matches Played',     icon: ClipboardList },
+  { type: 'avg_rating',     label: 'Average Rating',     icon: Star },
+  { type: 'wins',           label: 'Wins',               icon: Trophy },
+  { type: 'clean_sheets',   label: 'Clean Sheets (GK)',  icon: Shield },
 ];
 
 interface PlayerGoal {
