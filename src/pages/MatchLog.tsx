@@ -134,7 +134,7 @@ const MatchLog = () => {
         <Section label="Venue">
           <div className="grid grid-cols-2 gap-1.5">
             {VENUES.map(v => (
-              <SelectCard key={v} selected={venue === v} onClick={() => setVenue(v)} label={v === 'Home' ? '🏠 Home' : '✈️ Away'} />
+              <SelectCard key={v} selected={venue === v} onClick={() => setVenue(v)} label={v} />
             ))}
           </div>
         </Section>
@@ -188,7 +188,7 @@ const MatchLog = () => {
         <Section label="Body Condition">
           <div className="grid grid-cols-4 gap-1.5">
             {BODY_CONDITIONS.map(bc => (
-              <SelectCard key={bc.label} selected={bodyCondition === bc.label} onClick={() => setBodyCondition(bc.label)} label={`${bc.emoji}\n${bc.label}`} />
+              <SelectCard key={bc.label} selected={bodyCondition === bc.label} onClick={() => setBodyCondition(bc.label)} label={bc.label} />
             ))}
           </div>
         </Section>
@@ -237,7 +237,7 @@ const MatchLog = () => {
         {position && posQuestions.length > 0 && (
           <>
             <div className="border-t border-border pt-4">
-              <p className="text-[13px] text-primary mb-3 tracking-wide">📋 {position} Questions</p>
+              <p className="text-[13px] text-primary mb-3 tracking-wide">{position} Questions</p>
             </div>
             {posQuestions.map(q => {
               if (q.id === 'midrole') {

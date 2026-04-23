@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 import PlayerHome from '@/pages/player/PlayerHome';
 import CoachHomePage from '@/pages/coach/CoachHomePage';
+import { Users } from 'lucide-react';
 
 const Dashboard = () => {
   const { user, profile, loading, signOut } = useAuth();
@@ -68,7 +69,7 @@ const Dashboard = () => {
       </div>
       <div className="bg-card rounded-lg p-4 border border-border mb-6">
         <div className="flex items-center gap-3">
-          <span className="text-3xl">👨‍👩‍👦</span>
+          <Users size={28} strokeWidth={1.5} className="text-foreground" />
           <div>
             <h2 className="text-lg text-foreground">Parent Dashboard</h2>
             <p className="text-xs text-muted-foreground">Coming soon</p>

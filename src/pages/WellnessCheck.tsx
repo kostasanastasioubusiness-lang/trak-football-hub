@@ -3,26 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Moon, Smile, Meh, Frown, Zap, Battery, BatteryLow, MinusCircle, Laugh, type LucideIcon } from 'lucide-react';
 
-const SLEEP_OPTIONS = [
-  { emoji: '😴', label: 'Great', value: 'great' },
-  { emoji: '🙂', label: 'Good', value: 'good' },
-  { emoji: '😐', label: 'OK', value: 'ok' },
-  { emoji: '😩', label: 'Poor', value: 'poor' },
+type WellOpt = { icon: LucideIcon; label: string; value: string };
+
+const SLEEP_OPTIONS: WellOpt[] = [
+  { icon: Moon,  label: 'Great', value: 'great' },
+  { icon: Smile, label: 'Good',  value: 'good' },
+  { icon: Meh,   label: 'OK',    value: 'ok' },
+  { icon: Frown, label: 'Poor',  value: 'poor' },
 ];
 
-const ENERGY_OPTIONS = [
-  { emoji: '⚡', label: 'High', value: 'high' },
-  { emoji: '🔋', label: 'Good', value: 'good' },
-  { emoji: '🪫', label: 'Low', value: 'low' },
-  { emoji: '😶', label: 'Drained', value: 'drained' },
+const ENERGY_OPTIONS: WellOpt[] = [
+  { icon: Zap,         label: 'High',    value: 'high' },
+  { icon: Battery,     label: 'Good',    value: 'good' },
+  { icon: BatteryLow,  label: 'Low',     value: 'low' },
+  { icon: MinusCircle, label: 'Drained', value: 'drained' },
 ];
 
-const MOOD_OPTIONS = [
-  { emoji: '😁', label: 'Great', value: 'great' },
-  { emoji: '🙂', label: 'Good', value: 'good' },
-  { emoji: '😐', label: 'Meh', value: 'meh' },
-  { emoji: '😔', label: 'Low', value: 'low' },
+const MOOD_OPTIONS: WellOpt[] = [
+  { icon: Laugh, label: 'Great', value: 'great' },
+  { icon: Smile, label: 'Good',  value: 'good' },
+  { icon: Meh,   label: 'Meh',   value: 'meh' },
+  { icon: Frown, label: 'Low',   value: 'low' },
 ];
 
 const WellnessCheck = () => {
@@ -48,7 +51,7 @@ const WellnessCheck = () => {
         notes: notes || null,
       });
       if (error) throw error;
-      toast.success('Wellness logged! 💪');
+      toast.success('Wellness logged!');
       navigate('/dashboard');
     } catch (err: any) {
       toast.error(err.message || 'Failed to save');
@@ -68,17 +71,17 @@ const WellnessCheck = () => {
 
       {/* Sleep Quality */}
       <Section label="Sleep Quality">
-        <EmojiGrid options={SLEEP_OPTIONS} selected={sleep} onSelect={setSleep} />
+        <IconGrid options={SLEEP_OPTIONS} selected={sleep} onSelect={setSleep} />
       </Section>
 
       {/* Energy Level */}
       <Section label="Energy Level">
-        <EmojiGrid options={ENERGY_OPTIONS} selected={energy} onSelect={setEnergy} />
+        <IconGrid options={ENERGY_OPTIONS} selected={energy} onSelect={setEnergy} />
       </Section>
 
       {/* Mood */}
       <Section label="Mood">
-        <EmojiGrid options={MOOD_OPTIONS} selected={mood} onSelect={setMood} />
+        <IconGrid options={MOOD_OPTIONS} selected={mood} onSelect={setMood} />
       </Section>
 
       {/* Notes */}
@@ -97,10 +100,10 @@ const WellnessCheck = () => {
       {canSave && (
         <div className="rounded-[10px] p-4 mb-4 border border-primary/20 bg-primary/5">
           <p className="section-label mb-2 !text-primary">Today's Check-in</p>
-          <div className="flex items-center gap-4 text-sm">
-            <span>😴 {SLEEP_OPTIONS.find(o => o.value === sleep)?.label}</span>
-            <span>⚡ {ENERGY_OPTIONS.find(o => o.value === energy)?.label}</span>
-            <span>😁 {MOOD_OPTIONS.find(o => o.value === mood)?.label}</span>
+          <div className="flex items-center gap-4 text-sm flex-wrap">
+            {(() => { const o = SLEEP_OPTIONS.find(x => x.value === sleep); if (!o) return null; const I = o.icon; return <span className="inline-flex items-center gap-1.5"><I size={14} /> {o.label}</span>; })()}
+            {(() => { const o = ENERGY_OPTIONS.find(x => x.value === energy); if (!o) return null; const I = o.icon; return <span className="inline-flex items-center gap-1.5"><I size={14} /> {o.label}</span>; })()}
+            {(() => { const o = MOOD_OPTIONS.find(x => x.value === mood); if (!o) return null; const I = o.icon; return <span className="inline-flex items-center gap-1.5"><I size={14} /> {o.label}</span>; })()}
           </div>
         </div>
       )}
@@ -123,26 +126,30 @@ const Section = ({ label, children }: { label: string; children: React.ReactNode
   </div>
 );
 
-const EmojiGrid = ({ options, selected, onSelect }: {
-  options: { emoji: string; label: string; value: string }[];
+const IconGrid = ({ options, selected, onSelect }: {
+  options: WellOpt[];
   selected: string;
   onSelect: (v: string) => void;
 }) => (
   <div className="grid grid-cols-4 gap-2">
-    {options.map(o => (
-      <button
-        key={o.value}
-        onClick={() => onSelect(o.value)}
-        className={`flex flex-col items-center gap-1.5 rounded-xl py-3 border transition-all active:scale-95 ${
-          selected === o.value
-            ? 'border-primary bg-primary/15 shadow-[0_0_12px_rgba(200,242,90,0.15)]'
-            : 'border-border bg-card hover:border-primary/30'
-        }`}
-      >
-        <span className="text-2xl">{o.emoji}</span>
-        <span className={`text-[11px] font-medium ${selected === o.value ? 'text-primary' : 'text-muted-foreground'}`}>{o.label}</span>
-      </button>
-    ))}
+    {options.map(o => {
+      const Icon = o.icon;
+      const isActive = selected === o.value;
+      return (
+        <button
+          key={o.value}
+          onClick={() => onSelect(o.value)}
+          className={`flex flex-col items-center gap-1.5 rounded-xl py-3 border transition-all active:scale-95 ${
+            isActive
+              ? 'border-primary bg-primary/15 shadow-[0_0_12px_rgba(200,242,90,0.15)]'
+              : 'border-border bg-card hover:border-primary/30'
+          }`}
+        >
+          <Icon size={22} strokeWidth={1.75} className={isActive ? 'text-primary' : 'text-muted-foreground'} />
+          <span className={`text-[11px] font-medium ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>{o.label}</span>
+        </button>
+      );
+    })}
   </div>
 );
 

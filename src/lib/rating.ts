@@ -27,10 +27,10 @@ export const COMPETITIONS = ['League', 'Tournament', 'Friendly'] as const;
 export const VENUES = ['Home', 'Away'] as const;
 export const CARDS = ['None', 'Yellow', 'Red'] as const;
 export const BODY_CONDITIONS = [
-  { label: 'Fresh', emoji: '💪' },
-  { label: 'Good', emoji: '👍' },
-  { label: 'Tired', emoji: '😮‍💨' },
-  { label: 'Knock', emoji: '🤕' },
+  { label: 'Fresh' },
+  { label: 'Good' },
+  { label: 'Tired' },
+  { label: 'Knock' },
 ] as const;
 export const SELF_RATINGS = ['Poor', 'Average', 'Good', 'Excellent'] as const;
 

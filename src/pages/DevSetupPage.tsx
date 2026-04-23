@@ -163,7 +163,7 @@ export default function DevSetupPage() {
   }
 
   const iconFor = (s: Step['status']) =>
-    s === 'done' ? '✅' : s === 'error' ? '❌' : s === 'running' ? '⏳' : '○'
+    s === 'done' ? '[done]' : s === 'error' ? '[err]' : s === 'running' ? '...' : '·'
 
   return (
     <div className="min-h-screen bg-[#0A0A0B] flex flex-col items-center justify-start px-5 py-10 max-w-md mx-auto">
@@ -208,7 +208,7 @@ export default function DevSetupPage() {
 
       {done ? (
         <div className="w-full space-y-2">
-          <div className="text-center py-3 text-[14px] font-semibold text-[#C8F25A]">All done! ✅</div>
+          <div className="text-center py-3 text-[14px] font-semibold text-[#C8F25A]">All done!</div>
           <button onClick={() => navigate('/')}
             className="w-full py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm">
             Go to app →
@@ -222,7 +222,7 @@ export default function DevSetupPage() {
       )}
 
       <p className="text-[10px] text-white/20 mt-4 text-center" style={{ fontFamily: "'DM Mono', monospace" }}>
-        ⚠ Disable "Confirm email" in Supabase Auth settings if sign-up fails
+        Note: Disable "Confirm email" in Supabase Auth settings if sign-up fails
       </p>
 
       <button onClick={() => navigate('/')} className="mt-3 text-[11px] text-white/25 hover:text-white/50">

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel, BandPill } from '@/components/trak'
 import { toast } from 'sonner'
+import { Zap, Star, Check, Circle, Minus } from 'lucide-react'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import { calculateSquadAnalytics, type SquadAnalytics } from '@/lib/squad-analytics'
@@ -256,23 +257,27 @@ export default function CoachHomePage() {
             </div>
             <div className="flex items-center gap-2.5">
               {bandDist.star > 0 && (
-                <span className="text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#C8F25A' }}>
-                  {bandDist.star} ★
+                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#C8F25A' }}>
+                  {bandDist.star}
+                  <Star size={11} strokeWidth={2} fill="#C8F25A" />
                 </span>
               )}
               {bandDist.check > 0 && (
-                <span className="text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#4ade80' }}>
-                  {bandDist.check} ✓
+                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#4ade80' }}>
+                  {bandDist.check}
+                  <Check size={11} strokeWidth={2.5} />
                 </span>
               )}
               {bandDist.circle > 0 && (
-                <span className="text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#fb923c' }}>
-                  {bandDist.circle} ○
+                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#fb923c' }}>
+                  {bandDist.circle}
+                  <Circle size={10} strokeWidth={2} />
                 </span>
               )}
               {bandDist.dash > 0 && (
-                <span className="text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#60a5fa' }}>
-                  {bandDist.dash} —
+                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#60a5fa' }}>
+                  {bandDist.dash}
+                  <Minus size={11} strokeWidth={2.5} />
                 </span>
               )}
             </div>
@@ -375,7 +380,7 @@ export default function CoachHomePage() {
             />
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[16px] leading-none">&#9889;</span>
+                <Zap size={16} color="#C8F25A" fill="#C8F25A" strokeWidth={1.5} />
                 <span
                   className="text-[14px] font-semibold"
                   style={{ color: '#C8F25A', fontFamily: "'DM Sans', sans-serif" }}

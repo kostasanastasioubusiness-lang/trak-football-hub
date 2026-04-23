@@ -3,26 +3,27 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
-import { ChevronLeft, ChevronDown } from 'lucide-react'
+import { ChevronLeft, ChevronDown, Trophy, Medal, TrendingUp, Target, type LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useLocation } from 'react-router-dom'
 
-const AWARD_TYPES = [
-  { value: 'player_of_week', label: 'Player of the Week', emoji: '🏆' },
-  { value: 'player_of_month', label: 'Player of the Month', emoji: '🥇' },
-  { value: 'most_improved', label: 'Most Improved', emoji: '📈' },
-  { value: 'top_scorer', label: 'Top Scorer', emoji: '⚽' },
+const AWARD_TYPES: { value: string; label: string; icon: LucideIcon }[] = [
+  { value: 'player_of_week', label: 'Player of the Week', icon: Trophy },
+  { value: 'player_of_month', label: 'Player of the Month', icon: Medal },
+  { value: 'most_improved', label: 'Most Improved', icon: TrendingUp },
+  { value: 'top_scorer', label: 'Top Scorer', icon: Target },
 ]
 
-function OptPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function OptPill({ label, icon: Icon, active, onClick }: { label: string; icon?: LucideIcon; active: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className="rounded-[10px] p-[11px_8px] text-center text-[13px] font-medium transition-colors"
+      className="rounded-[10px] p-[11px_8px] text-center text-[13px] font-medium transition-colors inline-flex items-center justify-center gap-1.5"
       style={{
         background: active ? 'rgba(200,242,90,0.12)' : '#0d0d0f',
         border: active ? '1.5px solid #C8F25A' : '1.5px solid rgba(255,255,255,0.06)',
         color: active ? '#C8F25A' : 'rgba(255,255,255,0.55)',
       }}>
+      {Icon && <Icon size={14} />}
       {label}
     </button>
   )
@@ -119,7 +120,7 @@ export default function CoachAwardPlayer() {
           <MetadataLabel text="AWARD TYPE" />
           <div className="grid grid-cols-2 gap-2">
             {AWARD_TYPES.map(a => (
-              <OptPill key={a.value} label={`${a.emoji} ${a.label}`} active={awardType === a.value}
+              <OptPill key={a.value} label={a.label} icon={a.icon} active={awardType === a.value}
                 onClick={() => setAwardType(a.value)} />
             ))}
           </div>
@@ -129,7 +130,7 @@ export default function CoachAwardPlayer() {
         {selectedAward && (
           <div className="flex items-center gap-3 p-4 rounded-[14px]"
             style={{ background: 'rgba(200,242,90,0.06)', border: '1px solid rgba(200,242,90,0.18)' }}>
-            <span className="text-2xl">{selectedAward.emoji}</span>
+            <selectedAward.icon size={22} color="#C8F25A" />
             <p className="text-[14px] font-semibold text-[#C8F25A]">{selectedAward.label}</p>
           </div>
         )}
