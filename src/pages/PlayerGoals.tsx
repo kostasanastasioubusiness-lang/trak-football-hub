@@ -109,7 +109,7 @@ const PlayerGoals = () => {
 
         {goals.length === 0 && !showAdd && (
           <div className="bg-card rounded-xl border border-border p-6 text-center">
-            <p className="text-3xl mb-2">🎯</p>
+            <Target size={28} strokeWidth={1.5} className="mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">No goals set yet. Tap "Add Goal" to set your first target!</p>
           </div>
         )}
@@ -122,15 +122,18 @@ const PlayerGoals = () => {
             const target = Number(goal.target_value);
             const pct = Math.min(100, Math.round((current / target) * 100));
             const isComplete = current >= target;
+            const Icon = p?.icon || Target;
 
             return (
               <div key={goal.id} className="bg-card rounded-xl border border-border p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{p?.emoji || '🎯'}</span>
+                    <Icon size={18} strokeWidth={1.75} className="text-foreground" />
                     <span className="text-sm font-medium text-foreground">{p?.label || goal.goal_type}</span>
                   </div>
-                  <button onClick={() => handleDelete(goal.id)} className="text-[10px] text-muted-foreground hover:text-destructive">✕</button>
+                  <button onClick={() => handleDelete(goal.id)} className="text-muted-foreground hover:text-destructive">
+                    <X size={14} />
+                  </button>
                 </div>
                 <div className="flex items-end justify-between mb-2">
                   <span className={`text-2xl leading-none ${isComplete ? 'text-primary' : 'text-foreground'}`}>
@@ -146,8 +149,8 @@ const PlayerGoals = () => {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1.5 text-right">
-                  {isComplete ? '✅ Complete!' : `${pct}% there`}
+                <p className="text-[10px] text-muted-foreground mt-1.5 text-right inline-flex items-center gap-1 w-full justify-end">
+                  {isComplete ? <><Check size={11} className="text-primary" /> Complete!</> : `${pct}% there`}
                 </p>
               </div>
             );
@@ -163,7 +166,7 @@ const PlayerGoals = () => {
               <select value={newType} onChange={e => setNewType(e.target.value)}
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground">
                 {GOAL_PRESETS.map(p => (
-                  <option key={p.type} value={p.type}>{p.emoji} {p.label}</option>
+                  <option key={p.type} value={p.type}>{p.label}</option>
                 ))}
               </select>
             </div>
