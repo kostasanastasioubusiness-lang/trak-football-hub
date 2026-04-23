@@ -180,7 +180,7 @@ export default function Settings() {
           />
         </Section>
 
-        {/* Connections (player only) */}
+        {/* Connections — player */}
         {role === 'player' && (
           <Section label="Connections">
             <Row
@@ -197,11 +197,31 @@ export default function Settings() {
             />
             <button
               onClick={() => toast('Open the relevant invite flow from your profile')}
-              className="mt-1 flex items-center gap-1.5"
+              className="mt-1 mb-3 flex items-center gap-1.5"
               style={{ fontSize: 13, color: '#C8F25A' }}
             >
               <Plus size={12} /> Add connection
             </button>
+          </Section>
+        )}
+
+        {/* Connections — parent */}
+        {role === 'parent' && (
+          <Section label="Linked child">
+            <Row
+              label="Player"
+              right={<ConnectionPill name="Not linked" onRemove={() => toast('No link to remove')} />}
+            />
+          </Section>
+        )}
+
+        {/* Connections — coach */}
+        {role === 'coach' && (
+          <Section label="Squad invite">
+            <Row
+              label="Invite code"
+              right={<Value>Manage from your profile</Value>}
+            />
           </Section>
         )}
 
