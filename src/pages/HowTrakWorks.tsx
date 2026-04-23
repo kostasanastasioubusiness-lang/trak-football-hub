@@ -57,7 +57,7 @@ export default function HowTrakWorks() {
           <MetadataLabel text="THE IDEA" />
           <p className="text-[13px] text-white/70 mt-2.5 leading-relaxed" style={{ fontFamily: "'DM Sans', sans-serif" }}>
             TRAK turns every match into a story, not a number. Instead of a raw score,
-            your performance lands in a <span className="text-white/88 font-medium">Performance Band</span> —
+            your performance lands in a <span className="text-white/88 font-medium">Performance Band</span>,
             a word that captures how the game went and how you grew.
           </p>
         </div>
@@ -97,8 +97,8 @@ export default function HowTrakWorks() {
           <div className="mt-2.5 space-y-2.5 text-[12px] text-white/70 leading-relaxed"
             style={{ fontFamily: "'DM Sans', sans-serif" }}>
             <p>
-              Every match starts at a baseline of <span className="text-white/88 font-medium">6.5</span>
-              {' '}— a steady, average performance.
+              Every match starts at a baseline of <span className="text-white/88 font-medium">6.5</span>,
+              a steady, average performance.
             </p>
             <p>
               From there, the engine adjusts up or down based on what actually happened on the pitch:
@@ -106,8 +106,8 @@ export default function HowTrakWorks() {
               honestly you self-rated.
             </p>
             <p>
-              Coaches can add their own assessment — work rate, tactical, attitude, technical, physical,
-              coachability — which builds a fuller picture over time.
+              Coaches can add their own assessment across work rate, tactical, attitude, technical, physical,
+              and coachability, which builds a fuller picture over time.
             </p>
           </div>
         </div>
@@ -117,7 +117,7 @@ export default function HowTrakWorks() {
           <MetadataLabel text="WHY WORDS, NOT NUMBERS" />
           <p className="text-[12px] text-white/70 mt-2.5 leading-relaxed"
             style={{ fontFamily: "'DM Sans', sans-serif" }}>
-            A 7.2 and a 7.4 feel the same on the pitch — but a number invites comparison and pressure.
+            A 7.2 and a 7.4 feel the same on the pitch, but a number invites comparison and pressure.
             Bands keep the focus on growth: how often you reach <span style={{ color: '#4ade80' }}>Good</span>,
             how you bounce back from a <span style={{ color: '#fb923c' }}>Mixed</span> match, and when you
             break into <span style={{ color: '#C8F25A' }}>Exceptional</span>.
