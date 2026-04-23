@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
-import { ArrowLeft, Pencil, Check, X, Plus } from 'lucide-react'
+import { ArrowLeft, Pencil, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
@@ -17,29 +17,26 @@ const nameSchema = z
 const STORAGE_KEY = 'trak.settings.v1'
 
 interface LocalSettings {
-  notifyAssessment: boolean
-  notifyRecognition: boolean
-  notifyWeeklyTip: boolean
-  notifyMeetingRequest: boolean
-  notifyPlayerNeedsAttention: boolean
-  notifyChildAssessment: boolean
-  notifyChildRecognition: boolean
-  notifyChildAlert: boolean
+  // Player
+  notifyMatchUpdates: boolean
+  notifyCoachFeedback: boolean
+  // Coach
+  notifySquadUpdates: boolean
+  notifyMeetingRequests: boolean
+  // Parent
+  notifyChildMatchUpdates: boolean
+  notifyChildCoachFeedback: boolean
   passportVisibility: PassportVisibility
-  showInClubOverview: boolean
 }
 
 const DEFAULTS: LocalSettings = {
-  notifyAssessment: true,
-  notifyRecognition: true,
-  notifyWeeklyTip: true,
-  notifyMeetingRequest: true,
-  notifyPlayerNeedsAttention: true,
-  notifyChildAssessment: true,
-  notifyChildRecognition: true,
-  notifyChildAlert: true,
+  notifyMatchUpdates: true,
+  notifyCoachFeedback: true,
+  notifySquadUpdates: true,
+  notifyMeetingRequests: true,
+  notifyChildMatchUpdates: true,
+  notifyChildCoachFeedback: true,
   passportVisibility: 'coach_only',
-  showInClubOverview: true,
 }
 
 function loadLocal(): LocalSettings {
