@@ -32,7 +32,7 @@ interface Profile {
   role: UserRole;
   full_name: string;
   nationality: string | null;
-  avatar_url: string | null;
+  avatar_url?: string | null;
 }
 
 interface AuthContextType {
@@ -184,7 +184,7 @@ async function writeProfileFromPendingData(userId: string, userEmail: string, da
     .select('*')
     .eq('user_id', userId)
     .maybeSingle();
-  return newProfile as Profile | null;
+  return (newProfile as unknown as Profile | null);
 }
 
 async function writePendingProfile(user: User): Promise<Profile | null> {
@@ -215,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .maybeSingle();
 
     if (data) {
-      setProfile(data as Profile);
+      setProfile(data as unknown as Profile);
       return;
     }
 
