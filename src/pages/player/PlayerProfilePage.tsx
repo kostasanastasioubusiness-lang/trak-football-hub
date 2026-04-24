@@ -3,8 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
-import { IconMatch } from '@/components/icons/TrakIcons'
-import { ChevronRight, Settings as SettingsIcon, BookOpen } from 'lucide-react'
+import { IconMatch, IconHowItWorks } from '@/components/icons/TrakIcons'
+import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
 import { trackEvent } from '@/lib/telemetry'
 import RatingTrendChart from '@/components/player/RatingTrendChart'
 
@@ -112,7 +112,7 @@ export default function PlayerProfilePage() {
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center"
               style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.2)' }}>
-              <BookOpen size={16} className="text-[#C8F25A]" />
+              <IconHowItWorks size={16} color="#C8F25A" />
             </div>
             <div>
               <MetadataLabel text="MY PASSPORT" />

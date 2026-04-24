@@ -165,6 +165,13 @@ export const IconPassport = makeIcon({}, ({ size, color, className }) => (
   </svg>
 ))
 
+export const IconHowItWorks = makeIcon({}, ({ size, color, className }) => (
+  <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path d="M3 18 H7 V14 H12 V10 H18" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="18" cy="7.5" r="2.5" stroke={color} strokeWidth="1.5"/>
+  </svg>
+))
+
 export const IconProgress = makeIcon({}, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <path d="M2 16L8 10L12 13L20 5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

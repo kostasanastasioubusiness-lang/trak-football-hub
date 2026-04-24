@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Settings as SettingsIcon, BookOpen } from 'lucide-react'
+import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
 import { ClubShell, ClubCard, SectionLabel } from '@/components/club/ClubShell'
 import { useAuth } from '@/contexts/AuthContext'
+import { IconHowItWorks } from '@/components/icons/TrakIcons'
 
 export default function ClubProfile() {
   const { profile } = useAuth()
@@ -59,7 +60,7 @@ export default function ClubProfile() {
               className="w-9 h-9 rounded-xl flex items-center justify-center"
               style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.18)' }}
             >
-              <BookOpen size={16} className="text-[#C8F25A]" />
+              <IconHowItWorks size={16} color="#C8F25A" />
             </div>
             <div>
               <SectionLabel>HOW TRAK WORKS</SectionLabel>
