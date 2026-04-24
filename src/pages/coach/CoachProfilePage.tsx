@@ -4,7 +4,7 @@ import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, TrakCard, MetadataLabel, InviteCodeDisplay } from '@/components/trak'
-import { IconProfile } from '@/components/icons/TrakIcons'
+import { IconProfile, IconHowItWorks } from '@/components/icons/TrakIcons'
 import { formatCoachCode } from '@/lib/invite-codes'
 
 export default function CoachProfilePage() {
@@ -64,11 +64,17 @@ export default function CoachProfilePage() {
           onClick={() => navigate('/how-it-works')}
           className="w-full flex items-center justify-between rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] text-left hover:bg-[#141416] transition-colors"
         >
-          <div>
-            <MetadataLabel text="HOW TRAK WORKS" />
-            <p className="text-[12px] text-white/55 mt-1.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-              Performance bands & rating engine
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.18)' }}>
+              <IconHowItWorks size={16} color="#C8F25A" />
+            </div>
+            <div>
+              <MetadataLabel text="HOW TRAK WORKS" />
+              <p className="text-[12px] text-white/55 mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                Performance bands & rating engine
+              </p>
+            </div>
           </div>
           <ChevronRight size={18} className="text-white/40" />
         </button>
