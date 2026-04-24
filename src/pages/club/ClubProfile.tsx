@@ -1,17 +1,11 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Settings as SettingsIcon, BookOpen, LogOut } from 'lucide-react'
+import { ChevronRight, Settings as SettingsIcon, BookOpen } from 'lucide-react'
 import { ClubShell, ClubCard, SectionLabel } from '@/components/club/ClubShell'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/integrations/supabase/client'
 
 export default function ClubProfile() {
   const { profile } = useAuth()
   const navigate = useNavigate()
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    navigate('/', { replace: true })
-  }
 
   return (
     <ClubShell>
@@ -100,35 +94,6 @@ export default function ClubProfile() {
         </button>
       </div>
 
-      {/* Sign out */}
-      <button
-        onClick={handleSignOut}
-        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-[14px] transition-colors"
-        style={{
-          background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.1)',
-          color: 'rgba(255,255,255,0.55)',
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize: 14,
-        }}
-      >
-        <LogOut size={15} />
-        Sign out
-      </button>
-
-      {/* Readonly note */}
-      <p
-        className="text-center mt-6"
-        style={{
-          fontFamily: "'DM Mono', monospace",
-          fontSize: 9,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.18)',
-        }}
-      >
-        Read-only academy view
-      </p>
     </ClubShell>
   )
 }
