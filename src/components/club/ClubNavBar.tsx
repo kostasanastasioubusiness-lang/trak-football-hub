@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { IconOverview, IconSquad, IconCoaches } from '@/components/icons/TrakIcons'
+import { IconOverview, IconSquad, IconCoaches, IconProfile } from '@/components/icons/TrakIcons'
 
 const tabs = [
-  { to: '/club/home', label: 'Overview', Icon: IconOverview },
-  { to: '/club/squads', label: 'Squads', Icon: IconSquad },
-  { to: '/club/coaches', label: 'Coaches', Icon: IconCoaches },
+  { to: '/club/home',    label: 'Overview', Icon: IconOverview },
+  { to: '/club/squads',  label: 'Squads',   Icon: IconSquad    },
+  { to: '/club/coaches', label: 'Coaches',  Icon: IconCoaches  },
+  { to: '/club/profile', label: 'Profile',  Icon: IconProfile  },
 ]
 
 export function ClubNavBar() {
@@ -13,7 +14,7 @@ export function ClubNavBar() {
       className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-[#0A0A0B]/95 backdrop-blur"
       style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
     >
-      <div className="grid grid-cols-3">
+      <div className="grid grid-cols-4">
         {tabs.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
@@ -22,10 +23,7 @@ export function ClubNavBar() {
           >
             {({ isActive }) => (
               <>
-                <Icon
-                  size={20}
-                  color={isActive ? '#C8F25A' : 'rgba(255,255,255,0.45)'}
-                />
+                <Icon size={20} color={isActive ? '#C8F25A' : 'rgba(255,255,255,0.45)'} />
                 <span
                   style={{
                     fontFamily: "'DM Sans', sans-serif",

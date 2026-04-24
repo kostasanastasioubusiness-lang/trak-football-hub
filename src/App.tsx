@@ -54,6 +54,7 @@ const ParentProfilePage = lazy(() => import("./pages/parent/ParentProfilePage"))
 const ClubHome = lazy(() => import("./pages/club/ClubHome"));
 const ClubSquads = lazy(() => import("./pages/club/ClubSquads"));
 const ClubCoaches = lazy(() => import("./pages/club/ClubCoaches"));
+const ClubProfile = lazy(() => import("./pages/club/ClubProfile"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -125,6 +126,7 @@ const App = () => (
             <Route path="/club/home" element={<RouteGuard allowedRole="club"><ClubHome /></RouteGuard>} />
             <Route path="/club/squads" element={<RouteGuard allowedRole="club"><ClubSquads /></RouteGuard>} />
             <Route path="/club/coaches" element={<RouteGuard allowedRole="club"><ClubCoaches /></RouteGuard>} />
+            <Route path="/club/profile" element={<RouteGuard allowedRole="club"><ClubProfile /></RouteGuard>} />
 
             {/* Legacy redirects */}
             <Route path="/dashboard" element={<PlayerHome />} />
