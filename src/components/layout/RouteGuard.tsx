@@ -18,7 +18,13 @@ export function RouteGuard({ allowedRole, children }: { allowedRole: string; chi
   if (!user) return <Navigate to="/" replace />
 
   if (profile && profile.role !== allowedRole) {
-    return <Navigate to={`/${profile.role === 'player' ? 'player' : profile.role === 'coach' ? 'coach' : 'parent'}/home`} replace />
+    const homeMap: Record<string, string> = {
+      player: '/player/home',
+      coach: '/coach/home',
+      parent: '/parent/home',
+      club: '/club/home',
+    }
+    return <Navigate to={homeMap[profile.role] ?? '/'} replace />
   }
 
   return <>{children}</>

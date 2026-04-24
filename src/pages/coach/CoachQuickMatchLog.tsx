@@ -5,13 +5,14 @@ import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
+import { computeMatchScore } from '@/lib/rating-engine'
 
 /**
  * Quick Match Log — 1-minute capture at full-time.
- * Writes to coach_sessions (session_type='match') + session_attendance for selected players.
+ * Writes to coach_sessions + session_attendance + matches (for linked players).
  */
 
-type SquadPlayer = { id: string; player_name: string }
+type SquadPlayer = { id: string; player_name: string; linked_player_id: string | null; position: string | null; age: string | null }
 
 export default function CoachQuickMatchLog() {
   const { user } = useAuth()
@@ -27,7 +28,7 @@ export default function CoachQuickMatchLog() {
 
   useEffect(() => {
     if (!user) return
-    supabase.from('squad_players').select('id, player_name')
+    supabase.from('squad_players').select('id, player_name, linked_player_id, position, age')
       .eq('coach_user_id', user.id)
       .order('player_name')
       .then(({ data }) => setSquad(data || []))
@@ -70,12 +71,64 @@ export default function CoachQuickMatchLog() {
     }
 
     if (attended.size > 0) {
-      const rows = Array.from(attended).map(squad_player_id => ({
+      const attendedPlayers = squad.filter(p => attended.has(p.id))
+
+      // session_attendance rows
+      const attendanceRows = attendedPlayers.map(p => ({
         session_id: session.id,
-        squad_player_id,
+        squad_player_id: p.id,
         status: 'present',
       }))
-      await supabase.from('session_attendance').insert(rows)
+      await supabase.from('session_attendance').insert(attendanceRows)
+
+      // matches rows for every linked player
+      const linkedPlayers = attendedPlayers.filter(p => p.linked_player_id)
+      if (linkedPlayers.length > 0) {
+        const matchRows = linkedPlayers.map(p => {
+          // Map squad position string to rating-engine position key
+          const posRaw = (p.position || '').toLowerCase()
+          const pos =
+            posRaw.includes('goalkeeper') || posRaw === 'gk' ? 'gk'
+            : posRaw.includes('defender') || posRaw === 'def' || posRaw === 'cb' || posRaw === 'lb' || posRaw === 'rb' ? 'def'
+            : posRaw.includes('attacker') || posRaw === 'att' || posRaw === 'cf' || posRaw === 'st' || posRaw === 'lw' || posRaw === 'rw' ? 'att'
+            : 'mid'
+
+          const computed_rating = computeMatchScore({
+            position: pos,
+            competition: competition.toLowerCase() as 'league' | 'cup' | 'friendly',
+            venue: venue.toLowerCase() as 'home' | 'away',
+            opponent: opponent.trim(),
+            score_us: Number(scoreUs) || 0,
+            score_them: Number(scoreThem) || 0,
+            minutes_played: 90,
+            card: 'none',
+            body_condition: 'good',
+            self_rating: 'average',
+            position_inputs: {},
+            is_friendly: competition === 'Friendly',
+          })
+
+          return {
+            user_id: p.linked_player_id!,
+            opponent: opponent.trim(),
+            team_score: Number(scoreUs) || 0,
+            opponent_score: Number(scoreThem) || 0,
+            competition,
+            venue,
+            position: p.position || 'Midfielder',
+            age_group: p.age || 'U19+',
+            minutes_played: 90,
+            goals: 0,
+            assists: 0,
+            card_received: 'None',
+            body_condition: 'Average',
+            self_rating: 'Average',
+            computed_rating,
+            created_at: new Date().toISOString(),
+          }
+        })
+        await supabase.from('matches').insert(matchRows)
+      }
     }
 
     toast.success('Match logged')

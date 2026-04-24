@@ -25,11 +25,8 @@ const LandingPage = () => {
 
   useEffect(() => {
     if (!loading && user) {
-      const home = profile?.role === 'coach'
-        ? '/coach/home'
-        : profile?.role === 'parent'
-          ? '/parent/home'
-          : '/player/home';
+      const homeMap: Record<string, string> = { coach: '/coach/home', parent: '/parent/home', club: '/club/home' }
+      const home = homeMap[profile?.role ?? ''] ?? '/player/home';
       navigate(home, { replace: true });
     }
   }, [loading, user, profile, navigate]);

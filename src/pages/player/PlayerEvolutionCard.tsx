@@ -48,35 +48,85 @@ const FALLBACK_STATS = [
   { key: 'SPIRIT',      value: 50 },
 ]
 
-const EVOLUTIONS = [
-  {
-    icon: Flame,
-    title: 'On Fire',
-    desc: 'Earn 3 high bands in a row',
-    progress: 2, target: 3,
-    deadline: '4 matches left',
-    reward: '+2 CONSISTENCY · Tier nudge',
-    state: 'active' as const,
-  },
-  {
-    icon: Sprout,
-    title: 'Comeback Kid',
-    desc: 'Bounce back from a low band',
-    progress: 0, target: 1,
-    deadline: 'Next match',
-    reward: '+3 SPIRIT',
-    state: 'active' as const,
-  },
-  {
-    icon: Target,
-    title: "Coach's Pick",
-    desc: 'Earn a Standout from your coach',
-    progress: 1, target: 1,
-    deadline: 'Completed',
-    reward: 'Animated tier ring',
-    state: 'done' as const,
-  },
-]
+type EvoState = 'active' | 'done' | 'locked'
+type EvoQuest = {
+  icon: typeof Flame
+  title: string
+  desc: string
+  progress: number
+  target: number
+  deadline: string
+  reward: string
+  state: EvoState
+}
+
+/** Derive quest progress from real match + award data */
+function computeQuests(
+  matches: { computed_rating: number | null; created_at: string }[],
+  awardCount: number,
+): EvoQuest[] {
+  // Sort matches oldest→newest
+  const sorted = [...matches].sort((a, b) =>
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
+
+  // Quest 1 — On Fire: 3 consecutive matches with computed_rating ≥ 7.0
+  let streak = 0
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const r = sorted[i].computed_rating ?? 0
+    if (r >= 7.0) streak++
+    else break
+  }
+  const onFireProgress = Math.min(streak, 3)
+  const onFireDone = onFireProgress >= 3
+
+  // Quest 2 — Comeback Kid: a match ≥ 8.0 immediately after one ≤ 5.0
+  let comebackDone = false
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1].computed_rating ?? 0
+    const curr = sorted[i].computed_rating ?? 0
+    if (prev <= 5.0 && curr >= 8.0) { comebackDone = true; break }
+  }
+  // Progress: check if previous match was ≤ 5.0 (setup for next match)
+  const lastRating = sorted.length > 0 ? (sorted[sorted.length - 1].computed_rating ?? 0) : 0
+  const comebackSetup = !comebackDone && lastRating <= 5.0
+
+  // Quest 3 — Coach's Pick: at least 1 recognition award
+  const coachPickDone = awardCount > 0
+
+  return [
+    {
+      icon: Flame,
+      title: 'On Fire',
+      desc: 'Earn 3 high bands in a row',
+      progress: onFireProgress,
+      target: 3,
+      deadline: onFireDone ? 'Completed' : `${3 - onFireProgress} matches to go`,
+      reward: '+2 CONSISTENCY · Tier nudge',
+      state: onFireDone ? 'done' : 'active',
+    },
+    {
+      icon: Sprout,
+      title: 'Comeback Kid',
+      desc: 'Bounce back from a tough match',
+      progress: comebackDone ? 1 : 0,
+      target: 1,
+      deadline: comebackDone ? 'Completed' : comebackSetup ? 'Next match — go for it!' : 'Waiting for setup',
+      reward: '+3 SPIRIT',
+      state: comebackDone ? 'done' : 'active',
+    },
+    {
+      icon: Target,
+      title: "Coach's Pick",
+      desc: 'Earn a recognition award from your coach',
+      progress: coachPickDone ? 1 : 0,
+      target: 1,
+      deadline: coachPickDone ? 'Completed' : 'Keep impressing',
+      reward: 'Animated tier ring',
+      state: coachPickDone ? 'done' : 'active',
+    },
+  ]
+}
 
 export default function PlayerEvolutionCard() {
   const navigate = useNavigate()
@@ -89,14 +139,16 @@ export default function PlayerEvolutionCard() {
   const [ageGroup, setAgeGroup] = useState('')
   const [stats, setStats] = useState(FALLBACK_STATS)
   const [hasAssessment, setHasAssessment] = useState(false)
+  const [evolutions, setEvolutions] = useState<EvoQuest[]>([])
 
   useEffect(() => {
     if (!user) return
     ;(async () => {
-      // 1. Profile + player details
-      const [{ data: profile }, { data: details }] = await Promise.all([
+      // 1. Profile + player details + matches (all in parallel)
+      const [{ data: profile }, { data: details }, { data: matches }] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('user_id', user.id).maybeSingle(),
         supabase.from('player_details').select('position, current_club, age_group').eq('user_id', user.id).maybeSingle(),
+        supabase.from('matches').select('computed_rating, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
       ])
       if (profile?.full_name) setName(profile.full_name)
       if (details?.position) setPosition(details.position.toUpperCase())
@@ -109,28 +161,47 @@ export default function PlayerEvolutionCard() {
         .select('id')
         .eq('linked_player_id', user.id)
       const squadIds = (squadRows ?? []).map(r => r.id)
-      if (squadIds.length === 0) return
 
-      // 3. Pull recent assessments (newest first), average up to last 5
-      const { data: assessments } = await supabase
-        .from('coach_assessments')
-        .select('consistency, impact, workrate, technique, spirit, created_at')
-        .in('squad_player_id', squadIds)
-        .order('created_at', { ascending: false })
-        .limit(5)
+      // 3. Pull assessments + recognition awards in parallel
+      const [assessmentsRes, awardsRes] = await Promise.all([
+        squadIds.length > 0
+          ? supabase.from('coach_assessments')
+              .select('work_rate, tactical, attitude, technical, physical, coachability, created_at')
+              .in('squad_player_id', squadIds)
+              .order('created_at', { ascending: false })
+              .limit(5)
+          : Promise.resolve({ data: null }),
+        squadIds.length > 0
+          ? supabase.from('recognition_awards')
+              .select('id')
+              .in('squad_player_id', squadIds)
+          : Promise.resolve({ data: null }),
+      ])
+
+      const assessments = assessmentsRes.data
+      const awardCount = awardsRes.data?.length ?? 0
+
+      // Compute quests from real match + award data
+      setEvolutions(computeQuests(matches ?? [], awardCount))
 
       if (!assessments || assessments.length === 0) return
 
+      // Map coach dimensions → 5 card stats, then scale 1–10 → 0–100
       const n = assessments.length
       const sums = { consistency: 0, impact: 0, workrate: 0, technique: 0, spirit: 0 }
       for (const a of assessments as any[]) {
-        sums.consistency += a.consistency ?? 5
-        sums.impact      += a.impact      ?? 5
-        sums.workrate    += a.workrate    ?? 5
-        sums.technique   += a.technique   ?? 5
-        sums.spirit      += a.spirit      ?? 5
+        const wr = a.work_rate ?? 5
+        const tac = a.tactical ?? 5
+        const att = a.attitude ?? 5
+        const tech = a.technical ?? 5
+        const phys = a.physical ?? 5
+        const coach = a.coachability ?? 5
+        sums.consistency += att
+        sums.impact      += tech
+        sums.workrate    += wr
+        sums.technique   += (tech + tac) / 2
+        sums.spirit      += (att + coach) / 2
       }
-      // 1-10 → 0-100 scale
       const toOvr = (v: number) => Math.round((v / n) * 10)
       setStats([
         { key: 'CONSISTENCY', value: toOvr(sums.consistency) },
@@ -307,8 +378,8 @@ export default function PlayerEvolutionCard() {
               }}
             >
               <span>SERIES 01</span>
-              <span>· EVOLVING ·</span>
-              <span>NO. 047</span>
+              <span>{evolutions.some(e => e.state === 'done') ? '· EVOLVING ·' : '· ACTIVE ·'}</span>
+              <span>TRAK · 25/26</span>
             </div>
           </div>
         </div>
@@ -338,7 +409,7 @@ export default function PlayerEvolutionCard() {
         </div>
 
         <div className="flex flex-col gap-2.5">
-          {EVOLUTIONS.map((e) => (
+          {evolutions.map((e) => (
             <EvoRow key={e.title} {...e} />
           ))}
         </div>

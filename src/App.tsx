@@ -122,9 +122,9 @@ const App = () => (
             <Route path="/parent/profile" element={<RouteGuard allowedRole="parent"><ParentProfilePage /></RouteGuard>} />
 
             {/* Club admin routes */}
-            <Route path="/club/home" element={<ClubHome />} />
-            <Route path="/club/squads" element={<ClubSquads />} />
-            <Route path="/club/coaches" element={<ClubCoaches />} />
+            <Route path="/club/home" element={<RouteGuard allowedRole="club"><ClubHome /></RouteGuard>} />
+            <Route path="/club/squads" element={<RouteGuard allowedRole="club"><ClubSquads /></RouteGuard>} />
+            <Route path="/club/coaches" element={<RouteGuard allowedRole="club"><ClubCoaches /></RouteGuard>} />
 
             {/* Legacy redirects */}
             <Route path="/dashboard" element={<PlayerHome />} />
