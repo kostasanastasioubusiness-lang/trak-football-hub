@@ -171,10 +171,28 @@ const LoginForm = ({ onBack }: { onBack: () => void }) => {
   );
 };
 
+const DEV_PIN = '013';
+
 const DevLoginPanel = () => {
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const [unlocked, setUnlocked] = useState(false);
+  const [pin, setPin] = useState('');
+  const [shake, setShake] = useState(false);
   const [busyRole, setBusyRole] = useState<string | null>(null);
+
+  const handlePinChange = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 3);
+    setPin(digits);
+    if (digits.length === 3) {
+      if (digits === DEV_PIN) {
+        setUnlocked(true);
+      } else {
+        setShake(true);
+        setTimeout(() => { setShake(false); setPin(''); }, 600);
+      }
+    }
+  };
 
   const loginAs = async (account: typeof DEV_ACCOUNTS[number]) => {
     setBusyRole(account.role);
@@ -196,28 +214,55 @@ const DevLoginPanel = () => {
           style={{ fontFamily: "'DM Mono', monospace" }}>Dev quick-login</span>
         <div className="flex-1 h-px bg-white/[0.07]" />
       </div>
-      <div className="grid grid-cols-4 gap-2">
-        {DEV_ACCOUNTS.map(account => (
-          <button
-            key={account.role}
-            onClick={() => loginAs(account)}
-            disabled={busyRole !== null}
-            className="rounded-[10px] py-3 text-center text-[11px] font-semibold transition-opacity disabled:opacity-50"
+
+      {!unlocked ? (
+        <div className="flex flex-col items-center gap-2">
+          <input
+            type="password"
+            inputMode="numeric"
+            value={pin}
+            onChange={e => handlePinChange(e.target.value)}
+            placeholder="PIN"
+            maxLength={3}
+            className={`w-20 text-center py-2 rounded-[10px] text-[18px] tracking-[0.3em] outline-none transition-all ${shake ? 'animate-shake' : ''}`}
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: `1.5px solid rgba(255,255,255,0.08)`,
-              color: account.color,
+              background: shake ? 'rgba(255,80,80,0.08)' : 'rgba(255,255,255,0.04)',
+              border: `1.5px solid ${shake ? 'rgba(255,80,80,0.35)' : 'rgba(255,255,255,0.08)'}`,
+              color: 'rgba(255,255,255,0.6)',
+              fontFamily: "'DM Mono', monospace",
             }}
-          >
-            {busyRole === account.role ? '...' : account.label}
+            autoComplete="off"
+          />
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Enter PIN to access
+          </span>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-4 gap-2">
+            {DEV_ACCOUNTS.map(account => (
+              <button
+                key={account.role}
+                onClick={() => loginAs(account)}
+                disabled={busyRole !== null}
+                className="rounded-[10px] py-3 text-center text-[11px] font-semibold transition-opacity disabled:opacity-50"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: `1.5px solid rgba(255,255,255,0.08)`,
+                  color: account.color,
+                }}
+              >
+                {busyRole === account.role ? '...' : account.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => navigate('/dev-setup')}
+            className="w-full text-[9px] text-white/25 hover:text-white/50 text-center mt-2 transition-colors"
+            style={{ fontFamily: "'DM Mono', monospace" }}>
+            First time? Run setup → /dev-setup
           </button>
-        ))}
-      </div>
-      <button onClick={() => navigate('/dev-setup')}
-        className="w-full text-[9px] text-white/25 hover:text-white/50 text-center mt-2 transition-colors"
-        style={{ fontFamily: "'DM Mono', monospace" }}>
-        First time? Run setup → /dev-setup
-      </button>
+        </>
+      )}
     </div>
   );
 };
