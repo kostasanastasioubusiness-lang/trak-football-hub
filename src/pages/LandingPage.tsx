@@ -177,10 +177,6 @@ const DevLoginPanel = () => {
   const [busyRole, setBusyRole] = useState<string | null>(null);
 
   const loginAs = async (account: typeof DEV_ACCOUNTS[number]) => {
-    if (account.role === 'club') {
-      navigate('/club/home', { replace: true });
-      return;
-    }
     setBusyRole(account.role);
     await supabase.auth.signOut();
     const { error } = await signIn(account.email, DEV_PASSWORD);

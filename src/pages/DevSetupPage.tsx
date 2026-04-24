@@ -7,10 +7,13 @@ const PLAYER_ID = '22222222-2222-2222-2222-222222222222'
 const PARENT_ID = '33333333-3333-3333-3333-333333333333'
 const SQUAD_ID  = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
+const CLUB_ID = '44444444-4444-4444-4444-444444444444'
+
 const ACCOUNTS = [
-  { email: 'coach@trak.dev',  password: 'TrakDev123', role: 'coach',  name: 'Alex Martinez' },
-  { email: 'player@trak.dev', password: 'TrakDev123', role: 'player', name: 'Jamie Wilson'  },
-  { email: 'parent@trak.dev', password: 'TrakDev123', role: 'parent', name: 'Sarah Wilson'  },
+  { email: 'coach@trak.dev',  password: 'TrakDev123', role: 'coach',  name: 'Alex Martinez'   },
+  { email: 'player@trak.dev', password: 'TrakDev123', role: 'player', name: 'Jamie Wilson'     },
+  { email: 'parent@trak.dev', password: 'TrakDev123', role: 'parent', name: 'Sarah Wilson'     },
+  { email: 'club@trak.dev',   password: 'TrakDev123', role: 'club',   name: 'City FC Academy'  },
 ]
 
 type Step = { label: string; status: 'pending' | 'running' | 'done' | 'error'; detail?: string }
@@ -61,6 +64,7 @@ export default function DevSetupPage() {
       const coachId  = userIds['coach']
       const playerId = userIds['player']
       const parentId = userIds['parent']
+      const clubId   = userIds['club']
 
       // ── 2. Sign in as coach to seed coach data ───────────────────────
       update('Sign in as coach', 'running')
@@ -152,6 +156,14 @@ export default function DevSetupPage() {
       update('Parent profile + links', 'done')
 
       // ── 6. Sign out ─────────────────────────────────────────────────
+      // ── Club admin account ────────────────────────────────────────────
+      update('Club admin profile', 'running')
+      await supabase.auth.signInWithPassword({ email: 'club@trak.dev', password: 'TrakDev123' })
+      await supabase.from('profiles').upsert({
+        user_id: clubId, role: 'club', full_name: 'City FC Academy',
+      }, { onConflict: 'user_id' })
+      update('Club admin profile', 'done', 'club@trak.dev')
+
       await supabase.auth.signOut()
       setDone(true)
 
@@ -183,6 +195,7 @@ export default function DevSetupPage() {
           { role: 'Coach',  email: 'coach@trak.dev' },
           { role: 'Player', email: 'player@trak.dev' },
           { role: 'Parent', email: 'parent@trak.dev' },
+          { role: 'Admin',  email: 'club@trak.dev'   },
         ].map(a => (
           <div key={a.role} className="flex justify-between text-[12px]">
             <span className="text-white/50">{a.role}</span>

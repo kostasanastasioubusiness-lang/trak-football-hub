@@ -18,13 +18,6 @@ export function DevSwitcher() {
   const switchTo = async (account: typeof DEV_ACCOUNTS[number]) => {
     setBusy(account.role)
     setOpen(false)
-    if (account.role === 'club') {
-      await supabase.auth.signOut()
-      setBusy(null)
-      navigate('/club/home', { replace: true })
-      return
-    }
-    // signInWithPassword replaces the existing session — no need for an extra signOut round-trip
     const { error } = await supabase.auth.signInWithPassword({
       email: account.email,
       password: 'TrakDev123',
