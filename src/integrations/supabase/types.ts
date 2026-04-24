@@ -653,6 +653,16 @@ export type Database = {
           status: string
         }[]
       }
+      get_player_invites_for_current_user: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          parent_email: string
+          player_user_id: string
+          status: string
+        }[]
+      }
       get_profile_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
