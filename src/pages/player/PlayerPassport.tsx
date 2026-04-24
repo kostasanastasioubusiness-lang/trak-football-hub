@@ -17,7 +17,6 @@ type MatchRow = {
   opponent_score: number
   competition: string | null
   band: BandKey
-  coachVerified: boolean
 }
 
 type SeasonRow = {
@@ -25,7 +24,6 @@ type SeasonRow = {
   club: string
   ageGroup: string
   matches: number
-  verifiedCount: number
   dist: Record<BandKey, number>
   avgRating: number
 }
@@ -98,21 +96,12 @@ export default function PlayerPassport() {
       .eq('user_id', user!.id)
       .order('created_at', { ascending: false })
 
-    // 3. Coach assessments dates (for "coach verified" matching)
+    // 3. Squad player IDs (for awards)
     const { data: squadRows } = await supabase
       .from('squad_players')
       .select('id')
       .eq('linked_player_id', user!.id)
     const squadIds = (squadRows ?? []).map(r => r.id)
-
-    let assessmentDates: Date[] = []
-    if (squadIds.length > 0) {
-      const { data: assessments } = await supabase
-        .from('coach_assessments')
-        .select('created_at')
-        .in('squad_player_id', squadIds)
-      assessmentDates = (assessments ?? []).map(a => new Date(a.created_at))
-    }
 
     // 4. Recognition awards
     if (squadIds.length > 0) {
@@ -124,16 +113,11 @@ export default function PlayerPassport() {
       setAwards(awardData ?? [])
     }
 
-    // Process matches
-    const THREE_DAYS_MS = 3 * 86400000
+    // Process matches — all entries are coach-logged by definition
     const processed: MatchRow[] = (rawMatches ?? []).map(m => {
       const rating = m.computed_rating ?? 6.5
       const band = scoreToBand(rating) as BandKey
-      const matchTime = new Date(m.created_at).getTime()
-      const coachVerified = assessmentDates.some(
-        ad => Math.abs(ad.getTime() - matchTime) <= THREE_DAYS_MS
-      )
-      return { ...m, band, coachVerified }
+      return { ...m, band }
     })
     setMatches(processed)
 
@@ -162,7 +146,6 @@ export default function PlayerPassport() {
           club: det?.current_club || 'Academy',
           ageGroup: det?.age_group || '',
           matches: ms.length,
-          verifiedCount: ms.filter(m => m.coachVerified).length,
           dist,
           avgRating: ms.length > 0 ? ratingSum / ms.length : 6.5,
         }
@@ -311,9 +294,12 @@ export default function PlayerPassport() {
                         })}
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="mt-3 pt-3 flex items-center gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                       <StatItem label="Matches" value={s.matches} />
-                      <StatItem label="Coach Verified" value={s.verifiedCount} />
+                      <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]"
+                        style={{ color: '#C8F25A', background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.2)' }}>
+                        <ShieldCheck size={10} /> Coach logged
+                      </span>
                     </div>
                   </div>
                 )
@@ -350,11 +336,9 @@ export default function PlayerPassport() {
                         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
                           {m.team_score}–{m.opponent_score}
                         </span>
-                        {m.coachVerified && (
-                          <span className="inline-flex items-center gap-1" style={{ fontSize: 11, color: '#C8F25A' }}>
-                            <ShieldCheck size={10} /> Verified
-                          </span>
-                        )}
+                        <span className="inline-flex items-center gap-1" style={{ fontSize: 11, color: '#C8F25A' }}>
+                          <ShieldCheck size={10} /> Coach logged
+                        </span>
                       </div>
                     </div>
                     <span className="px-2.5 py-1 rounded-full text-[11px] shrink-0"
