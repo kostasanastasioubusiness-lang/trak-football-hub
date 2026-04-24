@@ -116,7 +116,7 @@ export default function CoachQuickMatchLog() {
             competition,
             venue,
             position: p.position || 'Midfielder',
-            age_group: p.age || 'U19+',
+            age_group: p.age != null ? String(p.age) : 'U19+',
             minutes_played: 90,
             goals: 0,
             assists: 0,
