@@ -643,9 +643,10 @@ export type Database = {
           status: string
         }[]
       }
+      is_club_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      user_role: "player" | "coach" | "parent"
+      user_role: "player" | "coach" | "parent" | "club"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -773,7 +774,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      user_role: ["player", "coach", "parent"],
+      user_role: ["player", "coach", "parent", "club"],
     },
   },
 } as const
