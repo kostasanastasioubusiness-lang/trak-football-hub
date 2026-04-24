@@ -12,7 +12,7 @@ type SquadPlayer = {
   player_name: string
   linked_player_id: string | null
   position: string | null
-  age: string | null
+  age: number | null
 }
 
 type Competition = 'League' | 'Cup' | 'Friendly'
@@ -91,7 +91,7 @@ export default function CoachAddSession() {
           competition,
           venue,
           notes:       `${scoreUs}-${scoreThem}${notes ? ' · ' + notes : ''}`,
-        }),
+        } as any),
       })
       .select()
       .single()
@@ -142,7 +142,7 @@ export default function CoachAddSession() {
               competition,
               venue,
               position:       p.position  || 'Midfielder',
-              age_group:      p.age       || 'U19+',
+              age_group:      p.age != null ? String(p.age) : 'U19+',
               minutes_played: 90,
               goals:          0,
               assists:        0,

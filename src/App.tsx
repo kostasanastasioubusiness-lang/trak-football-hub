@@ -129,8 +129,8 @@ const App = () => (
             <Route path="/club/profile" element={<RouteGuard allowedRole="club"><ClubProfile /></RouteGuard>} />
 
             {/* Legacy redirects */}
-            <Route path="/dashboard" element={<PlayerHome />} />
-            <Route path="/profile" element={<PlayerProfilePage />} />
+            <Route path="/dashboard" element={<RouteGuard allowedRole="player"><PlayerHome /></RouteGuard>} />
+            <Route path="/profile" element={<RouteGuard allowedRole="player"><PlayerProfilePage /></RouteGuard>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

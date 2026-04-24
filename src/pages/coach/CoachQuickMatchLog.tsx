@@ -12,7 +12,7 @@ import { computeMatchScore } from '@/lib/rating-engine'
  * Writes to coach_sessions + session_attendance + matches (for linked players).
  */
 
-type SquadPlayer = { id: string; player_name: string; linked_player_id: string | null; position: string | null; age: string | null }
+type SquadPlayer = { id: string; player_name: string; linked_player_id: string | null; position: string | null; age: number | null }
 
 export default function CoachQuickMatchLog() {
   const { user } = useAuth()
@@ -116,7 +116,7 @@ export default function CoachQuickMatchLog() {
             competition,
             venue,
             position: p.position || 'Midfielder',
-            age_group: p.age || 'U19+',
+            age_group: p.age != null ? String(p.age) : 'U19+',
             minutes_played: 90,
             goals: 0,
             assists: 0,
