@@ -199,7 +199,7 @@ export default function Settings() {
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: urlWithBust })
+        .update({ avatar_url: urlWithBust } as any)
         .eq('user_id', user.id)
       if (updateError) throw updateError
 
