@@ -5,6 +5,7 @@ import { ArrowLeft, Pencil, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
+import { POSITIONS, COACH_ROLES } from '@/lib/constants'
 
 type PassportVisibility = 'coach_only' | 'link'
 
@@ -58,9 +59,57 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<LocalSettings>(loadLocal)
 
+  // Coach profile fields
+  const [coachClub,     setCoachClub]     = useState('')
+  const [coachTeam,     setCoachTeam]     = useState('')
+  const [coachRoleVal,  setCoachRoleVal]  = useState('')
+  const [savingCoach,   setSavingCoach]   = useState(false)
+
+  // Player profile fields
+  const [playerPos,     setPlayerPos]     = useState('')
+  const [playerShirt,   setPlayerShirt]   = useState('')
+  const [savingPlayer,  setSavingPlayer]  = useState(false)
+
+  // Parent: linked child name
+  const [childName,     setChildName]     = useState<string | null>(null)
+
   useEffect(() => {
     if (profile?.full_name) setNameDraft(profile.full_name)
   }, [profile?.full_name])
+
+  // Load role-specific data
+  useEffect(() => {
+    if (!user || !profile) return
+    if (profile.role === 'coach') {
+      supabase.from('coach_details').select('current_club, team, coach_role')
+        .eq('user_id', user.id).maybeSingle()
+        .then(({ data }) => {
+          if (!data) return
+          setCoachClub(data.current_club || '')
+          setCoachTeam(data.team || '')
+          setCoachRoleVal(data.coach_role || '')
+        })
+    }
+    if (profile.role === 'player') {
+      supabase.from('player_details').select('position, shirt_number')
+        .eq('user_id', user.id).maybeSingle()
+        .then(({ data }) => {
+          if (!data) return
+          setPlayerPos(data.position || '')
+          setPlayerShirt(data.shirt_number ? String(data.shirt_number) : '')
+        })
+    }
+    if (profile.role === 'parent') {
+      supabase.from('player_parent_links').select('player_user_id')
+        .eq('parent_user_id', user.id).maybeSingle()
+        .then(async ({ data }) => {
+          if (!data?.player_user_id) return
+          const { data: p } = await supabase.from('profiles')
+            .select('full_name').eq('user_id', data.player_user_id).maybeSingle()
+          setChildName(p?.full_name || null)
+        })
+    }
+  }, [user, profile])
 
   const persist = (next: LocalSettings) => {
     setSettings(next)
@@ -93,6 +142,26 @@ export default function Settings() {
     const { error } = await supabase.auth.resetPasswordForEmail(user.email)
     if (error) toast.error('Could not send reset email')
     else toast.success('Password reset email sent')
+  }
+
+  const saveCoachProfile = async () => {
+    if (!user) return
+    setSavingCoach(true)
+    const { error } = await supabase.from('coach_details')
+      .upsert({ user_id: user.id, current_club: coachClub, team: coachTeam, coach_role: coachRoleVal }, { onConflict: 'user_id' })
+    setSavingCoach(false)
+    if (error) toast.error('Could not save profile')
+    else toast.success('Profile updated')
+  }
+
+  const savePlayerProfile = async () => {
+    if (!user) return
+    setSavingPlayer(true)
+    const { error } = await supabase.from('player_details')
+      .upsert({ user_id: user.id, position: playerPos, shirt_number: playerShirt ? Number(playerShirt) : null }, { onConflict: 'user_id' })
+    setSavingPlayer(false)
+    if (error) toast.error('Could not save profile')
+    else toast.success('Profile updated')
   }
 
   const deleteAccount = () => {
@@ -177,6 +246,59 @@ export default function Settings() {
           />
         </Section>
 
+        {/* Coach profile */}
+        {role === 'coach' && (
+          <Section label="My Profile">
+            <Row label="Club" right={
+              <input value={coachClub} onChange={e => setCoachClub(e.target.value)}
+                placeholder="Club name"
+                style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: 'rgba(255,255,255,0.88)', textAlign: 'right', width: 160 }} />
+            } />
+            <Row label="Team" right={
+              <input value={coachTeam} onChange={e => setCoachTeam(e.target.value)}
+                placeholder="e.g. U15 Boys"
+                style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: 'rgba(255,255,255,0.88)', textAlign: 'right', width: 160 }} />
+            } />
+            <Row label="Role" right={
+              <select value={coachRoleVal} onChange={e => setCoachRoleVal(e.target.value)}
+                style={{ background: '#101012', border: 'none', outline: 'none', fontSize: 13, color: 'rgba(255,255,255,0.88)', textAlign: 'right' }}>
+                <option value="">Select…</option>
+                {COACH_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            } />
+            <div className="py-3">
+              <button onClick={saveCoachProfile} disabled={savingCoach}
+                style={{ fontSize: 13, color: '#C8F25A' }}>
+                {savingCoach ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </Section>
+        )}
+
+        {/* Player profile */}
+        {role === 'player' && (
+          <Section label="My Profile">
+            <Row label="Position" right={
+              <select value={playerPos} onChange={e => setPlayerPos(e.target.value)}
+                style={{ background: '#101012', border: 'none', outline: 'none', fontSize: 13, color: 'rgba(255,255,255,0.88)', textAlign: 'right' }}>
+                <option value="">Select…</option>
+                {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            } />
+            <Row label="Shirt number" right={
+              <input value={playerShirt} onChange={e => setPlayerShirt(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                inputMode="numeric" placeholder="—"
+                style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: 'rgba(255,255,255,0.88)', textAlign: 'right', width: 48 }} />
+            } />
+            <div className="py-3">
+              <button onClick={savePlayerProfile} disabled={savingPlayer}
+                style={{ fontSize: 13, color: '#C8F25A' }}>
+                {savingPlayer ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </Section>
+        )}
+
         {/* Connections — player */}
         {role === 'player' && (
           <Section label="Connections">
@@ -191,9 +313,24 @@ export default function Settings() {
         {/* Connections — parent */}
         {role === 'parent' && (
           <Section label="Linked child">
-            <ConnectionRow label="Player" status="none" />
-            <div className="py-3" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
-              Children are linked using the invite code shared by your child. Use a new code to link another player.
+            <ConnectionRow
+              label="Player"
+              status={childName ? 'connected' : 'none'}
+              name={childName ?? undefined}
+            />
+            {!childName && (
+              <div className="py-3" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+                Ask your child to share their invite code and enter it during sign-up to link automatically.
+              </div>
+            )}
+          </Section>
+        )}
+
+        {/* Club admin info */}
+        {role === 'club' && (
+          <Section label="Access">
+            <div className="py-3" style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
+              Read-only academy view. You can see all coaches and squads but cannot edit player or coach records.
             </div>
           </Section>
         )}

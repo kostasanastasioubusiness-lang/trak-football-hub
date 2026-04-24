@@ -34,8 +34,6 @@ const LandingPage = () => {
   const handleRoleSelect = (role: string) => {
     if (role === 'parent') {
       navigate('/parent-info');
-    } else if (role === 'club') {
-      navigate('/club/home');
     } else {
       navigate(`/onboarding/${role}`);
     }

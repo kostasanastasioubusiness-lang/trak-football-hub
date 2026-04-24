@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateCode } from '@/lib/invite-codes';
 import type { User } from '@supabase/supabase-js';
 
-type UserRole = 'player' | 'coach' | 'parent';
+type UserRole = 'player' | 'coach' | 'parent' | 'club';
 const PENDING_PROFILE_KEY = 'trak_pending_profile';
 
 interface PendingProfileData {
@@ -53,7 +53,7 @@ export const useAuth = () => {
 };
 
 /** Write pending onboarding data from localStorage to Supabase */
-const isValidRole = (value: unknown): value is UserRole => value === 'player' || value === 'coach' || value === 'parent';
+const isValidRole = (value: unknown): value is UserRole => value === 'player' || value === 'coach' || value === 'parent' || value === 'club';
 
 const parsePendingProfile = (value: unknown): PendingProfileData | null => {
   if (!value || typeof value !== 'object') return null;
@@ -88,7 +88,7 @@ const readPendingProfileFromMetadata = (user: User): PendingProfileData | null =
   return parsePendingProfile(metadata?.trak_onboarding);
 };
 
-async function writeProfileFromPendingData(userId: string, data: PendingProfileData): Promise<Profile | null> {
+async function writeProfileFromPendingData(userId: string, userEmail: string, data: PendingProfileData): Promise<Profile | null> {
   const { error: profileError } = await supabase.from('profiles').upsert({
     user_id: userId,
     role: data.role as any,
@@ -146,6 +146,23 @@ async function writeProfileFromPendingData(userId: string, data: PendingProfileD
     }
   }
 
+  // When a parent signs up, find any pending invites for their email and
+  // create player_parent_links so their child's data is immediately visible.
+  if (data.role === 'parent' && userEmail) {
+    const { data: invites } = await supabase
+      .from('parent_invites')
+      .select('player_user_id')
+      .eq('parent_email', userEmail.toLowerCase().trim())
+    for (const invite of invites ?? []) {
+      await supabase
+        .from('player_parent_links')
+        .upsert(
+          { parent_user_id: userId, player_user_id: invite.player_user_id },
+          { onConflict: 'player_user_id,parent_user_id' }
+        )
+    }
+  }
+
   if (data.role === 'player' && data.coach_invite_code) {
     const rawCode = data.coach_invite_code.replace(/^TRK-/i, '').toUpperCase();
     const { data: coachUserId } = await supabase
@@ -174,7 +191,7 @@ async function writePendingProfile(user: User): Promise<Profile | null> {
   if (!data) return null;
 
   try {
-    const created = await writeProfileFromPendingData(user.id, data);
+    const created = await writeProfileFromPendingData(user.id, user.email ?? '', data);
     if (created) localStorage.removeItem(PENDING_PROFILE_KEY);
     return created;
   } catch (err) {

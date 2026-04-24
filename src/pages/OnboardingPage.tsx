@@ -25,7 +25,7 @@ const StyledSelect = ({ value, onChange, placeholder, children, ...props }: Reac
   </div>
 );
 
-type Role = 'player' | 'coach';
+type Role = 'player' | 'coach' | 'club';
 
 const EmailConfirmationScreen = ({ email }: { email: string }) => {
   const [resending, setResending] = useState(false);
@@ -76,20 +76,22 @@ const EmailConfirmationScreen = ({ email }: { email: string }) => {
 
 const OnboardingPage = () => {
   const { role } = useParams<{ role: string }>();
-  const validRole = (role === 'player' || role === 'coach') ? role as Role : null;
+  const validRole = (role === 'player' || role === 'coach' || role === 'club') ? role as Role : null;
 
   if (!validRole) return <div className="app-container p-6 text-foreground">Invalid role</div>;
+
+  const titles: Record<Role, string> = { player: 'Player', coach: 'Coach', club: 'Administrator' };
 
   return (
     <div className="app-container px-6 py-8">
       <a href="/" className="text-sm text-muted-foreground hover:text-primary mb-6 inline-block">
         ← Back
       </a>
-      <h1 className="text-2xl text-foreground mb-1">
-        {validRole === 'player' ? 'Player' : 'Coach'} Registration
-      </h1>
+      <h1 className="text-2xl text-foreground mb-1">{titles[validRole]} Registration</h1>
       <p className="text-muted-foreground text-sm mb-6">Create your Trak account</p>
-      {validRole === 'player' ? <PlayerOnboarding /> : <CoachOnboarding />}
+      {validRole === 'player' && <PlayerOnboarding />}
+      {validRole === 'coach' && <CoachOnboarding />}
+      {validRole === 'club' && <ClubOnboarding />}
     </div>
   );
 };
@@ -372,6 +374,65 @@ const CoachOnboarding = () => {
       {step === 3 && (
         <EmailConfirmationScreen email={email} />
       )}
+    </div>
+  );
+};
+
+const ClubOnboarding = () => {
+  const { signUp } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const [name,            setName]            = useState('');
+  const [academy,         setAcademy]         = useState('');
+  const [email,           setEmail]           = useState('');
+  const [password,        setPassword]        = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const handleSubmit = async () => {
+    if (!name || !academy || !email || !password || !confirmPassword) {
+      toast.error('Please fill in all fields'); return;
+    }
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match'); return;
+    }
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters'); return;
+    }
+    setLoading(true);
+    try {
+      const pendingProfile = {
+        role: 'club' as const,
+        full_name: name,
+        nationality: null,
+        club_details: { academy_name: academy },
+      };
+      const { user, error } = await signUp(email, password, pendingProfile);
+      if (error || !user) throw error || new Error('Signup failed');
+      localStorage.setItem('trak_pending_profile', JSON.stringify(pendingProfile));
+      setDone(true);
+    } catch (err: any) {
+      toast.error(err.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (done) return <EmailConfirmationScreen email={email} />;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-muted-foreground -mt-2 mb-2">
+        Administrator accounts give read-only access to all coaches and squads in your academy.
+      </p>
+      <Input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} className="bg-card" />
+      <Input placeholder="Academy / club name" value={academy} onChange={e => setAcademy(e.target.value)} className="bg-card" />
+      <Input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="bg-card" />
+      <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="bg-card" />
+      <Input type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="bg-card" />
+      <Button onClick={handleSubmit} disabled={loading} className="w-full mt-2">
+        {loading ? 'Creating account…' : 'Create Administrator Account'}
+      </Button>
     </div>
   );
 };
