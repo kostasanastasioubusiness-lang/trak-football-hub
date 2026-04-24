@@ -111,12 +111,12 @@ async function writeProfileFromPendingData(userId: string, userEmail: string, da
     if (playerError) throw playerError;
 
     if (data.parent_email) {
-      const { data: existingInvite } = await supabase
-        .from('parent_invites')
-        .select('id')
-        .eq('player_user_id', userId)
-        .eq('parent_email', data.parent_email)
-        .maybeSingle();
+      const { data: existingInvites } = await supabase
+        .rpc('get_player_invites_for_current_user');
+
+      const existingInvite = existingInvites?.find(
+        invite => invite.player_user_id === userId && invite.parent_email === data.parent_email,
+      );
 
       if (!existingInvite) {
         const { error: inviteError } = await supabase.from('parent_invites').insert({
@@ -151,9 +151,7 @@ async function writeProfileFromPendingData(userId: string, userEmail: string, da
   // create player_parent_links so their child's data is immediately visible.
   if (data.role === 'parent' && userEmail) {
     const { data: invites } = await supabase
-      .from('parent_invites')
-      .select('player_user_id')
-      .eq('parent_email', userEmail.toLowerCase().trim())
+      .rpc('get_parent_pending_invites_for_current_user')
     for (const invite of invites ?? []) {
       await supabase
         .from('player_parent_links')
