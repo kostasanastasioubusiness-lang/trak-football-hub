@@ -6,11 +6,12 @@ import { useAuth } from '@/contexts/AuthContext'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import { toast } from 'sonner'
+import html2canvas from 'html2canvas'
 
 type BandKey = 'exceptional' | 'standout' | 'good' | 'steady' | 'mixed' | 'developing' | 'difficult'
 
 type SeasonSummary = {
-  label: string          // e.g. "2025–26"
+  label: string
   club: string
   ageGroup: string
   matches: number
@@ -29,16 +30,6 @@ type CareerStats = {
   careerBand: BandKey
 }
 
-type AssessmentProfile = {
-  work_rate: number
-  tactical: number
-  attitude: number
-  technical: number
-  physical: number
-  coachability: number
-  count: number
-}
-
 type Award = {
   id: string
   award_type: string
@@ -54,14 +45,7 @@ const AWARD_LABELS: Record<string, { label: string; emoji: string }> = {
   player_of_season: { label: 'Player of the Season', emoji: '🌟' },
 }
 
-const ASSESSMENT_LABELS = [
-  { key: 'work_rate',    label: 'Work Rate'    },
-  { key: 'tactical',     label: 'Tactical'     },
-  { key: 'attitude',     label: 'Attitude'     },
-  { key: 'technical',    label: 'Technical'    },
-  { key: 'physical',     label: 'Physical'     },
-  { key: 'coachability', label: 'Coachability' },
-] as const
+const BAND_ORDER = ['exceptional','standout','good','steady','mixed','developing','difficult']
 
 function getBand(key: BandKey) {
   return BANDS.find(b => b.word.toLowerCase() === key) || BANDS[4]
@@ -77,14 +61,14 @@ function seasonLabel(date: Date) {
 export default function PlayerPassport() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
-  const passportRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const [details, setDetails] = useState<any>(null)
   const [seasons, setSeasons] = useState<SeasonSummary[]>([])
   const [career, setCareer] = useState<CareerStats | null>(null)
-  const [assessment, setAssessment] = useState<AssessmentProfile | null>(null)
   const [awards, setAwards] = useState<Award[]>([])
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => { if (user) loadData() }, [user])
 
@@ -92,58 +76,26 @@ export default function PlayerPassport() {
     const [{ data: det }, { data: rawMatches }] = await Promise.all([
       supabase.from('player_details').select('*').eq('user_id', user!.id).maybeSingle(),
       supabase.from('matches')
-        .select('created_at, computed_rating, goals, assists, competition')
+        .select('created_at, computed_rating, goals, assists')
         .eq('user_id', user!.id)
         .order('created_at', { ascending: true }),
     ])
     setDetails(det)
 
-    // Squad IDs for assessment + awards
     const { data: squadRows } = await supabase
       .from('squad_players').select('id').eq('linked_player_id', user!.id)
     const squadIds = (squadRows ?? []).map(r => r.id)
 
-    const [assessmentsRes, awardsRes] = await Promise.all([
-      squadIds.length > 0
-        ? supabase.from('coach_assessments')
-            .select('work_rate, tactical, attitude, technical, physical, coachability')
-            .in('squad_player_id', squadIds)
-        : Promise.resolve({ data: null }),
-      squadIds.length > 0
-        ? supabase.from('recognition_awards')
-            .select('id, award_type, awarded_for, created_at')
-            .in('squad_player_id', squadIds)
-            .order('created_at', { ascending: false })
-        : Promise.resolve({ data: null }),
-    ])
+    const awardsRes = squadIds.length > 0
+      ? await supabase.from('recognition_awards')
+          .select('id, award_type, awarded_for, created_at')
+          .in('squad_player_id', squadIds)
+          .order('created_at', { ascending: false })
+      : { data: null }
 
     setAwards(awardsRes.data ?? [])
 
-    // Average assessment profile across all assessments
-    const allAssessments = assessmentsRes.data ?? []
-    if (allAssessments.length > 0) {
-      const sums = { work_rate: 0, tactical: 0, attitude: 0, technical: 0, physical: 0, coachability: 0 }
-      for (const a of allAssessments as any[]) {
-        sums.work_rate    += a.work_rate ?? 5
-        sums.tactical     += a.tactical ?? 5
-        sums.attitude     += a.attitude ?? 5
-        sums.technical    += a.technical ?? 5
-        sums.physical     += a.physical ?? 5
-        sums.coachability += a.coachability ?? 5
-      }
-      const n = allAssessments.length
-      setAssessment({
-        work_rate:    Math.round((sums.work_rate / n) * 10) / 10,
-        tactical:     Math.round((sums.tactical / n) * 10) / 10,
-        attitude:     Math.round((sums.attitude / n) * 10) / 10,
-        technical:    Math.round((sums.technical / n) * 10) / 10,
-        physical:     Math.round((sums.physical / n) * 10) / 10,
-        coachability: Math.round((sums.coachability / n) * 10) / 10,
-        count: n,
-      })
-    }
-
-    // Group matches by season
+    // Group matches by academic season
     const seasonMap: Record<string, typeof rawMatches> = {}
     for (const m of rawMatches ?? []) {
       const lbl = seasonLabel(new Date(m.created_at))
@@ -166,21 +118,16 @@ export default function PlayerPassport() {
         }
         const avgRating = ratingSum / ms!.length
         return {
-          label,
-          club: det?.current_club || 'Academy',
+          label, club: det?.current_club || 'Academy',
           ageGroup: det?.age_group || '',
-          matches: ms!.length,
-          goals,
-          assists,
+          matches: ms!.length, goals, assists,
           avgBand: scoreToBand(avgRating) as BandKey,
-          avgRating,
-          dist,
+          avgRating, dist,
         }
       })
 
     setSeasons(seasonRows)
 
-    // Career totals
     const allMatches = rawMatches ?? []
     if (allMatches.length > 0) {
       const totalRating = allMatches.reduce((s, m) => s + (m.computed_rating ?? 6.5), 0)
@@ -197,39 +144,68 @@ export default function PlayerPassport() {
     setLoading(false)
   }
 
-  const handleShare = async () => {
-    const name = profile?.full_name || 'Player'
-    const pos = details?.position || ''
-    const club = details?.current_club || ''
-    const band = career ? getBand(career.careerBand).word : ''
-    const text = [
-      `${name} · ${pos} · ${club}`,
-      career ? `${career.totalMatches} matches · ${career.totalGoals} goals · Career band: ${band}` : '',
-      seasons.length > 0 ? `${seasons.length} season${seasons.length > 1 ? 's' : ''} tracked on TRAK` : '',
-      '— TRAK football',
-    ].filter(Boolean).join('\n')
-
-    if (navigator.share) {
-      try { await navigator.share({ title: `${name} · TRAK Passport`, text }); return }
-      catch { /* fall through */ }
-    }
+  // ── Export: capture the card div as a PNG ──────────────────────────────────
+  const captureCard = async (): Promise<Blob | null> => {
+    if (!cardRef.current) return null
     try {
-      await navigator.clipboard.writeText(text)
-      toast.success('Passport summary copied to clipboard')
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: null,
+        scale: 3,          // 3× for crisp retina output
+        useCORS: true,
+        logging: false,
+      })
+      return await new Promise(res => canvas.toBlob(blob => res(blob), 'image/png'))
     } catch {
-      toast.error('Could not share')
+      return null
     }
   }
 
-  const handleDownload = () => {
-    toast.success('Screenshot to save', { description: 'Long-press on mobile or use your browser\'s screenshot tool' })
+  const handleShare = async () => {
+    setExporting(true)
+    try {
+      const blob = await captureCard()
+      if (!blob) throw new Error('capture failed')
+      const file = new File([blob], 'trak-passport.png', { type: 'image/png' })
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `${profile?.full_name ?? 'Player'} · TRAK Passport` })
+        return
+      }
+      // Fallback: download
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'trak-passport.png'; a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Passport saved as image')
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') toast.error('Could not export passport')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleDownload = async () => {
+    setExporting(true)
+    try {
+      const blob = await captureCard()
+      if (!blob) throw new Error('capture failed')
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'trak-passport.png'; a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Passport downloaded')
+    } catch {
+      toast.error('Could not export passport')
+    } finally {
+      setExporting(false)
+    }
   }
 
   const careerBandCfg = career ? getBand(career.careerBand) : null
 
   return (
     <div className="min-h-screen" style={{ background: '#0A0A0B', fontFamily: "'DM Sans', sans-serif" }}>
-      <div className="mx-auto max-w-[430px] px-5 pt-5 pb-16">
+      <div className="mx-auto max-w-[430px] px-5 pt-5 pb-20">
 
         {/* Topbar */}
         <div className="relative flex items-center justify-center mb-6 h-10">
@@ -238,263 +214,312 @@ export default function PlayerPassport() {
             <ArrowLeft size={16} />
           </button>
           <span style={{ fontSize: 17, fontWeight: 400, color: 'rgba(255,255,255,0.88)' }}>Player Passport</span>
-          <div className="absolute right-0 flex gap-2">
-            <button onClick={handleShare} className="flex items-center justify-center"
-              style={{ width: 36, height: 36, borderRadius: 999, background: '#101012', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.88)' }}>
-              <Share2 size={15} />
-            </button>
-            <button onClick={handleDownload} className="flex items-center justify-center"
-              style={{ width: 36, height: 36, borderRadius: 999, background: '#101012', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.88)' }}>
-              <Download size={15} />
-            </button>
-          </div>
         </div>
 
-        {/* ── PASSPORT DOCUMENT ── */}
-        <div ref={passportRef} className="rounded-[22px] overflow-hidden"
-          style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}>
+        {/* ── SHAREABLE CARD (captured by html2canvas) ─────────────────── */}
+        <div
+          ref={cardRef}
+          style={{
+            width: 390,
+            background: '#0D0D0F',
+            borderRadius: 24,
+            overflow: 'hidden',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          {/* Card top: name + identity block with TRAK wordmark baked in */}
+          <div style={{
+            padding: '36px 32px 28px',
+            background: 'linear-gradient(160deg, #131418 0%, #0D0D0F 60%)',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            position: 'relative',
+          }}>
+            {/* Subtle watermark behind name */}
+            <div style={{
+              position: 'absolute', top: 20, right: 28,
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 72, fontWeight: 700,
+              color: 'rgba(200,242,90,0.04)',
+              letterSpacing: '-0.05em',
+              userSelect: 'none', pointerEvents: 'none',
+              lineHeight: 1,
+            }}>TRAK</div>
 
-          {/* TRAK Header band */}
-          <div className="px-6 py-4 flex items-center justify-between"
-            style={{ background: 'rgba(200,242,90,0.06)', borderBottom: '1px solid rgba(200,242,90,0.12)' }}>
-            <div className="flex items-baseline gap-1.5">
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>TRAK</span>
-              <span style={{ fontFamily: "'DM Sans', sans-serif", fontStyle: 'italic', fontSize: 12, color: '#C8F25A' }}>football</span>
+            {/* TRAK label top-left */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 24 }}>
+              <span style={{
+                fontFamily: "'DM Mono', monospace", fontSize: 10,
+                letterSpacing: '0.2em', textTransform: 'uppercase',
+                color: '#C8F25A',
+              }}>TRAK</span>
+              <span style={{
+                fontFamily: "'DM Mono', monospace", fontSize: 9,
+                letterSpacing: '0.12em', textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.2)',
+              }}>PLAYER PASSPORT</span>
             </div>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)' }}>PLAYER PASSPORT</span>
+
+            {/* Name */}
+            <div style={{ fontSize: 34, fontWeight: 300, letterSpacing: '-0.03em', color: '#FFFFFF', lineHeight: 1.05 }}>
+              {profile?.full_name || '—'}
+            </div>
+
+            {/* Identity pills */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+              {details?.position    && <CardPill>{details.position}</CardPill>}
+              {details?.current_club && <CardPill>{details.current_club}</CardPill>}
+              {details?.age_group   && <CardPill>{details.age_group}</CardPill>}
+              {details?.shirt_number && <CardPill>#{details.shirt_number}</CardPill>}
+            </div>
           </div>
 
-          <div className="px-6 py-6 space-y-7">
+          {/* Career band + stats */}
+          {career && careerBandCfg && (
+            <div style={{ padding: '24px 32px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              {/* Band hero */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '16px 20px', borderRadius: 16,
+                background: `${careerBandCfg.bg}`,
+                border: `1px solid ${careerBandCfg.border}`,
+                marginBottom: 16,
+              }}>
+                <div>
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 6 }}>
+                    CAREER BAND
+                  </div>
+                  <div style={{ fontSize: 28, fontWeight: 300, color: careerBandCfg.color, letterSpacing: '-0.02em' }}>
+                    {careerBandCfg.word}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 6 }}>
+                    AVG RATING
+                  </div>
+                  <div style={{ fontSize: 28, fontWeight: 300, color: careerBandCfg.color, letterSpacing: '-0.02em' }}>
+                    {career.careerAvgRating.toFixed(1)}
+                  </div>
+                </div>
+              </div>
 
-            {/* Identity */}
-            <div>
-              <h1 style={{ fontWeight: 300, fontSize: 30, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.1 }}>
-                {profile?.full_name || '—'}
-              </h1>
-              <div className="mt-3 flex gap-2 flex-wrap">
-                {details?.position    && <Pill>{details.position}</Pill>}
-                {details?.current_club && <Pill>{details.current_club}</Pill>}
-                {details?.age_group   && <Pill>{details.age_group}</Pill>}
-                {details?.shirt_number && <Pill>#{details.shirt_number}</Pill>}
+              {/* Stat row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                <CardStat label="Matches" value={career.totalMatches} />
+                <CardStat label="Goals"   value={career.totalGoals} />
+                <CardStat label="Assists" value={career.totalAssists} />
               </div>
             </div>
+          )}
 
-            {/* Career at a Glance */}
-            {career && (
-              <div>
-                <Label>Career at a Glance</Label>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  <StatBox label="Matches" value={career.totalMatches} />
-                  <StatBox label="Goals" value={career.totalGoals} />
-                  <StatBox label="Assists" value={career.totalAssists} />
-                </div>
-                {/* Career band */}
-                <div className="mt-3 flex items-center gap-3 px-4 py-3 rounded-[14px]"
-                  style={{ background: `${careerBandCfg!.bg}`, border: `1px solid ${careerBandCfg!.border}` }}>
-                  <div className="flex-1">
-                    <Label>Career Band</Label>
-                    <div className="mt-1" style={{ fontSize: 22, fontWeight: 300, color: careerBandCfg!.color, letterSpacing: '-0.01em' }}>
-                      {careerBandCfg!.word}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <Label>Avg Rating</Label>
-                    <div className="mt-1" style={{ fontSize: 22, fontWeight: 300, color: careerBandCfg!.color }}>
-                      {career.careerAvgRating.toFixed(1)}
-                    </div>
-                  </div>
-                </div>
+          {/* Season history */}
+          {seasons.length > 0 && (
+            <div style={{ padding: '20px 32px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)', marginBottom: 14 }}>
+                SEASON HISTORY
               </div>
-            )}
-
-            {/* Coach Assessment Profile */}
-            {assessment && assessment.count > 0 && (
-              <div>
-                <div className="flex items-baseline justify-between">
-                  <Label>Coach Assessment Profile</Label>
-                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>
-                    {assessment.count} assessment{assessment.count !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                <div className="mt-3 space-y-2.5">
-                  {ASSESSMENT_LABELS.map(({ key, label }) => {
-                    const val = assessment[key]
-                    const pct = (val / 10) * 100
-                    const band = scoreToBand(val) as BandKey
-                    const cfg = getBand(band)
-                    return (
-                      <div key={key} className="flex items-center gap-3">
-                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', width: 96, flexShrink: 0 }}>{label}</span>
-                        <div className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: cfg.color }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {seasons.map(s => {
+                  const bandCfg = getBand(s.avgBand)
+                  const topBands = (Object.entries(s.dist) as [BandKey, number][])
+                    .filter(([, c]) => c > 0)
+                    .sort((a, b) => BAND_ORDER.indexOf(a[0]) - BAND_ORDER.indexOf(b[0]))
+                  return (
+                    <div key={s.label} style={{
+                      padding: '12px 16px', borderRadius: 14,
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.88)', fontWeight: 400 }}>{s.label}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+                            {s.club}{s.ageGroup ? ` · ${s.ageGroup}` : ''}
+                          </div>
                         </div>
-                        <span style={{ fontSize: 12, color: cfg.color, width: 56, textAlign: 'right', flexShrink: 0 }}>
-                          {cfg.word}
-                        </span>
+                        <span style={{
+                          padding: '3px 10px', borderRadius: 999, fontSize: 10,
+                          color: bandCfg.color, background: bandCfg.bg,
+                          border: `1px solid ${bandCfg.border}`,
+                        }}>{bandCfg.word}</span>
                       </div>
-                    )
-                  })}
-                </div>
+                      {/* Mini stats + dist */}
+                      <div style={{ display: 'flex', gap: 16, marginTop: 10, alignItems: 'center' }}>
+                        <MiniStat label="M" value={s.matches} />
+                        <MiniStat label="G" value={s.goals} />
+                        <MiniStat label="A" value={s.assists} />
+                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: 4, flexWrap: 'wrap' }}>
+                          {topBands.slice(0, 4).map(([band, count]) => {
+                            const d = getBand(band)
+                            return (
+                              <span key={band} style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 3,
+                                padding: '1px 7px', borderRadius: 999, fontSize: 9,
+                                color: d.color, background: `${d.color}18`,
+                                border: `1px solid ${d.color}30`,
+                              }}>
+                                {d.word[0]}<span style={{ opacity: 0.75 }}>{count}</span>
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Seasons / Career Timeline */}
-            {seasons.length > 0 && (
-              <div>
-                <Label>Season History</Label>
-                <div className="mt-3 space-y-2.5">
-                  {seasons.map(s => {
-                    const bandCfg = getBand(s.avgBand)
-                    const topBands = (Object.entries(s.dist) as [BandKey, number][])
-                      .filter(([, c]) => c > 0)
-                      .sort((a, b) => {
-                        const order = ['exceptional','standout','good','steady','mixed','developing','difficult']
-                        return order.indexOf(a[0]) - order.indexOf(b[0])
-                      })
-                    return (
-                      <div key={s.label} className="p-4 rounded-[16px]"
-                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.88)', fontWeight: 400 }}>{s.label}</div>
-                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
-                              {s.club}{s.ageGroup ? ` · ${s.ageGroup}` : ''}
-                            </div>
-                          </div>
-                          <span className="px-2.5 py-1 rounded-full text-[11px]"
-                            style={{ color: bandCfg.color, background: bandCfg.bg, border: `1px solid ${bandCfg.border}` }}>
-                            {bandCfg.word}
-                          </span>
-                        </div>
-                        {/* Season stats row */}
-                        <div className="mt-3 flex gap-4">
-                          <SeasonStat label="Matches" value={s.matches} />
-                          <SeasonStat label="Goals" value={s.goals} />
-                          <SeasonStat label="Assists" value={s.assists} />
-                        </div>
-                        {/* Band distribution */}
-                        {topBands.length > 0 && (
-                          <div className="mt-3 flex gap-1.5 flex-wrap">
-                            {topBands.map(([band, count]) => {
-                              const d = getBand(band)
-                              return (
-                                <span key={band} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
-                                  style={{ color: d.color, background: `${d.color}1A`, border: `1px solid ${d.color}35`, fontSize: 10 }}>
-                                  <span style={{ fontWeight: 500 }}>{d.word[0]}</span>
-                                  <span style={{ opacity: 0.8 }}>{count}</span>
-                                </span>
-                              )
-                            })}
-                          </div>
+          {/* Recognition */}
+          {awards.length > 0 && (
+            <div style={{ padding: '20px 32px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)', marginBottom: 14 }}>
+                RECOGNITION
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {awards.map(a => {
+                  const info = AWARD_LABELS[a.award_type] || { label: a.award_type, emoji: '🏅' }
+                  return (
+                    <div key={a.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 14px', borderRadius: 12,
+                      background: 'rgba(200,242,90,0.04)',
+                      border: '1px solid rgba(200,242,90,0.1)',
+                    }}>
+                      <span style={{ fontSize: 16 }}>{info.emoji}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.88)' }}>{info.label}</div>
+                        {a.awarded_for && (
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{a.awarded_for}</div>
                         )}
                       </div>
-                    )
-                  })}
-                </div>
+                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: 'rgba(255,255,255,0.25)', flexShrink: 0 }}>
+                        {new Date(a.created_at).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Awards */}
-            {awards.length > 0 && (
-              <div>
-                <Label>Recognition</Label>
-                <div className="mt-3 space-y-2">
-                  {awards.map(a => {
-                    const info = AWARD_LABELS[a.award_type] || { label: a.award_type, emoji: '🏅' }
-                    return (
-                      <div key={a.id} className="flex items-center gap-3 px-4 py-3 rounded-[14px]"
-                        style={{ background: 'rgba(200,242,90,0.04)', border: '1px solid rgba(200,242,90,0.12)' }}>
-                        <span style={{ fontSize: 18 }}>{info.emoji}</span>
-                        <div className="flex-1 min-w-0">
-                          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.88)' }}>{info.label}</div>
-                          {a.awarded_for && (
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{a.awarded_for}</div>
-                          )}
-                        </div>
-                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
-                          {new Date(a.created_at).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+          {/* Empty state */}
+          {!loading && seasons.length === 0 && awards.length === 0 && (
+            <div style={{ padding: '48px 32px', textAlign: 'center' }}>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.28)', lineHeight: 1.8 }}>
+                Your passport is empty for now.<br />
+                As your coach logs matches and assessments,<br />
+                your career will build up here.
+              </p>
+            </div>
+          )}
 
-            {/* Empty state */}
-            {!loading && seasons.length === 0 && awards.length === 0 && (
-              <div className="py-8 text-center">
-                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', lineHeight: 1.7 }}>
-                  Your passport is empty for now.<br />
-                  As your coach logs matches and assessments,<br />
-                  your career will build up here.
-                </p>
-              </div>
-            )}
-
-          </div>
-
-          {/* TRAK Footer */}
-          <div className="px-6 py-4 flex items-center justify-between"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)' }}>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.18)' }}>
-              TRAK · Verified Career Record
-            </span>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: 'rgba(255,255,255,0.18)' }}>
-              trak.football
-            </span>
+          {/* Footer — baked into the card, not croppable without losing content */}
+          <div style={{
+            padding: '16px 32px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: 'rgba(200,242,90,0.03)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+              <span style={{
+                fontFamily: "'DM Mono', monospace", fontSize: 11,
+                letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8F25A',
+              }}>TRAK</span>
+              <span style={{
+                fontFamily: "'DM Mono', monospace", fontSize: 9,
+                color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em',
+              }}>· Verified Career Record</span>
+            </div>
+            <span style={{
+              fontFamily: "'DM Mono', monospace", fontSize: 9,
+              color: 'rgba(255,255,255,0.18)', letterSpacing: '0.06em',
+            }}>trak.football</span>
           </div>
         </div>
 
-        {/* Share / Download buttons below document */}
-        <div className="mt-4 flex gap-3">
-          <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-[12px]"
-            style={{ background: '#C8F25A', color: '#000', fontSize: 14, fontWeight: 500 }}>
-            <Share2 size={14} /> Share
+        {/* Action buttons below card */}
+        <div className="mt-5 flex gap-3">
+          <button
+            onClick={handleShare}
+            disabled={exporting || loading}
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-[14px] transition-opacity"
+            style={{
+              background: exporting ? 'rgba(200,242,90,0.5)' : '#C8F25A',
+              color: '#000', fontSize: 14, fontWeight: 500,
+              opacity: loading ? 0.4 : 1,
+            }}
+          >
+            <Share2 size={14} />
+            {exporting ? 'Exporting…' : 'Share'}
           </button>
-          <button onClick={handleDownload} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-[12px]"
-            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
-            <Download size={14} /> Save
+          <button
+            onClick={handleDownload}
+            disabled={exporting || loading}
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-[14px] transition-opacity"
+            style={{
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.7)', fontSize: 14,
+              opacity: loading ? 0.4 : 1,
+            }}
+          >
+            <Download size={14} />
+            Save Image
           </button>
         </div>
+
+        <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 14, lineHeight: 1.6 }}>
+          Exports as a PNG image you can share anywhere
+        </p>
 
       </div>
     </div>
   )
 }
 
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.22)' }}>
-      {children}
-    </div>
-  )
-}
+// ── Inline sub-components (used inside cardRef — must use style not className) ──
 
-function Pill({ children }: { children: React.ReactNode }) {
+function CardPill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center px-3 py-1 rounded-full"
-      style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '4px 12px', borderRadius: 999,
+      fontSize: 11, color: 'rgba(255,255,255,0.45)',
+      background: 'rgba(255,255,255,0.05)',
+      border: '1px solid rgba(255,255,255,0.08)',
+    }}>
       {children}
     </span>
   )
 }
 
-function StatBox({ label, value }: { label: string; value: number }) {
+function CardStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex flex-col items-center py-3 rounded-[12px]"
-      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-      <div style={{ fontSize: 24, fontWeight: 300, color: '#FFFFFF', letterSpacing: '-0.02em' }}>{value}</div>
-      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>{label}</div>
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      padding: '12px 8px', borderRadius: 12,
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.06)',
+    }}>
+      <div style={{ fontSize: 26, fontWeight: 300, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: 1 }}>
+        {value}
+      </div>
+      <div style={{
+        fontFamily: "'DM Mono', monospace", fontSize: 8,
+        textTransform: 'uppercase', letterSpacing: '0.1em',
+        color: 'rgba(255,255,255,0.28)', marginTop: 5,
+      }}>
+        {label}
+      </div>
     </div>
   )
 }
 
-function SeasonStat({ label, value }: { label: string; value: number }) {
+function MiniStat({ label, value }: { label: string; value: number }) {
   return (
-    <div>
-      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)' }}>{label}</div>
-      <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.88)', marginTop: 1 }}>{value}</div>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
+      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.06em' }}>{label}</span>
+      <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', fontWeight: 400 }}>{value}</span>
     </div>
   )
 }
