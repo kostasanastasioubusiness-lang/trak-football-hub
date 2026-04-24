@@ -39,8 +39,11 @@ export default function ParentProfilePage() {
       <div className="pt-3.5 pb-4 space-y-2.5">
         {/* Avatar + Identity */}
         <div className="text-center mb-6">
-          <div className="w-[72px] h-[72px] rounded-[22px] bg-[#202024] border border-[rgba(200,242,90,0.18)] mx-auto mb-3 flex items-center justify-center">
-            <IconProfile size={32} color="#C8F25A" />
+          <div className="w-[72px] h-[72px] rounded-[22px] overflow-hidden bg-[#202024] border border-[rgba(200,242,90,0.18)] mx-auto mb-3 flex items-center justify-center">
+            {profile?.avatar_url
+              ? <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+              : <IconProfile size={32} color="#C8F25A" />
+            }
           </div>
           <p className="text-[20px] font-semibold text-white/88 tracking-tight" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
             {profile?.full_name || 'Parent'}

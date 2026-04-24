@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
-import { ArrowLeft, Pencil, Check, X } from 'lucide-react'
+import { ArrowLeft, Pencil, Check, X, Camera } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
@@ -52,12 +52,17 @@ function loadLocal(): LocalSettings {
 
 export default function Settings() {
   const navigate = useNavigate()
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, signOut, refreshProfile } = useAuth()
 
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<LocalSettings>(loadLocal)
+
+  // Avatar
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   // Coach profile fields
   const [coachClub,     setCoachClub]     = useState('')
@@ -75,7 +80,8 @@ export default function Settings() {
 
   useEffect(() => {
     if (profile?.full_name) setNameDraft(profile.full_name)
-  }, [profile?.full_name])
+    if (profile?.avatar_url) setAvatarUrl(profile.avatar_url)
+  }, [profile?.full_name, profile?.avatar_url])
 
   // Load role-specific data
   useEffect(() => {
@@ -170,6 +176,44 @@ export default function Settings() {
     })
   }
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5 MB')
+      return
+    }
+    setUploadingAvatar(true)
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(user.id, file, { upsert: true, contentType: file.type })
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(user.id)
+
+      // Bust the browser cache with a timestamp
+      const urlWithBust = `${publicUrl}?t=${Date.now()}`
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: urlWithBust })
+        .eq('user_id', user.id)
+      if (updateError) throw updateError
+
+      setAvatarUrl(urlWithBust)
+      await refreshProfile()
+      toast.success('Profile photo updated')
+    } catch (err: any) {
+      toast.error(err.message || 'Upload failed')
+    } finally {
+      setUploadingAvatar(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const role = profile?.role
 
   return (
@@ -192,6 +236,44 @@ export default function Settings() {
           <h1 style={{ fontSize: 17, fontWeight: 400, color: 'rgba(255,255,255,0.88)' }}>
             Settings
           </h1>
+        </div>
+
+        {/* Avatar */}
+        <div className="flex flex-col items-center mb-7">
+          <div className="relative">
+            <div
+              className="w-[72px] h-[72px] rounded-[22px] overflow-hidden flex items-center justify-center"
+              style={{ background: '#202024', border: '1px solid rgba(200,242,90,0.18)' }}
+            >
+              {avatarUrl
+                ? <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                : <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 26, fontWeight: 600, color: '#C8F25A' }}>
+                    {(profile?.full_name || '?').charAt(0).toUpperCase()}
+                  </span>
+              }
+            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="absolute -bottom-1.5 -right-1.5 w-[26px] h-[26px] rounded-full flex items-center justify-center"
+              style={{ background: '#C8F25A', border: '2px solid #0A0A0B' }}
+              aria-label="Change profile photo"
+            >
+              <Camera size={13} color="#000" />
+            </button>
+          </div>
+          {uploadingAvatar && (
+            <span className="mt-3" style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>
+              Uploading…
+            </span>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
         </div>
 
         {/* Account */}

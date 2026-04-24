@@ -13,12 +13,15 @@ export default function ClubProfile() {
       {/* Identity */}
       <div className="text-center mb-8 pt-2">
         <div
-          className="w-[72px] h-[72px] rounded-[22px] mx-auto mb-4 flex items-center justify-center"
+          className="w-[72px] h-[72px] rounded-[22px] mx-auto mb-4 overflow-hidden flex items-center justify-center"
           style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.18)' }}
         >
-          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 22, fontWeight: 600, color: '#C8F25A' }}>
-            {(profile?.full_name || 'A').charAt(0).toUpperCase()}
-          </span>
+          {profile?.avatar_url
+            ? <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+            : <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 22, fontWeight: 600, color: '#C8F25A' }}>
+                {(profile?.full_name || 'A').charAt(0).toUpperCase()}
+              </span>
+          }
         </div>
         <p
           style={{

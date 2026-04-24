@@ -32,6 +32,7 @@ interface Profile {
   role: UserRole;
   full_name: string;
   nationality: string | null;
+  avatar_url: string | null;
 }
 
 interface AuthContextType {
