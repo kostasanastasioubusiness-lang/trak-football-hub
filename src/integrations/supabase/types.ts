@@ -452,6 +452,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           full_name: string
           id: string
@@ -461,6 +462,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           full_name: string
           id?: string
@@ -470,6 +472,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           full_name?: string
           id?: string
@@ -668,6 +671,30 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       is_club_admin: { Args: never; Returns: boolean }
+      link_parent_to_players_by_email: {
+        Args: { p_email: string }
+        Returns: number
+      }
+      log_match_for_player: {
+        Args: {
+          p_age_group: string
+          p_assists: number
+          p_body_condition: string
+          p_card_received: string
+          p_competition: string
+          p_computed_rating: number
+          p_goals: number
+          p_minutes_played: number
+          p_opponent: string
+          p_opponent_score: number
+          p_position: string
+          p_self_rating: string
+          p_team_score: number
+          p_user_id: string
+          p_venue: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       user_role: "player" | "coach" | "parent" | "club"
