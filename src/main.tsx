@@ -1,11 +1,21 @@
 import { createRoot } from "react-dom/client";
+import * as Sentry from "@sentry/react";
 import App from "./App.tsx";
 import "./index.css";
 
-// Catch unhandled promise rejections so they surface in the console
-// (and later in Sentry once monitoring is wired up).
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  enabled: import.meta.env.PROD && !!import.meta.env.VITE_SENTRY_DSN,
+  environment: import.meta.env.MODE,
+  integrations: [Sentry.browserTracingIntegration()],
+  tracesSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
+})
+
+// Catch unhandled promise rejections — forwards to Sentry in production.
 window.addEventListener('unhandledrejection', (event) => {
   console.error('[Trak] Unhandled promise rejection:', event.reason)
+  Sentry.captureException(event.reason)
   event.preventDefault()
 })
 
