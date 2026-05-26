@@ -70,55 +70,62 @@ export function calculateSquadAnalytics(
   }
 
   // ── Needs Attention ─────────────────────────────────────────────────────────
-  // Only flag players who already have a track record — never flag someone just
-  // because they are new to the squad. A player appears here only when:
+  // Players surface here when:
   //
-  //   1. They have ≥ 2 past assessments AND their last assessment was 30+ days ago
-  //      → the coach has been active with them before, now quiet
+  //   1. They have no assessments at all → 'No assessments recorded'
+  //   2. Their last assessment was 14+ days ago → 'No assessment in 14+ days'
+  //   3. They have ≥ 6 assessments AND the last 3 avg 1.5+ pts lower than the
+  //      previous 3 → 'Declining trend'  (rules 2 and 3 never both fire for
+  //      the same player — stale takes priority)
   //
-  //   2. They have ≥ 4 assessments AND their last 2 ratings average 1.5+ points
-  //      lower than the 2 before — a clear, meaningful drop (not just one bad day)
-  //
-  // Maximum 3 players are shown, sorted by severity, to keep the list actionable.
+  // Maximum 3 players shown, sorted by severity.
 
   type Candidate = { name: string; playerId: string; reason: string; severity: number }
   const candidates: Candidate[] = []
   const now = Date.now()
-  const thirtyDays = 30 * 24 * 60 * 60 * 1000
+  const fourteenDays = 14 * 24 * 60 * 60 * 1000
 
   for (const player of players) {
     const entries = byPlayer.get(player.id)
 
-    // Skip players with fewer than 2 assessments — they're still getting started
-    if (!entries || entries.length < 2) continue
+    // Rule 1: no assessments at all
+    if (!entries || entries.length === 0) {
+      candidates.push({
+        name: player.player_name,
+        playerId: player.id,
+        reason: 'No assessments recorded',
+        severity: 1000,
+      })
+      continue
+    }
 
     const lastDate = new Date(entries[entries.length - 1].created_at).getTime()
     const daysSince = Math.floor((now - lastDate) / (24 * 60 * 60 * 1000))
 
-    // Rule 1: previously active, now gone quiet for 30+ days
-    if (now - lastDate >= thirtyDays) {
+    // Rule 2: stale — last assessment 14+ days ago
+    if (now - lastDate >= fourteenDays) {
       candidates.push({
         name: player.player_name,
         playerId: player.id,
-        reason: `Not assessed for ${daysSince} days`,
+        reason: 'No assessment in 14+ days',
         severity: daysSince,
       })
-      continue // don't double-flag the same player
+      continue // don't double-flag
     }
 
-    // Rule 2: clear declining trend — needs at least 4 assessments
-    if (entries.length >= 4) {
-      const prev2 = entries.slice(-4, -2)
-      const last2 = entries.slice(-2)
-      const avgPrev = prev2.reduce((s, e) => s + e.rating, 0) / prev2.length
-      const avgLast = last2.reduce((s, e) => s + e.rating, 0) / last2.length
+    // Rule 3: declining trend — needs at least 6 assessments, last 3 vs previous 3
+    if (entries.length >= 6) {
+      const prev3 = entries.slice(-6, -3)
+      const last3 = entries.slice(-3)
+      const avgPrev = prev3.reduce((s, e) => s + e.rating, 0) / prev3.length
+      const avgLast = last3.reduce((s, e) => s + e.rating, 0) / last3.length
       const drop = avgPrev - avgLast
       if (drop >= 1.5) {
         candidates.push({
           name: player.player_name,
           playerId: player.id,
-          reason: `Rating dropped ${drop.toFixed(1)} pts recently`,
-          severity: drop * 10, // larger drop = higher priority
+          reason: 'Declining trend',
+          severity: drop * 10,
         })
       }
     }

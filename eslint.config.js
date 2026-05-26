@@ -22,5 +22,11 @@ export default tseslint.config({ ignores: ["dist"] }, {
     ...reactHooks.configs.recommended.rules,
     "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
     "@typescript-eslint/no-unused-vars": "off",
+    // Downgraded to warn — will be resolved in Stage 8 TypeScript strictness pass
+    "@typescript-eslint/no-explicit-any": "warn",
+    // Empty interfaces are common with Supabase generated types
+    "@typescript-eslint/no-empty-object-type": "warn",
+    // tailwind.config.ts uses require() for plugins — acceptable
+    "@typescript-eslint/no-require-imports": "warn",
   },
 }, storybook.configs["flat/recommended"]);

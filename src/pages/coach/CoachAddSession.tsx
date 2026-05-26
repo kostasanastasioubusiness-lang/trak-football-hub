@@ -130,7 +130,7 @@ export default function CoachAddSession() {
   const toggleExpanded = (id: string) =>
     setExpanded(prev => {
       const n = new Set(prev)
-      n.has(id) ? n.delete(id) : n.add(id)
+      if (n.has(id)) { n.delete(id) } else { n.add(id) }
       return n
     })
 
@@ -625,7 +625,7 @@ export default function CoachAddSession() {
                     <button key={key}
                       onClick={() => setTrainingFocus(prev => {
                         const n = new Set(prev)
-                        n.has(key) ? n.delete(key) : n.add(key)
+                        if (n.has(key)) { n.delete(key) } else { n.add(key) }
                         return n
                       })}
                       className="text-left px-3 py-2.5 rounded-[12px] transition-colors"
@@ -732,7 +732,7 @@ export default function CoachAddSession() {
                     const on = attended.has(p.id)
                     return (
                       <button key={p.id}
-                        onClick={() => setAttended(prev => { const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })}
+                        onClick={() => setAttended(prev => { const n = new Set(prev); if (n.has(p.id)) { n.delete(p.id) } else { n.add(p.id) } return n })}
                         className="text-left px-3 py-2.5 rounded-[10px] transition-colors"
                         style={{
                           background: on ? 'rgba(200,242,90,0.08)' : 'rgba(0,0,0,0.35)',
@@ -798,7 +798,7 @@ export default function CoachAddSession() {
                     const on = attended.has(p.id)
                     return (
                       <button key={p.id}
-                        onClick={() => setAttended(prev => { const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })}
+                        onClick={() => setAttended(prev => { const n = new Set(prev); if (n.has(p.id)) { n.delete(p.id) } else { n.add(p.id) } return n })}
                         className="text-left px-3 py-2.5 rounded-[10px] transition-colors"
                         style={{
                           background: on ? 'rgba(200,242,90,0.08)' : 'rgba(0,0,0,0.35)',
