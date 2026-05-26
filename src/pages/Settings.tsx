@@ -196,10 +196,25 @@ export default function Settings() {
     else toast.success('Profile updated')
   }
 
-  const deleteAccount = () => {
-    toast('Contact support to permanently delete your account', {
-      description: 'For your safety, account deletion is handled manually.',
-    })
+  const deleteAccount = async () => {
+    const confirmed = window.confirm(
+      'This permanently deletes all your data and cannot be undone. Are you sure?'
+    )
+    if (!confirmed) return
+
+    try {
+      const { error } = await supabase.rpc('delete_my_account')
+      if (error) {
+        console.error('delete_my_account error:', error)
+        toast.error('Could not delete account. Please contact support.')
+        return
+      }
+      await signOut()
+      navigate('/', { replace: true })
+    } catch (err) {
+      console.error('deleteAccount unexpected error:', err)
+      toast.error('Something went wrong. Please contact support.')
+    }
   }
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
