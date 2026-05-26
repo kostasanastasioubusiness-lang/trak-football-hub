@@ -58,27 +58,19 @@ const ParentOnboarding = () => {
 
     setSubmitting(true);
     try {
-      const { user, error } = await signUp(email, password);
-      if (error || !user) throw error || new Error('Signup failed');
-
-      await supabase.from('profiles').insert({
-        user_id: user.id,
-        role: 'parent' as any,
+      // Pass pendingProfile so AuthContext.writeProfileFromPendingData handles
+      // profile creation and link_parent_to_players_by_email after email
+      // confirmation — direct DB calls here fail because auth.uid() is null
+      // until the user has confirmed their email and the session is active.
+      const { error } = await signUp(email, password, {
+        role: 'parent',
         full_name: name,
+        nationality: null,
       });
-
-      await supabase.from('player_parent_links').insert({
-        player_user_id: invite.player_user_id,
-        parent_user_id: user.id,
-      });
-
-      // Mark the invite as accepted so it can't be replayed
-      await supabase.from('parent_invites')
-        .update({ status: 'accepted' })
-        .eq('id', invite.id);
+      if (error) throw error;
 
       toast.success('Account created! Check your email to verify.');
-      navigate('/dashboard');
+      navigate('/parent/home', { replace: true });
     } catch (err: any) {
       toast.error(err.message || 'Registration failed');
     } finally {

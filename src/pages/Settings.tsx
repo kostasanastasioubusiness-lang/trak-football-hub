@@ -5,7 +5,7 @@ import { ArrowLeft, Pencil, Check, X, Camera } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
-import { POSITIONS, COACH_ROLES } from '@/lib/constants'
+import { POSITIONS, COACH_ROLES, AGE_GROUPS } from '@/lib/constants'
 
 type PassportVisibility = 'coach_only' | 'link'
 
@@ -78,6 +78,10 @@ export default function Settings() {
   // Parent: linked child name
   const [childName,     setChildName]     = useState<string | null>(null)
 
+  // Player: linked coach + parent names
+  const [linkedCoachName,  setLinkedCoachName]  = useState<string | null>(null)
+  const [linkedParentName, setLinkedParentName] = useState<string | null>(null)
+
   useEffect(() => {
     if (profile?.full_name) setNameDraft(profile.full_name)
     if (profile?.avatar_url) setAvatarUrl(profile.avatar_url)
@@ -113,6 +117,26 @@ export default function Settings() {
           const { data: p } = await supabase.from('profiles')
             .select('full_name').eq('user_id', data.player_user_id).maybeSingle()
           setChildName(p?.full_name || null)
+        })
+    }
+    if (profile.role === 'player') {
+      // Linked coach
+      supabase.from('squad_players').select('coach_user_id')
+        .eq('linked_player_id', user.id).maybeSingle()
+        .then(async ({ data }) => {
+          if (!data?.coach_user_id) return
+          const { data: c } = await supabase.from('profiles')
+            .select('full_name').eq('user_id', data.coach_user_id).maybeSingle()
+          setLinkedCoachName(c?.full_name || null)
+        })
+      // Linked parent
+      supabase.from('player_parent_links').select('parent_user_id')
+        .eq('player_user_id', user.id).maybeSingle()
+        .then(async ({ data }) => {
+          if (!data?.parent_user_id) return
+          const { data: p } = await supabase.from('profiles')
+            .select('full_name').eq('user_id', data.parent_user_id).maybeSingle()
+          setLinkedParentName(p?.full_name || null)
         })
     }
   }, [user, profile])
@@ -152,6 +176,7 @@ export default function Settings() {
 
   const saveCoachProfile = async () => {
     if (!user) return
+    if (!coachClub.trim()) { toast.error('Club name is required'); return }
     setSavingCoach(true)
     const { error } = await supabase.from('coach_details')
       .upsert({ user_id: user.id, current_club: coachClub, team: coachTeam, coach_role: coachRoleVal }, { onConflict: 'user_id' })
@@ -162,6 +187,7 @@ export default function Settings() {
 
   const savePlayerProfile = async () => {
     if (!user) return
+    if (!playerPos) { toast.error('Please select a position'); return }
     setSavingPlayer(true)
     const { error } = await supabase.from('player_details')
       .upsert({ user_id: user.id, position: playerPos, shirt_number: playerShirt ? Number(playerShirt) : null }, { onConflict: 'user_id' })
@@ -336,10 +362,12 @@ export default function Settings() {
                 placeholder="Club name"
                 style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: 'rgba(255,255,255,0.88)', textAlign: 'right', width: 160 }} />
             } />
-            <Row label="Team" right={
-              <input value={coachTeam} onChange={e => setCoachTeam(e.target.value)}
-                placeholder="e.g. U15 Boys"
-                style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: 'rgba(255,255,255,0.88)', textAlign: 'right', width: 160 }} />
+            <Row label="Age Group" right={
+              <select value={coachTeam} onChange={e => setCoachTeam(e.target.value)}
+                style={{ background: '#101012', border: 'none', outline: 'none', fontSize: 13, color: coachTeam ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.35)', textAlign: 'right' }}>
+                <option value="">Select…</option>
+                {AGE_GROUPS.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
             } />
             <Row label="Role" right={
               <select value={coachRoleVal} onChange={e => setCoachRoleVal(e.target.value)}
@@ -384,11 +412,21 @@ export default function Settings() {
         {/* Connections — player */}
         {role === 'player' && (
           <Section label="Connections">
-            <ConnectionRow label="Coach" status="none" />
-            <ConnectionRow label="Parent" status="none" />
-            <div className="py-3" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
-              Share your invite code from your profile to connect with a coach or parent.
-            </div>
+            <ConnectionRow
+              label="Coach"
+              status={linkedCoachName ? 'connected' : 'none'}
+              name={linkedCoachName ?? undefined}
+            />
+            <ConnectionRow
+              label="Parent"
+              status={linkedParentName ? 'connected' : 'none'}
+              name={linkedParentName ?? undefined}
+            />
+            {(!linkedCoachName || !linkedParentName) && (
+              <div className="py-3" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+                Share your invite code from your profile to connect with a coach or parent.
+              </div>
+            )}
           </Section>
         )}
 

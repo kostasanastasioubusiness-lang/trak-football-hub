@@ -25,8 +25,8 @@ const PlayerMatches = lazy(() => import("./pages/player/PlayerMatches"));
 const PlayerMatchDetail = lazy(() => import("./pages/player/PlayerMatchDetail"));
 const PlayerProfilePage = lazy(() => import("./pages/player/PlayerProfilePage"));
 const PlayerPassport = lazy(() => import("./pages/player/PlayerPassport"));
-const PlayerCard = lazy(() => import("./pages/player/PlayerCard"));
 const PlayerEvolutionCard = lazy(() => import("./pages/player/PlayerEvolutionCard"));
+const PlayerFeedback = lazy(() => import("./pages/player/PlayerFeedback"));
 const HowTrakWorks = lazy(() => import("./pages/HowTrakWorks"));
 
 const CoachHomePage = lazy(() => import("./pages/coach/CoachHomePage"));
@@ -38,6 +38,7 @@ const CoachAddSession = lazy(() => import("./pages/coach/CoachAddSession"));
 const CoachSessionsChooser = lazy(() => import("./pages/coach/CoachSessionsChooser"));
 const CoachQuickMatchLog = lazy(() => import("./pages/coach/CoachQuickMatchLog"));
 const CoachProfilePage = lazy(() => import("./pages/coach/CoachProfilePage"));
+const CoachManual = lazy(() => import("./pages/coach/CoachManual"));
 const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfilePage"));
 const CoachRecognition = lazy(() => import("./pages/coach/CoachRecognition"));
 const CoachAwardPlayer = lazy(() => import("./pages/coach/CoachAwardPlayer"));
@@ -48,13 +49,13 @@ const CoachAssistant = lazy(() => import("./pages/coach/CoachAssistant"));
 const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
 const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
 const ParentAlerts = lazy(() => import("./pages/parent/ParentAlerts"));
-const ParentOnboardingFlow = lazy(() => import("./pages/parent/ParentOnboardingFlow"));
 const ParentProfilePage = lazy(() => import("./pages/parent/ParentProfilePage"));
 
 const ClubHome = lazy(() => import("./pages/club/ClubHome"));
 const ClubSquads = lazy(() => import("./pages/club/ClubSquads"));
 const ClubCoaches = lazy(() => import("./pages/club/ClubCoaches"));
 const ClubProfile = lazy(() => import("./pages/club/ClubProfile"));
+const ClubRadar = lazy(() => import("./pages/club/ClubRadar"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,7 +83,6 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
-            <Route path="/onboarding/parent" element={<ParentOnboardingFlow />} />
             <Route path="/onboarding/:role" element={<OnboardingPage />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/parent-info" element={<ParentInfoPage />} />
@@ -95,8 +95,8 @@ const App = () => (
             <Route path="/player/match/:id" element={<RouteGuard allowedRole="player"><PlayerMatchDetail /></RouteGuard>} />
             <Route path="/player/profile" element={<RouteGuard allowedRole="player"><PlayerProfilePage /></RouteGuard>} />
             <Route path="/player/passport" element={<RouteGuard allowedRole="player"><PlayerPassport /></RouteGuard>} />
-            <Route path="/player/card" element={<RouteGuard allowedRole="player"><PlayerCard /></RouteGuard>} />
             <Route path="/player/evolution" element={<RouteGuard allowedRole="player"><PlayerEvolutionCard /></RouteGuard>} />
+            <Route path="/player/feedback/:assessmentId" element={<RouteGuard allowedRole="player"><PlayerFeedback /></RouteGuard>} />
             <Route path="/how-it-works" element={<HowTrakWorks />} />
 
             {/* Coach routes */}
@@ -109,6 +109,7 @@ const App = () => (
             <Route path="/coach/sessions/quick" element={<RouteGuard allowedRole="coach"><CoachQuickMatchLog /></RouteGuard>} />
             <Route path="/coach/sessions/add" element={<RouteGuard allowedRole="coach"><CoachAddSession /></RouteGuard>} />
             <Route path="/coach/profile" element={<RouteGuard allowedRole="coach"><CoachProfilePage /></RouteGuard>} />
+            <Route path="/coach/manual" element={<CoachManual />} />
             <Route path="/coach/quick-assess" element={<RouteGuard allowedRole="coach"><CoachQuickAssess /></RouteGuard>} />
             <Route path="/coach/player/:id" element={<RouteGuard allowedRole="coach"><CoachPlayerProfilePage /></RouteGuard>} />
             <Route path="/coach/recognition" element={<RouteGuard allowedRole="coach"><CoachRecognition /></RouteGuard>} />
@@ -127,6 +128,7 @@ const App = () => (
             <Route path="/club/squads" element={<RouteGuard allowedRole="club"><ClubSquads /></RouteGuard>} />
             <Route path="/club/coaches" element={<RouteGuard allowedRole="club"><ClubCoaches /></RouteGuard>} />
             <Route path="/club/profile" element={<RouteGuard allowedRole="club"><ClubProfile /></RouteGuard>} />
+            <Route path="/club/radar" element={<RouteGuard allowedRole="club"><ClubRadar /></RouteGuard>} />
 
             {/* Legacy redirects */}
             <Route path="/dashboard" element={<RouteGuard allowedRole="player"><PlayerHome /></RouteGuard>} />

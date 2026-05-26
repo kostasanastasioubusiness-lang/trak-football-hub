@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   EUROPEAN_COUNTRIES, POSITIONS, AGE_GROUPS, COACH_ROLES,
-  DAYS, MONTHS, YEARS
+  DAYS, MONTHS, YEARS,
 } from '@/lib/constants';
 import { Mail, RefreshCw, ChevronDown } from 'lucide-react';
 
@@ -357,7 +357,10 @@ const CoachOnboarding = () => {
       {step === 2 && (
         <>
           <Input placeholder="Current club" value={club} onChange={e => setClub(e.target.value)} className="bg-card" />
-          <Input placeholder="Team name" value={team} onChange={e => setTeam(e.target.value)} className="bg-card" />
+          <StyledSelect value={team} onChange={e => setTeam(e.target.value)}>
+            <option value="">Select age group</option>
+            {AGE_GROUPS.map(a => <option key={a} value={a}>{a}</option>)}
+          </StyledSelect>
           <StyledSelect value={coachRole} onChange={e => setCoachRole(e.target.value)}>
             <option value="">Select role</option>
             {COACH_ROLES.map(r => <option key={r} value={r}>{r}</option>)}

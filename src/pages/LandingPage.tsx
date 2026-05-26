@@ -143,9 +143,9 @@ const LoginForm = ({ onBack }: { onBack: () => void }) => {
     setLoading(false);
     if (error) {
       toast.error(error.message);
-    } else {
-      navigate('/player/home');
     }
+    // On success, the LandingPage useEffect handles role-aware redirect
+    // (coach → /coach/home, parent → /parent/home, etc.)
   };
 
   return (

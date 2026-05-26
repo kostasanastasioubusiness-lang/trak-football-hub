@@ -149,6 +149,8 @@ async function writeProfileFromPendingData(userId: string, userEmail: string, da
 
   // When a parent signs up, find any pending invites for their email and
   // create player_parent_links so their child's data is immediately visible.
+  // Direct query on parent_invites is blocked by RLS for parent users —
+  // the SECURITY DEFINER RPC handles the lookup and insert atomically.
   if (data.role === 'parent' && userEmail) {
     const { data: invites } = await supabase
       .rpc('get_parent_pending_invites_for_current_user')
@@ -263,7 +265,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/`,
         ...(pendingProfile ? { data: { trak_onboarding: pendingProfile } } : {}),
       },
     });

@@ -1,25 +1,119 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, Sparkles } from 'lucide-react'
+import { ArrowLeft, Send, Sparkles, ClipboardList } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { toast } from 'sonner'
-import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
+import { MobileShell, NavBar, MetadataLabel, PitchDiagram, detectDiagrams, PRESETS } from '@/components/trak'
+import type { DiagramData } from '@/components/trak'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
+type Segment = { type: 'text'; content: string } | { type: 'diagram'; data: DiagramData }
 
-const PROMPTS = [
-  'Plan a 60-min session focused on first touch under pressure',
-  'Suggest 3 rondo variations for U14',
-  'Drills to improve tactical awareness for my weakest players',
-  'Pre-match warm-up for a Saturday cup tie',
-]
+/**
+ * Split an assistant message into interleaved text + diagram segments.
+ * Primary: parse explicit [diagram:preset_id] tags placed by the AI.
+ * Fallback: keyword scan on ### sections for any drills without tags.
+ */
+function buildSegments(content: string): Segment[] {
+  // Strip legacy ```diagram blocks
+  const cleaned = content
+    .replace(/```diagram\n([\s\S]*?)```/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+  // Split on [diagram:id] tags — captured groups end up as alternating elements
+  // e.g. "text [diagram:rondo_4v1] more text" → ["text ", "rondo_4v1", " more text"]
+  const TAG_RE = /\[diagram:([a-z0-9_]+)\]/g
+  const parts = cleaned.split(TAG_RE)
+
+  const segments: Segment[] = []
+  const usedKeys = new Set<string>()
+
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 0) {
+      // Text chunk — also run fallback keyword detection on ### sections
+      const chunk = parts[i]
+      if (!chunk.trim()) continue
+
+      // Split into ### sub-sections for fallback diagram detection
+      const subParts = chunk.split(/(?=^###\s)/m)
+      for (const sub of subParts) {
+        if (!sub.trim()) continue
+        segments.push({ type: 'text', content: sub.trim() })
+
+        // Fallback: keyword detect only if no explicit tag was used for this section
+        const found = detectDiagrams(sub)
+        for (const d of found) {
+          const key = d.id ?? d.title ?? ''
+          if (key && !usedKeys.has(key)) {
+            usedKeys.add(key)
+            segments.push({ type: 'diagram', data: d })
+            break
+          }
+        }
+      }
+    } else {
+      // Diagram tag — look up preset by id
+      const id = parts[i]
+      if (!usedKeys.has(id) && PRESETS[id]) {
+        usedKeys.add(id)
+        segments.push({ type: 'diagram', data: PRESETS[id] })
+      }
+    }
+  }
+
+  return segments.length > 0 ? segments : [{ type: 'text', content: cleaned }]
+}
+
+// Detect whether an AI response looks like a session or drill plan
+function isSessionPlan(content: string) {
+  return /warm.?up|main drill|session plan|rondo|drill|small.?sided|possession game|cool.?down/i.test(content)
+}
+
+// Extract pre-fill data from an AI session plan message
+function extractPlan(content: string) {
+  const lower = content.toLowerCase()
+  const focus: string[] = []
+  if (/technical|passing|first touch|control|dribbling/.test(lower))    focus.push('Technical')
+  if (/tactical|press|shape|transition|position/.test(lower))           focus.push('Tactical')
+  if (/finish|shooting|goal|1v1/.test(lower))                           focus.push('Finishing')
+  if (/set piece|corner|free kick|penalty/.test(lower))                 focus.push('Set Pieces')
+  if (/physical|fitness|speed|conditioning/.test(lower))                focus.push('Physical')
+  if (/possession|rondo|keep.?ball/.test(lower))                        focus.push('Possession')
+  if (/goalkeeper|gk\b/.test(lower))                                    focus.push('Goalkeeper')
+  if (/small.?sided|ssg|game based|match scenario/.test(lower))         focus.push('Game Based')
+
+  const durMatch = content.match(/(\d+)[- ]?min/i)
+  const duration = durMatch ? Math.min(120, Math.max(30, parseInt(durMatch[1]))) : 60
+  const notes = 'Coach Assistant'
+
+  return { focus: focus.length ? focus : ['Training'], duration, notes }
+}
 
 export default function CoachAssistant() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [useSquad, setUseSquad] = useState(true)
+  const [ageGroup, setAgeGroup] = useState('')
+  const [showDisclosure, setShowDisclosure] = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+    supabase.from('coach_details').select('team').eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => { if (data?.team) setAgeGroup(data.team) })
+  }, [user])
+
+  const tag = ageGroup || 'my team'
+  const PROMPTS = [
+    `Plan a training session for ${tag}`,
+    `3 drills to work on finishing`,
+    `Warm-up ideas for match day`,
+    `How do I improve my team's pressing?`,
+  ]
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -55,7 +149,7 @@ export default function CoachAssistant() {
         },
         body: JSON.stringify({
           messages: [...messages, userMsg],
-          includeSquadContext: useSquad,
+          includeSquadContext: true,
         }),
       })
 
@@ -106,7 +200,7 @@ export default function CoachAssistant() {
   return (
     <MobileShell>
       <div className="pt-3 pb-32 flex flex-col" style={{ minHeight: '100vh' }}>
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center justify-center"
@@ -123,29 +217,6 @@ export default function CoachAssistant() {
               Assistant
             </h1>
           </div>
-        </div>
-
-        <div className="flex items-center justify-between mb-3 px-1">
-          <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            Use my squad data
-          </span>
-          <button
-            role="switch"
-            aria-checked={useSquad}
-            onClick={() => setUseSquad(v => !v)}
-            style={{
-              position: 'relative', width: 38, height: 22, borderRadius: 999,
-              background: useSquad ? '#C8F25A' : 'rgba(255,255,255,0.1)',
-              transition: 'background 150ms ease',
-            }}
-          >
-            <span style={{
-              position: 'absolute', top: 2, left: useSquad ? 18 : 2,
-              width: 18, height: 18, borderRadius: 999,
-              background: useSquad ? '#000' : '#0A0A0B',
-              transition: 'left 150ms ease',
-            }} />
-          </button>
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3">
@@ -170,43 +241,72 @@ export default function CoachAssistant() {
             </div>
           )}
 
-          {messages.map((m, i) => (
-            <div
-              key={i}
-              className="rounded-[14px] p-3.5"
-              style={{
-                background: m.role === 'user' ? 'rgba(200,242,90,0.06)' : '#101012',
-                border: m.role === 'user' ? '1px solid rgba(200,242,90,0.18)' : '1px solid rgba(255,255,255,0.07)',
-              }}
-            >
-              <p className="text-[8px] tracking-[0.12em] uppercase mb-2" style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.3)' }}>
-                {m.role === 'user' ? 'You' : 'Trak AI'}
-              </p>
+          {messages.map((m, i) => {
+            const isStreaming = m.role === 'assistant' && isLoading && i === messages.length - 1
+            // Only build segments once streaming is complete (avoids partial-text flicker)
+            const segments: Segment[] = isStreaming
+              ? [{ type: 'text', content: m.content }]
+              : (m.role === 'assistant' ? buildSegments(m.content) : [{ type: 'text', content: m.content }])
+
+            const mdComponents = {
+              h1: ({ node, ...props }: any) => <h3 style={{ fontSize: 15, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgba(255,255,255,0.95)' }} {...props} />,
+              h2: ({ node, ...props }: any) => <h3 style={{ fontSize: 14, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgba(255,255,255,0.95)' }} {...props} />,
+              h3: ({ node, ...props }: any) => <h4 style={{ fontSize: 13, fontWeight: 600, marginTop: 10, marginBottom: 4, color: 'rgba(255,255,255,0.92)' }} {...props} />,
+              p: ({ node, ...props }: any) => <p style={{ margin: '6px 0' }} {...props} />,
+              ul: ({ node, ...props }: any) => <ul style={{ margin: '6px 0', paddingLeft: 18 }} {...props} />,
+              ol: ({ node, ...props }: any) => <ol style={{ margin: '6px 0', paddingLeft: 18 }} {...props} />,
+              li: ({ node, ...props }: any) => <li style={{ margin: '2px 0' }} {...props} />,
+              strong: ({ node, ...props }: any) => <strong style={{ color: 'rgba(255,255,255,0.95)' }} {...props} />,
+              code: ({ node, ...props }: any) => <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 4, fontSize: 12 }} {...props} />,
+            }
+
+            return (
               <div
-                className="prose prose-sm max-w-none"
-                style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, lineHeight: 1.55, fontFamily: "'DM Sans', sans-serif" }}
+                key={i}
+                className="rounded-[14px] p-3.5"
+                style={{
+                  background: m.role === 'user' ? 'rgba(200,242,90,0.06)' : '#101012',
+                  border: m.role === 'user' ? '1px solid rgba(200,242,90,0.18)' : '1px solid rgba(255,255,255,0.07)',
+                }}
               >
-                <ReactMarkdown
-                  components={{
-                    h1: ({ node, ...props }) => <h3 style={{ fontSize: 15, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgba(255,255,255,0.95)' }} {...props} />,
-                    h2: ({ node, ...props }) => <h3 style={{ fontSize: 14, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgba(255,255,255,0.95)' }} {...props} />,
-                    h3: ({ node, ...props }) => <h4 style={{ fontSize: 13, fontWeight: 600, marginTop: 10, marginBottom: 4, color: 'rgba(255,255,255,0.92)' }} {...props} />,
-                    p: ({ node, ...props }) => <p style={{ margin: '6px 0' }} {...props} />,
-                    ul: ({ node, ...props }) => <ul style={{ margin: '6px 0', paddingLeft: 18 }} {...props} />,
-                    ol: ({ node, ...props }) => <ol style={{ margin: '6px 0', paddingLeft: 18 }} {...props} />,
-                    li: ({ node, ...props }) => <li style={{ margin: '2px 0' }} {...props} />,
-                    strong: ({ node, ...props }) => <strong style={{ color: 'rgba(255,255,255,0.95)' }} {...props} />,
-                    code: ({ node, ...props }) => <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 4, fontSize: 12 }} {...props} />,
-                  }}
-                >
-                  {m.content}
-                </ReactMarkdown>
-                {m.role === 'assistant' && isLoading && i === messages.length - 1 && (
-                  <span style={{ opacity: 0.4 }}>▍</span>
+                <p className="text-[8px] tracking-[0.12em] uppercase mb-2" style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.3)' }}>
+                  {m.role === 'user' ? 'You' : 'Trak AI'}
+                </p>
+
+                {/* Render interleaved text + diagram segments */}
+                {segments.map((seg, si) =>
+                  seg.type === 'diagram' ? (
+                    <PitchDiagram key={si} data={seg.data} />
+                  ) : (
+                    <div
+                      key={si}
+                      className="prose prose-sm max-w-none"
+                      style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, lineHeight: 1.55, fontFamily: "'DM Sans', sans-serif" }}
+                    >
+                      <ReactMarkdown components={mdComponents}>{seg.content}</ReactMarkdown>
+                      {isStreaming && si === segments.length - 1 && <span style={{ opacity: 0.4 }}>▍</span>}
+                    </div>
+                  )
+                )}
+
+                {/* Log this session button — shown on completed training plan responses */}
+                {!isStreaming && m.role === 'assistant' && isSessionPlan(m.content) && (
+                  <button
+                    onClick={() => {
+                      const plan = extractPlan(m.content)
+                      navigate('/coach/sessions/add', { state: { fromAssistant: plan } })
+                    }}
+                    className="flex items-center gap-2 mt-3 px-3 py-2 rounded-[10px] w-full transition-colors active:scale-[0.98]"
+                    style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.2)' }}>
+                    <ClipboardList size={13} color="#C8F25A" />
+                    <span className="text-[11px] font-medium" style={{ color: '#C8F25A', fontFamily: "'DM Sans', sans-serif" }}>
+                      Log this as a session
+                    </span>
+                  </button>
                 )}
               </div>
-            </div>
-          ))}
+            )
+          })}
           {isLoading && messages[messages.length - 1]?.role === 'user' && (
             <div className="rounded-[14px] border border-white/[0.07] p-4" style={{ background: '#101012' }}>
               <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Thinking…</p>
@@ -218,6 +318,25 @@ export default function CoachAssistant() {
           className="fixed bottom-[72px] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-4 pb-2"
           style={{ background: 'linear-gradient(to top, rgba(10,10,11,1) 60%, rgba(10,10,11,0))' }}
         >
+          {/* Disclosure note */}
+          <button
+            onClick={() => setShowDisclosure(v => !v)}
+            className="w-full text-left mb-1.5 px-1"
+          >
+            <span className="text-[9px] tracking-[0.08em] text-white/25 flex items-center gap-1.5"
+              style={{ fontFamily: "'DM Mono', monospace" }}>
+              <span>ⓘ</span>
+              <span>About these recommendations</span>
+              <span className="ml-auto">{showDisclosure ? '▲' : '▼'}</span>
+            </span>
+            {showDisclosure && (
+              <p className="text-[11px] leading-[1.6] text-white/40 mt-1.5 pr-2"
+                style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                Drills and session plans are AI-generated based on established football coaching methodology, following UEFA coaching principles — warm-up, technical focus, game application. These are a starting point. Not every suggestion will suit your squad's age group or level, so your judgment as a coach always takes priority.
+              </p>
+            )}
+          </button>
+
           <div className="flex items-end gap-2 rounded-[14px] p-2" style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}>
             <textarea
               value={input}

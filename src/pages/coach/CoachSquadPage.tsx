@@ -6,7 +6,7 @@ import { MobileShell, NavBar, BandPill } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
 import { Plus } from 'lucide-react'
 
-const POSITIONS = ['All', 'Attack', 'Midfield', 'Defence', 'GK'] as const
+const POSITIONS = ['All', 'Goalkeeper', 'Defender', 'Midfielder', 'Attacker'] as const
 
 export default function CoachSquadPage() {
   const { user } = useAuth()
@@ -14,7 +14,13 @@ export default function CoachSquadPage() {
   const location = useLocation()
   const [players, setPlayers] = useState<any[]>([])
   const [assessments, setAssessments] = useState<Record<string, number>>({})
-  const [filter, setFilter] = useState<string>('All')
+  const [posFilter, setPosFilter] = useState<string>('All')
+  const [ageFilter, setAgeFilter] = useState<string>('All')
+
+  // Derive age groups present in the squad (sorted)
+  const ageGroups = Array.from(
+    new Set(players.map(p => p.age).filter(Boolean))
+  ).sort()
 
   useEffect(() => {
     if (!user) return
@@ -45,12 +51,11 @@ export default function CoachSquadPage() {
       })
   }, [user])
 
-  const filtered =
-    filter === 'All'
-      ? players
-      : players.filter(
-          (p) => p.position?.toLowerCase() === filter.toLowerCase()
-        )
+  const filtered = players.filter(p => {
+    const posMatch = posFilter === 'All' || p.position?.toLowerCase() === posFilter.toLowerCase()
+    const ageMatch = ageFilter === 'All' || p.age === ageFilter
+    return posMatch && ageMatch
+  })
 
   const initials = (name: string) =>
     name
@@ -73,30 +78,86 @@ export default function CoachSquadPage() {
         </button>
       </div>
 
-      {/* Position filter chips */}
-      <div className="flex items-center gap-2 px-5 py-3">
-        {POSITIONS.map((pos) => {
-          const active = filter === pos
-          return (
-            <button
-              key={pos}
-              onClick={() => setFilter(pos)}
-              className={`inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] transition-colors ${
-                active
-                  ? 'bg-[rgba(251,191,36,0.12)] text-amber-400'
-                  : 'bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.45)]'
-              }`}
-            >
-              {pos}
-            </button>
-          )
-        })}
+      {/* Filters */}
+      <div className="px-5 pt-3 pb-2 space-y-2 shrink-0">
+        {/* Age group row — only shown when coach has 2+ groups */}
+        {ageGroups.length >= 2 && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            {['All', ...ageGroups].map(age => {
+              const active = ageFilter === age
+              return (
+                <button
+                  key={age}
+                  onClick={() => setAgeFilter(age)}
+                  className="inline-flex items-center h-6 px-2.5 rounded-[6px] text-[10px] font-semibold whitespace-nowrap transition-colors flex-shrink-0"
+                  style={{
+                    background: active ? 'rgba(200,242,90,0.12)' : 'rgba(255,255,255,0.05)',
+                    color: active ? '#C8F25A' : 'rgba(255,255,255,0.4)',
+                    border: `1px solid ${active ? 'rgba(200,242,90,0.25)' : 'transparent'}`,
+                  }}
+                >
+                  {age}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Position row */}
+        <div className="flex items-center gap-2">
+          {POSITIONS.map((pos) => {
+            const active = posFilter === pos
+            return (
+              <button
+                key={pos}
+                onClick={() => setPosFilter(pos)}
+                className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] transition-colors"
+                style={{
+                  background: active ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.06)',
+                  color: active ? 'rgb(251,191,36)' : 'rgba(255,255,255,0.45)',
+                }}
+              >
+                {pos}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Squad list */}
       <div className="flex-1 overflow-y-auto px-5 pb-24">
         {filtered.length === 0 ? (
-          <p className="text-white/45 text-sm mt-4">No players found.</p>
+          players.length === 0 ? (
+            <div className="flex flex-col items-center text-center pt-14 px-6">
+              <div
+                className="w-14 h-14 rounded-[16px] flex items-center justify-center mb-4"
+                style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.15)' }}
+              >
+                <Plus size={22} className="text-[#C8F25A]" strokeWidth={1.5} />
+              </div>
+              <p className="text-[15px] text-white/70 font-medium mb-1">Add your first player</p>
+              <p className="text-[12px] text-white/35 leading-relaxed mb-5">
+                Build your squad to start logging sessions, assessments and match ratings.
+              </p>
+              <button
+                onClick={() => navigate('/coach/squad/add')}
+                className="px-5 py-2.5 rounded-[10px] text-[13px] font-medium text-black"
+                style={{ background: '#C8F25A' }}
+              >
+                Add player
+              </button>
+            </div>
+          ) : (
+            <div className="pt-8 text-center">
+              <p className="text-[13px] text-white/45 mb-2">No players match that filter.</p>
+              <button
+                onClick={() => { setPosFilter('All'); setAgeFilter('All') }}
+                className="text-[11px] text-[#C8F25A]"
+              >
+                Clear filters
+              </button>
+            </div>
+          )
         ) : (
           <div className="space-y-0">
             {filtered.map((p, idx) => {
@@ -114,9 +175,7 @@ export default function CoachSquadPage() {
                     style={{ border: '1px solid rgba(255,255,255,0.07)' }}
                   >
                     <span
-                      className={`text-[11px] font-semibold ${
-                        idx === 0 ? 'text-amber-400' : 'text-white/45'
-                      }`}
+                      className="text-[11px] font-semibold text-white/45"
                     >
                       {initials(p.player_name || '??')}
                     </span>

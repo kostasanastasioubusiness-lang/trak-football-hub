@@ -194,5 +194,33 @@ export const IconVerified = makeIcon({}, ({ size, color, className }) => (
   </svg>
 ))
 
+// Stopwatch — training sessions
+export const IconTraining = makeIcon({}, ({ size, color, className }) => (
+  <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <circle cx="11" cy="13" r="7" stroke={color} strokeWidth="1.5"/>
+    <path d="M11 9.5V13L13.5 15" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M8.5 2.5H13.5" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M11 2.5V5" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+))
+
+// Two profiles (adult + child) — parent connections
+export const IconParentLink = makeIcon({}, ({ size, color, className }) => (
+  <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <circle cx="7.5" cy="7" r="3.5" stroke={color} strokeWidth="1.5"/>
+    <circle cx="16" cy="8" r="2.5" stroke={color} strokeWidth="1.5"/>
+    <path d="M1.5 19C1.5 15.7 4.2 13 7.5 13C9.2 13 10.7 13.7 11.8 14.9" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M12 18.5C12 16.3 13.8 14.5 16 14.5C18.2 14.5 20 16.3 20 18.5" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+))
+
+// Pennant flag — tips / getting started
+export const IconTips = makeIcon({}, ({ size, color, className }) => (
+  <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path d="M5 20V3" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M5 3L18 6.5L5 11" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+))
+
 export const ACTIVE_COLOR = activeColor
 export const DEFAULT_COLOR = defaultColor

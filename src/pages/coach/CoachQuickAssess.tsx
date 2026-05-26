@@ -153,7 +153,6 @@ export default function CoachQuickAssess() {
       coachability,
       // derived card stats
       ...cardStats,
-      coach_rating: Math.round(avg * 10) / 10,
     } as any]).select('id').maybeSingle()
     if (inserted?.id && note.trim()) {
       await supabase.from('coach_assessment_notes').insert({

@@ -122,9 +122,9 @@ export default function DevSetupPage() {
 
       update('3 coach assessments', 'running')
       const seedAssessments = [
-        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 8, tactical: 7, attitude: 9, technical: 7, physical: 8, coachability: 8, flag: 'fair',     created_at: new Date(now - 1  * 86400000).toISOString(), _note: 'Great attitude this week — pressed well in the first half.' },
-        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 6, tactical: 6, attitude: 7, technical: 6, physical: 7, coachability: 7, flag: 'generous', created_at: new Date(now - 8  * 86400000).toISOString(), _note: 'Struggled away but kept working. Needs to improve positioning.' },
-        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 9, tactical: 8, attitude: 9, technical: 8, physical: 9, coachability: 9, flag: 'fair',     created_at: new Date(now - 22 * 86400000).toISOString(), _note: 'Outstanding — best of the season. Real leadership on show.' },
+        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 8, tactical: 7, attitude: 9, technical: 7, physical: 8, coachability: 8, flag: 'fair',     created_at: new Date(now - 1  * 86400000).toISOString(), _note: 'First touch under pressure needs work — losing the ball in central areas when pressed. Also needs to check his shoulder more before receiving and hold his position better when tracking runners from midfield.' },
+        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 6, tactical: 6, attitude: 7, technical: 6, physical: 7, coachability: 7, flag: 'generous', created_at: new Date(now - 8  * 86400000).toISOString(), _note: 'Struggled to keep the ball under pressure in an away environment. Passing tempo too slow — needs to play quicker one-touch combinations in tight areas and move immediately after playing the ball.' },
+        { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 9, tactical: 8, attitude: 9, technical: 8, physical: 9, coachability: 9, flag: 'fair',     created_at: new Date(now - 22 * 86400000).toISOString(), _note: 'Outstanding performance. To reach the next level focus on aerial duels — winning second balls in midfield — and work on the long switch of play to find wide players in space.' },
       ]
       for (const a of seedAssessments) {
         const { _note, ...row } = a
@@ -134,6 +134,52 @@ export default function DevSetupPage() {
         }
       }
       update('3 coach assessments', 'done')
+
+      update('Seed calendar events', 'running')
+      const dt = (daysFromNow: number, hour: number, min = 0) => {
+        const d = new Date(); d.setDate(d.getDate() + daysFromNow); d.setHours(hour, min, 0, 0); return d.toISOString()
+      }
+      await supabase.from('coach_calendar_events').insert([
+        {
+          coach_user_id: coachId,
+          title: 'Training — Pressing & Transitions',
+          event_type: 'training',
+          starts_at: dt(2, 18),
+          ends_at:   dt(2, 19, 30),
+          venue: 'City FC Academy — Pitch 2',
+          published: true,
+          source: 'ai_text',
+        },
+        {
+          coach_user_id: coachId,
+          title: 'League Match vs Riverside United',
+          event_type: 'match',
+          starts_at: dt(5, 15),
+          venue: 'Riverside Ground',
+          opponent: 'Riverside United',
+          published: true,
+          source: 'ai_text',
+        },
+        {
+          coach_user_id: coachId,
+          title: 'Training — Set Pieces',
+          event_type: 'training',
+          starts_at: dt(9, 18),
+          venue: 'City FC Academy — Main Pitch',
+          published: true,
+          source: 'ai_text',
+        },
+        {
+          coach_user_id: coachId,
+          title: 'Regional Cup — Quarter Final',
+          event_type: 'tournament',
+          starts_at: dt(14, 14),
+          venue: 'Central Sports Complex',
+          published: true,
+          source: 'ai_text',
+        },
+      ])
+      update('Seed calendar events', 'done')
 
       update('Player of the Week award', 'running')
       await supabase.from('recognition_awards').insert({

@@ -363,6 +363,22 @@ export default function CoachHomePage() {
           </button>
         </div>
 
+        {/* Empty squad callout */}
+        {playerCount === 0 && (
+          <button
+            onClick={() => navigate('/coach/squad/add')}
+            className="w-full mt-3 rounded-[14px] border p-4 text-left active:scale-[0.98] transition-transform"
+            style={{ background: '#101012', borderColor: 'rgba(255,255,255,0.07)' }}
+          >
+            <p className="text-[13px] font-medium text-white/70" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              Add players to your squad
+            </p>
+            <p className="text-[10px] mt-0.5 text-white/35" style={{ fontFamily: "'DM Mono', monospace" }}>
+              Once you've added players you can assess them, log matches, and track progress →
+            </p>
+          </button>
+        )}
+
         {/* Quick Assess CTA */}
         {playerCount > 0 && (
           <button
@@ -566,7 +582,7 @@ export default function CoachHomePage() {
               </div>
             )}
 
-            {/* Needs Attention */}
+            {/* Needs Attention — max 3, only players with prior history */}
             {squadAnalytics.needsAttention.length > 0 && (
               <div
                 className="rounded-[18px] border border-white/[0.07] p-4"
@@ -605,6 +621,7 @@ export default function CoachHomePage() {
                 </div>
               </div>
             )}
+
           </div>
         )}
       </div>

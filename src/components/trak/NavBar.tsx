@@ -36,7 +36,9 @@ function getNavItems(role: Role): NavItem[] {
     { label: 'Profile', path: '/coach/profile', Icon: IconProfile },
   ]
   return [
-    { label: 'Home', path: '/parent/home', Icon: IconHome },
+    { label: 'Home',    path: '/parent/home',    Icon: IconHome },
+    { label: 'Matches', path: '/parent/matches', Icon: IconMatch },
+    { label: 'Alerts',  path: '/parent/alerts',  Icon: IconAlerts },
     { label: 'Profile', path: '/parent/profile', Icon: IconProfile },
   ]
 }

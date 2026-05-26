@@ -35,7 +35,7 @@ export function calculateSquadAnalytics(
     bandDistribution[band] = (bandDistribution[band] || 0) + 1
   }
 
-  // Group assessments by player, sorted chronologically
+  // Group assessments by player, sorted chronologically (oldest first)
   const byPlayer = new Map<string, { rating: number; created_at: string }[]>()
   for (const a of assessments) {
     if (!byPlayer.has(a.squad_player_id)) byPlayer.set(a.squad_player_id, [])
@@ -69,52 +69,68 @@ export function calculateSquadAnalytics(
     }
   }
 
-  // Needs attention: declining trend or no recent assessment
-  const needsAttention: SquadAnalytics['needsAttention'] = []
+  // ── Needs Attention ─────────────────────────────────────────────────────────
+  // Only flag players who already have a track record — never flag someone just
+  // because they are new to the squad. A player appears here only when:
+  //
+  //   1. They have ≥ 2 past assessments AND their last assessment was 30+ days ago
+  //      → the coach has been active with them before, now quiet
+  //
+  //   2. They have ≥ 4 assessments AND their last 2 ratings average 1.5+ points
+  //      lower than the 2 before — a clear, meaningful drop (not just one bad day)
+  //
+  // Maximum 3 players are shown, sorted by severity, to keep the list actionable.
+
+  type Candidate = { name: string; playerId: string; reason: string; severity: number }
+  const candidates: Candidate[] = []
   const now = Date.now()
-  const fourteenDays = 14 * 24 * 60 * 60 * 1000
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000
 
   for (const player of players) {
     const entries = byPlayer.get(player.id)
 
-    // No assessment in 14+ days
-    if (!entries || entries.length === 0) {
-      needsAttention.push({
-        name: player.player_name,
-        playerId: player.id,
-        reason: 'No assessments recorded',
-      })
-      continue
-    }
+    // Skip players with fewer than 2 assessments — they're still getting started
+    if (!entries || entries.length < 2) continue
 
     const lastDate = new Date(entries[entries.length - 1].created_at).getTime()
-    if (now - lastDate >= fourteenDays) {
-      needsAttention.push({
+    const daysSince = Math.floor((now - lastDate) / (24 * 60 * 60 * 1000))
+
+    // Rule 1: previously active, now gone quiet for 30+ days
+    if (now - lastDate >= thirtyDays) {
+      candidates.push({
         name: player.player_name,
         playerId: player.id,
-        reason: 'No assessment in 14+ days',
+        reason: `Not assessed for ${daysSince} days`,
+        severity: daysSince,
       })
+      continue // don't double-flag the same player
     }
 
-    // Declining trend: last 3 avg < previous 3 avg
-    if (entries.length >= 6) {
-      const prev3 = entries.slice(-6, -3)
-      const last3 = entries.slice(-3)
-      const avgPrev = prev3.reduce((s, e) => s + e.rating, 0) / prev3.length
-      const avgLast = last3.reduce((s, e) => s + e.rating, 0) / last3.length
-      if (avgLast < avgPrev) {
-        // Check not already added
-        const alreadyAdded = needsAttention.some(n => n.playerId === player.id)
-        if (!alreadyAdded) {
-          needsAttention.push({
-            name: player.player_name,
-            playerId: player.id,
-            reason: 'Declining trend',
-          })
-        }
+    // Rule 2: clear declining trend — needs at least 4 assessments
+    if (entries.length >= 4) {
+      const prev2 = entries.slice(-4, -2)
+      const last2 = entries.slice(-2)
+      const avgPrev = prev2.reduce((s, e) => s + e.rating, 0) / prev2.length
+      const avgLast = last2.reduce((s, e) => s + e.rating, 0) / last2.length
+      const drop = avgPrev - avgLast
+      if (drop >= 1.5) {
+        candidates.push({
+          name: player.player_name,
+          playerId: player.id,
+          reason: `Rating dropped ${drop.toFixed(1)} pts recently`,
+          severity: drop * 10, // larger drop = higher priority
+        })
       }
     }
   }
+
+  // Most urgent first, cap at 3
+  candidates.sort((a, b) => b.severity - a.severity)
+  const needsAttention = candidates.slice(0, 3).map(({ name, playerId, reason }) => ({
+    name,
+    playerId,
+    reason,
+  }))
 
   return {
     totalPlayers,

@@ -109,7 +109,7 @@ export default function CoachQuickMatchLog() {
           })
 
           return {
-            user_id: p.linked_player_id!,
+            linked_player_id: p.linked_player_id!,
             opponent: opponent.trim(),
             team_score: Number(scoreUs) || 0,
             opponent_score: Number(scoreThem) || 0,
@@ -117,17 +117,32 @@ export default function CoachQuickMatchLog() {
             venue,
             position: p.position || 'Midfielder',
             age_group: p.age != null ? String(p.age) : 'U19+',
-            minutes_played: 90,
-            goals: 0,
-            assists: 0,
-            card_received: 'None',
-            body_condition: 'Average',
-            self_rating: 'Average',
             computed_rating,
-            created_at: new Date().toISOString(),
           }
         })
-        await supabase.from('matches').insert(matchRows)
+
+        // Direct insert is blocked by RLS (user_id ≠ coach's auth.uid()).
+        // Use the SECURITY DEFINER RPC which verifies the coach→player link
+        // before writing, so the row actually reaches the player's match history.
+        for (const row of matchRows) {
+          await supabase.rpc('log_match_for_player', {
+            p_user_id:         row.linked_player_id,
+            p_opponent:        row.opponent,
+            p_team_score:      row.team_score,
+            p_opponent_score:  row.opponent_score,
+            p_competition:     row.competition,
+            p_venue:           row.venue,
+            p_position:        row.position,
+            p_age_group:       row.age_group,
+            p_minutes_played:  90,
+            p_goals:           0,
+            p_assists:         0,
+            p_card_received:   'None',
+            p_body_condition:  'Average',
+            p_self_rating:     'Average',
+            p_computed_rating: row.computed_rating,
+          })
+        }
       }
     }
 

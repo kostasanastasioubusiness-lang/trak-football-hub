@@ -11,6 +11,7 @@ export default function CoachAddPlayer() {
   const [name, setName] = useState('')
   const [position, setPosition] = useState('')
   const [shirtNumber, setShirtNumber] = useState('')
+  const [ageGroup, setAgeGroup] = useState('')
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
@@ -21,17 +22,24 @@ export default function CoachAddPlayer() {
       player_name: name,
       position: position || null,
       shirt_number: shirtNumber ? Number(shirtNumber) : null,
+      age: ageGroup || null,
     })
     navigate('/coach/squad')
   }
 
   return (
     <MobileShell>
-      <div className="pt-8 pb-4 space-y-6">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-white/45 text-sm">
-          <ChevronLeft size={16} /> Back
+      {/* Sticky header */}
+      <div className="sticky top-0 z-20 flex items-center gap-3 py-3 -mx-5 px-5"
+        style={{ background: 'rgba(10,10,11,0.96)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <button onClick={() => navigate('/coach/squad')}
+          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]">
+          <ChevronLeft size={16} className="text-white/70" />
         </button>
-        <h1 className="text-xl font-light text-white/88">Add Player</h1>
+        <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90 -ml-[34px] pointer-events-none">Add Player</h1>
+      </div>
+
+      <div className="pt-6 pb-4 space-y-6">
 
         <div className="space-y-2">
           <MetadataLabel text="PLAYER NAME" />
@@ -43,6 +51,16 @@ export default function CoachAddPlayer() {
           { label: 'GK', value: 'Goalkeeper' }, { label: 'DEF', value: 'Defender' },
           { label: 'MID', value: 'Midfielder' }, { label: 'ATT', value: 'Attacker' },
         ]} value={position} onChange={setPosition} />
+
+        <PillSelector label="Age Group" options={[
+          { label: 'U7',   value: 'U7'   }, { label: 'U8',  value: 'U8'  },
+          { label: 'U9',   value: 'U9'   }, { label: 'U10', value: 'U10' },
+          { label: 'U11',  value: 'U11'  }, { label: 'U12', value: 'U12' },
+          { label: 'U13',  value: 'U13'  }, { label: 'U14', value: 'U14' },
+          { label: 'U15',  value: 'U15'  }, { label: 'U16', value: 'U16' },
+          { label: 'U17',  value: 'U17'  }, { label: 'U18', value: 'U18' },
+          { label: 'U19+', value: 'U19+' },
+        ]} value={ageGroup} onChange={setAgeGroup} />
 
         <div className="space-y-2">
           <MetadataLabel text="SHIRT NUMBER" />

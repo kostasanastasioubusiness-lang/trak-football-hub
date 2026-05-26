@@ -127,7 +127,6 @@ export default function CoachAssessPage() {
       coachability,
       // derived card stats
       ...cardStats,
-      coach_rating: Math.round(avg * 10) / 10,
     } as any).select('id').maybeSingle()
     if (inserted?.id && note.trim()) {
       await supabase.from('coach_assessment_notes').insert({
@@ -142,20 +141,26 @@ export default function CoachAssessPage() {
 
   /* ---- render ---- */
   return (
-    <MobileShell>
-      <div className="pb-24 space-y-5">
-        {/* ---- 1. header: back + title ---- */}
-        <div className="flex items-center gap-3 pt-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]"
-          >
-            <ChevronLeft size={16} className="text-white/70" />
-          </button>
-          <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90 -ml-[34px]">
-            Assessment
-          </h1>
-        </div>
+    <div className="flex flex-col mx-auto max-w-[430px] bg-[#0A0A0B]" style={{ height: '100dvh' }}>
+      {/* ---- header: always visible, never scrolls ---- */}
+      <div className="flex items-center gap-3 px-5 py-3 shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <button
+          onClick={() => {
+            const fromPlayer = (location.state as any)?.preselectedPlayerId
+            navigate(fromPlayer ? `/coach/player/${fromPlayer}` : '/coach/home')
+          }}
+          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]"
+        >
+          <ChevronLeft size={16} className="text-white/70" />
+        </button>
+        <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90 -ml-[34px] pointer-events-none">
+          Assessment
+        </h1>
+      </div>
+
+      {/* ---- scrollable content ---- */}
+      <div className="flex-1 overflow-y-auto px-5 pb-24 space-y-5 pt-4">
 
         {/* ---- 2. player card (sq-item) ---- */}
         {selectedPlayer ? (
@@ -274,22 +279,27 @@ export default function CoachAssessPage() {
           </span>
         </div>
 
-        {/* ---- 7. private note ---- */}
+        {/* ---- 7. improvement areas (AI-powered player feedback) ---- */}
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
-            <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
-              PRIVATE NOTE
-            </span>
-            <span className="text-[10px] text-white/25">{note.length}/200</span>
+            <div>
+              <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
+                IMPROVEMENT AREAS
+              </span>
+              <p className="text-[9px] text-white/25 mt-0.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                AI will expand these into personalised feedback for the player
+              </p>
+            </div>
+            <span className="text-[10px] text-white/25">{note.length}/300</span>
           </div>
           <textarea
             value={note}
             onChange={e => {
-              if (e.target.value.length <= 200) setNote(e.target.value)
+              if (e.target.value.length <= 300) setNote(e.target.value)
             }}
-            maxLength={200}
+            maxLength={300}
             rows={3}
-            placeholder="Visible to player only, not parents"
+            placeholder="e.g. First touch under pressure, positioning when defending set pieces"
             className="w-full px-4 py-3 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none resize-none placeholder:text-white/20"
           />
         </div>
@@ -306,6 +316,6 @@ export default function CoachAssessPage() {
 
       {/* ---- 10. bottom nav ---- */}
       <NavBar role="coach" activeTab="/coach/assess" onNavigate={p => navigate(p)} />
-    </MobileShell>
+    </div>
   )
 }

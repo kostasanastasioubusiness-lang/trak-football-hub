@@ -20,17 +20,16 @@ interface Props {
 }
 
 const THRESHOLD_LINES = [
-  { y: 9.2, label: 'Exceptional', color: '#C8F25A' },
-  { y: 7.2, label: 'Good', color: '#4ade80' },
-  { y: 6.4, label: 'Steady', color: '#60a5fa' },
-  { y: 4.8, label: 'Developing', color: '#a78bfa' },
+  { y: 9.0, color: '#C8F25A' },
+  { y: 8.0, color: '#86efac' },
+  { y: 7.0, color: '#4ade80' },
+  { y: 6.0, color: '#60a5fa' },
+  { y: 4.8, color: '#fb923c' },
 ]
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
-  const day = d.getDate()
-  const month = d.toLocaleString('en-GB', { month: 'short' })
-  return `${day} ${month}`
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
 interface ChartDatum {
@@ -48,10 +47,11 @@ function CustomTooltip({ active, payload }: any) {
       className="rounded-lg px-3 py-2 border border-white/[0.07]"
       style={{ background: '#18181b', fontFamily: "'DM Sans', sans-serif" }}
     >
-      <p className="text-[11px] text-white/45 mb-0.5">{d.label}</p>
-      <p className="text-[14px] font-semibold" style={{ color: d.color }}>
-        {d.rating.toFixed(2)}{' '}
-        <span className="text-[11px] font-medium">{d.band}</span>
+      <p className="text-[10px] text-white/35 mb-0.5" style={{ fontFamily: "'DM Mono', monospace" }}>
+        {d.label}
+      </p>
+      <p className="text-[13px] font-semibold" style={{ color: d.color }}>
+        {d.band}
       </p>
     </div>
   )
@@ -84,22 +84,23 @@ export default function RatingTrendChart({ matches }: Props) {
     }
   })
 
+  // Show at most ~5 X-axis date labels regardless of total count
+  const interval = data.length <= 5 ? 0
+    : data.length <= 10 ? 1
+    : Math.ceil(data.length / 5) - 1
+
   return (
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
         <XAxis
           dataKey="label"
+          interval={interval}
           tick={{ fill: 'rgba(255,255,255,0.22)', fontSize: 9, fontFamily: "'DM Mono', monospace" }}
           axisLine={{ stroke: 'rgba(255,255,255,0.04)' }}
           tickLine={false}
         />
-        <YAxis
-          domain={[4, 10]}
-          ticks={[4, 5, 6, 7, 8, 9, 10]}
-          tick={{ fill: 'rgba(255,255,255,0.22)', fontSize: 9, fontFamily: "'DM Mono', monospace" }}
-          axisLine={{ stroke: 'rgba(255,255,255,0.04)' }}
-          tickLine={false}
-        />
+        {/* Y-axis hidden — reference lines carry the band context visually */}
+        <YAxis hide domain={[4, 10]} />
         {THRESHOLD_LINES.map((t) => (
           <ReferenceLine
             key={t.y}

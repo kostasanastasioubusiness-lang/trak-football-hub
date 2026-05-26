@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Flame, Target, Lock, Check, Shield, Zap, Activity } from 'lucide-react'
+import { Flame, Target, Lock, Check, Shield, Zap, Activity, Share2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { MobileShell, NavBar } from '@/components/trak'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -33,15 +34,34 @@ import { useAuth } from '@/contexts/AuthContext'
  */
 
 type Tier = 'Bronze' | 'Silver' | 'Gold' | 'Volt' | 'Icon'
+
+type CardSnapshot = {
+  date: string   // ISO date string
+  ovr: number
+  tier: Tier
+}
 type PosGroup = 'gk' | 'def' | 'mid' | 'att'
 type EvoState = 'active' | 'done' | 'locked'
 
-const TIERS: Record<Tier, { ring: string; label: string; glow: string }> = {
-  Bronze: { ring: 'rgba(205,127,50,0.55)', label: 'rgba(205,127,50,0.85)', glow: 'rgba(205,127,50,0.18)' },
-  Silver: { ring: 'rgba(220,220,230,0.55)', label: 'rgba(220,220,230,0.85)', glow: 'rgba(220,220,230,0.16)' },
-  Gold:   { ring: 'rgba(245,200,80,0.65)',  label: 'rgba(245,200,80,0.95)',  glow: 'rgba(245,200,80,0.20)' },
-  Volt:   { ring: 'rgba(200,242,90,0.75)',  label: '#C8F25A',                glow: 'rgba(200,242,90,0.28)' },
-  Icon:   { ring: 'rgba(255,255,255,0.85)', label: '#FFFFFF',                glow: 'rgba(200,242,90,0.35)' },
+const TIERS: Record<Tier, {
+  ring: string; label: string; glow: string
+  shimmerOpacity: number
+  min: number; max: number; nextLabel: string | null
+  darkText: boolean
+}> = {
+  Bronze: { ring: 'rgba(205,127,50,0.55)', label: 'rgba(205,127,50,0.85)', glow: 'rgba(205,127,50,0.18)', shimmerOpacity: 0.04, min: 0,  max: 64,  nextLabel: 'Silver', darkText: false },
+  Silver: { ring: 'rgba(220,220,230,0.55)', label: 'rgba(220,220,230,0.85)', glow: 'rgba(220,220,230,0.16)', shimmerOpacity: 0.07, min: 65, max: 74,  nextLabel: 'Gold',   darkText: false },
+  Gold:   { ring: 'rgba(245,200,80,0.65)',  label: 'rgba(245,200,80,0.95)',  glow: 'rgba(245,200,80,0.20)',  shimmerOpacity: 0.10, min: 75, max: 84,  nextLabel: 'Volt',   darkText: true  },
+  Volt:   { ring: 'rgba(200,242,90,0.75)',  label: '#C8F25A',                glow: 'rgba(200,242,90,0.28)',  shimmerOpacity: 0.14, min: 85, max: 91,  nextLabel: 'Icon',   darkText: true  },
+  Icon:   { ring: 'rgba(255,255,255,0.85)', label: '#FFFFFF',                glow: 'rgba(200,242,90,0.35)',  shimmerOpacity: 0.20, min: 92, max: 100, nextLabel: null,     darkText: false },
+}
+
+function currentSeasonLabel() {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = now.getMonth() + 1
+  const start = m >= 8 ? y : y - 1
+  return `TRAK · ${String(start).slice(2)}/${String(start + 1).slice(2)}`
 }
 
 function tierFromOvr(ovr: number): Tier {
@@ -131,11 +151,9 @@ function computePositionQuests(
 
   // ── Goalkeeper ────────────────────────────────────────────────────────────
   if (group === 'gk') {
-    // Clean sheets — opponent_score = 0 means the team conceded nothing (GK kept a clean sheet)
     const cleanSheets = sorted.filter(m => (m.opponent_score ?? 1) === 0).length
     const wallDone = cleanSheets >= 3
 
-    // Good GK displays (rating accounts for saves, distribution, commanding presence)
     const sweepGames = ratingCount(7.0)
     const sweepDone = sweepGames >= 4
 
@@ -239,8 +257,6 @@ function computePositionQuests(
   }
 
   // ── Attacker ──────────────────────────────────────────────────────────────
-  // Rating ≥7.5 for ATT means genuinely dominant: the rating engine gives +0.55 for 2 goals,
-  // +0.3 for dominant threat — a 7.5 almost always means the player was dangerous and impactful.
   const clinicalGames = ratingCount(7.5)
   const clinicalDone = clinicalGames >= 4
 
@@ -286,9 +302,37 @@ export default function PlayerEvolutionCard() {
   const [posGroup, setPosGroup] = useState<PosGroup>('mid')
   const [club, setClub] = useState('')
   const [ageGroup, setAgeGroup] = useState('')
-  const [stats, setStats] = useState(FALLBACK_STATS)
-  const [hasAssessment, setHasAssessment] = useState(false)
+  const [stats, setStats] = useState<typeof FALLBACK_STATS>(() => {
+    if (!user) return FALLBACK_STATS
+    try {
+      const stored = localStorage.getItem(`trak_last_stats_${user.id}`)
+      if (!stored) return FALLBACK_STATS
+      const data = JSON.parse(stored)
+      return [
+        { key: 'CONSISTENCY', value: data.CONSISTENCY ?? 50 },
+        { key: 'IMPACT',      value: data.IMPACT      ?? 50 },
+        { key: 'WORKRATE',    value: data.WORKRATE     ?? 50 },
+        { key: 'TECHNIQUE',   value: data.TECHNIQUE    ?? 50 },
+        { key: 'SPIRIT',      value: data.SPIRIT       ?? 50 },
+      ]
+    } catch { return FALLBACK_STATS }
+  })
+  const [hasAssessment, setHasAssessment] = useState(() => {
+    if (!user) return false
+    try { return !!localStorage.getItem(`trak_last_stats_${user.id}`) } catch { return false }
+  })
   const [evolutions, setEvolutions] = useState<EvoQuest[]>([])
+  const [deltas, setDeltas] = useState<Record<string, number>>({})
+  const [barsReady, setBarsReady] = useState(false)
+  const [questsReady, setQuestsReady] = useState(false)
+  const [history, setHistory] = useState<CardSnapshot[]>(() => {
+    if (!user) return []
+    try {
+      const stored = localStorage.getItem(`trak_card_history_${user.id}`)
+      if (!stored) return []
+      return JSON.parse(stored) as CardSnapshot[]
+    } catch { return [] }
+  })
 
   useEffect(() => {
     if (!user) return
@@ -331,9 +375,13 @@ export default function PlayerEvolutionCard() {
       const awardCount = awardsRes.data?.length ?? 0
       const group = details?.position ? posGroupFromPosition(details.position) : 'mid'
       setEvolutions(computePositionQuests(group, matches ?? [], awardCount))
+      setTimeout(() => setQuestsReady(true), 150)
 
       const assessments = assessmentsRes.data
-      if (!assessments || assessments.length === 0) return
+      if (!assessments || assessments.length === 0) {
+        setTimeout(() => setBarsReady(true), 100)
+        return
+      }
 
       const n = assessments.length
       const sums = { consistency: 0, impact: 0, workrate: 0, technique: 0, spirit: 0 }
@@ -350,14 +398,50 @@ export default function PlayerEvolutionCard() {
         sums.spirit      += (att + coach) / 2
       }
       const toOvr = (v: number) => Math.round((v / n) * 10)
-      setStats([
+      const newStats = [
         { key: 'CONSISTENCY', value: toOvr(sums.consistency) },
         { key: 'IMPACT',      value: toOvr(sums.impact) },
         { key: 'WORKRATE',    value: toOvr(sums.workrate) },
         { key: 'TECHNIQUE',   value: toOvr(sums.technique) },
         { key: 'SPIRIT',      value: toOvr(sums.spirit) },
-      ])
+      ]
+      setStats(newStats)
       setHasAssessment(true)
+      setTimeout(() => setBarsReady(true), 100)
+
+      // Card history — append snapshot when OVR changes
+      const historyKey = `trak_card_history_${user.id}`
+      try {
+        const storedHist = localStorage.getItem(historyKey)
+        const hist: CardSnapshot[] = storedHist ? JSON.parse(storedHist) : []
+        const computedOvr = Math.round(newStats.reduce((s, x) => s + x.value, 0) / newStats.length)
+        const computedTier = tierFromOvr(computedOvr)
+        const last = hist[0]
+        if (!last || last.ovr !== computedOvr) {
+          const newSnap: CardSnapshot = { date: new Date().toISOString(), ovr: computedOvr, tier: computedTier }
+          const updated = [newSnap, ...hist].slice(0, 20)
+          localStorage.setItem(historyKey, JSON.stringify(updated))
+          setHistory(updated)
+        }
+      } catch { /* ignore */ }
+
+      // Stat delta computation — compare to last stored snapshot
+      const storageKey = `trak_last_stats_${user.id}`
+      try {
+        const stored = localStorage.getItem(storageKey)
+        if (stored) {
+          const prev: Record<string, number> = JSON.parse(stored)
+          const computed: Record<string, number> = {}
+          for (const s of newStats) {
+            computed[s.key] = Math.round(s.value - (prev[s.key] ?? s.value))
+          }
+          setDeltas(computed)
+        }
+        // Always write the current snapshot
+        const snapshot: Record<string, number> = {}
+        for (const s of newStats) snapshot[s.key] = s.value
+        localStorage.setItem(storageKey, JSON.stringify(snapshot))
+      } catch { /* localStorage unavailable — ignore silently */ }
     })()
   }, [user])
 
@@ -366,105 +450,154 @@ export default function PlayerEvolutionCard() {
   const tier = TIERS[tierName]
   const initials = initialsOf(name)
 
+  // Tier progress derived values
+  const tierSpan   = tier.max - tier.min
+  const tierOffset = Math.max(0, ovr - tier.min)
+  const tierPct    = tierSpan > 0 ? (tierOffset / tierSpan) * 100 : 100
+  const toNext     = tier.nextLabel ? tier.max + 1 - ovr : 0
+
   const series1Complete = evolutions.length === 3 && evolutions.every(e => e.state === 'done')
 
-  return (
-    <MobileShell>
-      {/* Top bar */}
-      <div className="pt-5 pb-3 flex items-center justify-center">
-        <span style={{
-          fontFamily: "'DM Mono', monospace",
-          fontSize: 10, letterSpacing: '0.18em',
-          textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
-        }}>
-          EVOLUTION CARD
-        </span>
-      </div>
+  const handleShare = async () => {
+    const text = `${name} · ${tierName} tier · ${ovr} OVR · ${positionDisplay} — via TRAK football`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'My TRAK Card', text })
+      } else {
+        await navigator.clipboard.writeText(text)
+        toast.success('Copied to clipboard')
+      }
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(text)
+          toast.success('Copied to clipboard')
+        } catch {
+          toast.error('Could not share card')
+        }
+      }
+    }
+  }
 
-      {/* THE CARD */}
-      <div className="flex justify-center mt-2">
-        <div
-          className="relative"
-          style={{
-            width: '100%', maxWidth: 360, aspectRatio: '3 / 4',
-            borderRadius: 24, padding: 2,
-            background: `conic-gradient(from 140deg, ${tier.ring}, rgba(255,255,255,0.04) 35%, ${tier.ring} 65%, rgba(255,255,255,0.04) 95%)`,
-            boxShadow: `0 0 60px ${tier.glow}, 0 20px 60px rgba(0,0,0,0.6)`,
-          }}
-        >
+  return (
+    <>
+      <MobileShell>
+        {/* Top bar */}
+        <div className="pt-5 pb-3 flex items-center justify-center">
+          <span style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: 10, letterSpacing: '0.18em',
+            textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
+          }}>
+            EVOLUTION CARD
+          </span>
+        </div>
+
+        {/* THE CARD */}
+        <div className="flex justify-center mt-2">
           <div
-            className="relative w-full h-full overflow-hidden flex flex-col"
+            className="relative"
             style={{
-              borderRadius: 22,
-              background: 'radial-gradient(120% 80% at 50% 0%, #18181C 0%, #101012 55%, #0A0A0B 100%)',
-              padding: 22,
+              width: '100%', maxWidth: 360, aspectRatio: '3 / 4',
+              borderRadius: 24, padding: 2,
+              background: `conic-gradient(from 140deg, ${tier.ring}, rgba(255,255,255,0.04) 35%, ${tier.ring} 65%, rgba(255,255,255,0.04) 95%)`,
+              boxShadow: `0 0 60px ${tier.glow}, 0 20px 60px rgba(0,0,0,0.6)`,
             }}
           >
-            {/* Volt corner glow */}
-            <div className="absolute pointer-events-none" style={{
-              inset: 0,
-              background: 'radial-gradient(circle at 100% 100%, rgba(200,242,90,0.10), transparent 55%)',
-            }} />
+            <div
+              className="relative w-full h-full overflow-hidden flex flex-col"
+              style={{
+                borderRadius: 22,
+                background: 'radial-gradient(120% 80% at 50% 0%, #18181C 0%, #101012 55%, #0A0A0B 100%)',
+                padding: 22,
+              }}
+            >
+              {/* Volt corner glow */}
+              <div className="absolute pointer-events-none" style={{
+                inset: 0,
+                background: 'radial-gradient(circle at 100% 100%, rgba(200,242,90,0.10), transparent 55%)',
+              }} />
 
-            {/* Top row: OVR + Tier */}
-            <div className="relative flex items-start justify-between">
-              <div>
-                <div style={{
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontWeight: 200, fontSize: 64, lineHeight: 0.9,
-                  letterSpacing: '-0.04em', color: '#FFFFFF',
-                }}>
-                  {ovr}
+              {/* Static diagonal sheen */}
+              <div className="absolute pointer-events-none" style={{
+                inset: 0, borderRadius: 22, zIndex: 10,
+                background: `linear-gradient(105deg, transparent 35%, rgba(255,255,255,${tier.shimmerOpacity}) 50%, transparent 65%)`,
+              }} />
+
+              {/* Top row: OVR + Tier */}
+              <div className="relative flex items-start justify-between" style={{ zIndex: 20 }}>
+                <div>
+                  <div style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontWeight: 200, fontSize: 64, lineHeight: 0.9,
+                    letterSpacing: '-0.04em', color: '#FFFFFF',
+                  }}>
+                    {ovr}
+                  </div>
+                  <div className="mt-1" style={{
+                    fontFamily: "'DM Mono', monospace",
+                    fontSize: 9, letterSpacing: '0.2em',
+                    textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)',
+                  }}>
+                    {positionDisplay}{ageGroup ? ` · ${ageGroup}` : ''}
+                  </div>
+
+                  {/* Tier progress bar + next-tier label */}
+                  <div className="mt-2" style={{ width: 96 }}>
+                    <div style={{
+                      height: 3, borderRadius: 999, overflow: 'hidden',
+                      background: 'rgba(255,255,255,0.08)',
+                    }}>
+                      <div style={{
+                        height: '100%', borderRadius: 999,
+                        width: `${tierPct}%`,
+                        background: tier.label,
+                        transition: 'width 600ms cubic-bezier(0.16,1,0.3,1)',
+                      }} />
+                    </div>
+                    <div style={{
+                      marginTop: 4,
+                      fontFamily: "'DM Mono', monospace",
+                      fontSize: 8, letterSpacing: '0.16em',
+                      textTransform: 'uppercase',
+                      color: tier.label,
+                    }}>
+                      {tier.nextLabel ? `${toNext} to ${tier.nextLabel}` : 'Peak — Icon tier'}
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-1" style={{
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: 9, letterSpacing: '0.2em',
-                  textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)',
-                }}>
-                  {positionDisplay}{ageGroup ? ` · ${ageGroup}` : ''}
+
+                <div className="flex flex-col items-end gap-1.5">
+                  <span className="inline-flex items-center px-2 py-0.5" style={{
+                    borderRadius: 999,
+                    border: `1px solid ${tier.ring}`,
+                    background: 'rgba(255,255,255,0.02)',
+                    fontFamily: "'DM Mono', monospace",
+                    fontSize: 9, letterSpacing: '0.18em',
+                    textTransform: 'uppercase', color: tier.label,
+                  }}>
+                    {tierName} TIER
+                  </span>
+                  <span style={{
+                    fontFamily: "'DM Mono', monospace",
+                    fontSize: 8, letterSpacing: '0.22em',
+                    textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)',
+                  }}>
+                    {currentSeasonLabel()}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex flex-col items-end gap-1.5">
-                <span className="inline-flex items-center px-2 py-0.5" style={{
-                  borderRadius: 999,
-                  border: `1px solid ${tier.ring}`,
-                  background: 'rgba(255,255,255,0.02)',
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: 9, letterSpacing: '0.18em',
-                  textTransform: 'uppercase', color: tier.label,
-                }}>
-                  {tierName} TIER
-                </span>
-                <span style={{
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: 8, letterSpacing: '0.22em',
-                  textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)',
-                }}>
-                  TRAK · 25/26
-                </span>
-              </div>
-            </div>
-
-            {/* Initials block */}
-            <div className="relative mt-5 flex items-center gap-3">
-              <div className="flex items-center justify-center" style={{
-                width: 56, height: 56, borderRadius: 14,
-                background: '#0A0A0B', border: '1px solid rgba(200,242,90,0.18)',
-                fontFamily: "'DM Sans', sans-serif",
-                fontWeight: 300, fontSize: 22, color: '#C8F25A',
-              }}>
-                {initials}
-              </div>
-              <div className="min-w-0">
+              {/* Name + club */}
+              <div className="relative mt-5 min-w-0" style={{ zIndex: 20 }}>
                 <div className="truncate" style={{
                   fontFamily: "'DM Sans', sans-serif",
-                  fontWeight: 400, fontSize: 18,
+                  fontWeight: 400, fontSize: 20,
                   letterSpacing: '-0.02em', color: '#FFFFFF',
                 }}>
                   {name}
                 </div>
-                <div className="truncate" style={{
+                <div className="truncate mt-0.5" style={{
                   fontFamily: "'DM Mono', monospace",
                   fontSize: 9, letterSpacing: '0.16em',
                   textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
@@ -472,110 +605,226 @@ export default function PlayerEvolutionCard() {
                   {club || 'Unaffiliated'}
                 </div>
               </div>
-            </div>
 
-            {/* Divider */}
-            <div className="relative my-4" style={{
-              height: 1,
-              background: 'linear-gradient(90deg, transparent, rgba(200,242,90,0.35), transparent)',
-            }} />
+              {/* Divider */}
+              <div className="relative my-4" style={{
+                height: 1, zIndex: 20,
+                background: 'linear-gradient(90deg, transparent, rgba(200,242,90,0.35), transparent)',
+              }} />
 
-            {/* Stats */}
-            <div className="relative flex-1 flex flex-col gap-2.5">
-              {stats.map(s => <StatRow key={s.key} label={s.key} value={s.value} />)}
-            </div>
+              {/* Stats */}
+              <div className="relative flex-1 flex flex-col gap-2.5" style={{ zIndex: 20 }}>
+                {stats.map(s => (
+                  <StatRow
+                    key={s.key}
+                    label={s.key}
+                    value={s.value}
+                    delta={deltas[s.key]}
+                    barsReady={barsReady}
+                  />
+                ))}
+              </div>
 
-            {/* Footer */}
-            <div className="relative mt-4 flex items-center justify-between" style={{
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 8, letterSpacing: '0.22em',
-              textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)',
-            }}>
-              <span>SERIES 01</span>
-              <span>{series1Complete ? '· EVOLVED ·' : evolutions.some(e => e.state === 'done') ? '· EVOLVING ·' : '· ACTIVE ·'}</span>
-              <span>TRAK · 25/26</span>
+              {/* Footer */}
+              <div className="relative mt-4 flex items-center justify-between" style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 8, letterSpacing: '0.22em',
+                textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)',
+                zIndex: 20,
+              }}>
+                <span>SERIES 01</span>
+                <span>{series1Complete ? '· EVOLVED ·' : evolutions.some(e => e.state === 'done') ? '· EVOLVING ·' : '· ACTIVE ·'}</span>
+                <span>{currentSeasonLabel()}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Evolutions */}
-      <div className="mt-7 mb-6">
-        <div className="flex items-end justify-between mb-3">
-          <h2 style={{
-            fontFamily: "'DM Sans', sans-serif",
-            fontWeight: 400, fontSize: 18,
-            letterSpacing: '-0.02em', color: '#FFFFFF',
-          }}>
-            {series1Complete ? 'Series 01 Complete' : 'Active Evolutions'}
-          </h2>
-          <span style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 9, letterSpacing: '0.18em',
-            textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)',
-          }}>
-            SERIES 01
-          </span>
+        {/* Share button */}
+        <div className="flex justify-center mt-4 px-4">
+          <button
+            onClick={handleShare}
+            style={{
+              width: '100%', maxWidth: 360,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '14px 0', borderRadius: 14, border: 'none', cursor: 'pointer',
+              background: tier.label,
+              color: tier.darkText ? '#000000' : '#ffffff',
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 500, fontSize: 14,
+            }}
+          >
+            <Share2 size={15} />
+            Share card
+          </button>
         </div>
 
-        {series1Complete && (
-          <div className="mb-3 px-4 py-3 rounded-[12px] text-center" style={{
-            background: 'rgba(200,242,90,0.07)',
-            border: '1px solid rgba(200,242,90,0.2)',
-          }}>
-            <p style={{
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 9, letterSpacing: '0.14em',
-              textTransform: 'uppercase', color: '#C8F25A',
+        {/* Evolutions */}
+        <div className="mt-7 mb-6">
+          <div className="flex items-end justify-between mb-3">
+            <h2 style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 400, fontSize: 18,
+              letterSpacing: '-0.02em', color: '#FFFFFF',
             }}>
-              All Series 01 challenges complete — Series 02 coming soon
-            </p>
+              {series1Complete ? 'Series 01 Complete' : 'Active Evolutions'}
+            </h2>
+            <span style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 9, letterSpacing: '0.18em',
+              textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)',
+            }}>
+              SERIES 01
+            </span>
+          </div>
+
+          {series1Complete && (
+            <div className="mb-3 px-4 py-3 rounded-[12px] text-center" style={{
+              background: 'rgba(200,242,90,0.07)',
+              border: '1px solid rgba(200,242,90,0.2)',
+            }}>
+              <p style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 9, letterSpacing: '0.14em',
+                textTransform: 'uppercase', color: '#C8F25A',
+              }}>
+                All Series 01 challenges complete — Series 02 coming soon
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2.5">
+            {evolutions.map(e => (
+              <EvoRow key={e.title} {...e} questsReady={questsReady} />
+            ))}
+          </div>
+
+          {/* Series 02 stub */}
+          <div className="mt-3 p-4 rounded-[14px] flex items-center gap-3" style={{
+            background: '#101012',
+            border: '1px solid rgba(255,255,255,0.05)',
+            opacity: 0.5,
+          }}>
+            <div className="flex items-center justify-center" style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.25)',
+            }}>
+              <Lock size={15} />
+            </div>
+            <div>
+              <div style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontWeight: 500, fontSize: 13,
+                color: 'rgba(255,255,255,0.4)', letterSpacing: '-0.01em',
+              }}>
+                Series 02
+              </div>
+              <div style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 9, letterSpacing: '0.14em',
+                textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)',
+                marginTop: 2,
+              }}>
+                {series1Complete ? 'Series 01 complete — coming in a future update' : 'Complete Series 01 to unlock'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card History */}
+        {history.length > 0 && (
+          <div className="mt-7 mb-2">
+            <div className="flex items-end justify-between mb-3">
+              <h2 style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontWeight: 400, fontSize: 18,
+                letterSpacing: '-0.02em', color: '#FFFFFF',
+              }}>
+                Card History
+              </h2>
+              <span style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 9, letterSpacing: '0.18em',
+                textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)',
+              }}>
+                {history.length} SNAPSHOT{history.length !== 1 ? 'S' : ''}
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {history.map((snap, i) => {
+                const snapTier = TIERS[snap.tier]
+                const prev = history[i + 1]
+                const delta = prev ? snap.ovr - prev.ovr : null
+                const dateStr = new Date(snap.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                return (
+                  <div key={snap.date + i} className="flex items-center gap-3 px-4 py-3 rounded-[12px]" style={{
+                    background: '#101012',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}>
+                    {/* Tier colour dot */}
+                    <div style={{
+                      width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                      background: snapTier.label,
+                      boxShadow: `0 0 6px ${snapTier.glow}`,
+                    }} />
+                    {/* Tier + OVR */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontWeight: 400, fontSize: 14,
+                        color: '#FFFFFF', letterSpacing: '-0.01em',
+                      }}>
+                        {snap.tier}
+                      </span>
+                      <span style={{
+                        fontFamily: "'DM Mono', monospace",
+                        fontSize: 11, color: 'rgba(255,255,255,0.45)',
+                        marginLeft: 6,
+                      }}>
+                        · {snap.ovr} OVR
+                      </span>
+                    </div>
+                    {/* Delta vs previous */}
+                    {delta !== null && delta !== 0 && (
+                      <span style={{
+                        fontFamily: "'DM Mono', monospace",
+                        fontSize: 9,
+                        color: delta > 0 ? 'rgba(200,242,90,0.8)' : 'rgba(251,146,60,0.7)',
+                      }}>
+                        {delta > 0 ? `+${delta}` : `${delta}`}
+                      </span>
+                    )}
+                    {/* Date */}
+                    <span style={{
+                      fontFamily: "'DM Mono', monospace",
+                      fontSize: 9, letterSpacing: '0.12em',
+                      color: 'rgba(255,255,255,0.3)',
+                      flexShrink: 0,
+                    }}>
+                      {dateStr}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
-        <div className="flex flex-col gap-2.5">
-          {evolutions.map(e => <EvoRow key={e.title} {...e} />)}
-        </div>
-
-        {/* Series 02 stub */}
-        <div className="mt-3 p-4 rounded-[14px] flex items-center gap-3" style={{
-          background: '#101012',
-          border: '1px solid rgba(255,255,255,0.05)',
-          opacity: 0.5,
-        }}>
-          <div className="flex items-center justify-center" style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.06)',
-            color: 'rgba(255,255,255,0.25)',
-          }}>
-            <Lock size={15} />
-          </div>
-          <div>
-            <div style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontWeight: 500, fontSize: 13,
-              color: 'rgba(255,255,255,0.4)', letterSpacing: '-0.01em',
-            }}>
-              Series 02
-            </div>
-            <div style={{
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 9, letterSpacing: '0.14em',
-              textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)',
-              marginTop: 2,
-            }}>
-              Complete Series 01 to unlock
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
-    </MobileShell>
+        <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
+      </MobileShell>
+    </>
   )
 }
 
-function StatRow({ label, value }: { label: string; value: number }) {
+function StatRow({
+  label, value, delta, barsReady,
+}: {
+  label: string
+  value: number
+  delta?: number
+  barsReady: boolean
+}) {
   const pct = Math.max(0, Math.min(100, value))
   return (
     <div className="flex items-center gap-3">
@@ -589,8 +838,9 @@ function StatRow({ label, value }: { label: string; value: number }) {
       </div>
       <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
         <div className="h-full rounded-full" style={{
-          width: `${pct}%`,
+          width: barsReady ? `${pct}%` : '0%',
           background: 'linear-gradient(90deg, rgba(200,242,90,0.7), #C8F25A)',
+          transition: 'width 600ms cubic-bezier(0.16,1,0.3,1)',
         }} />
       </div>
       <div style={{
@@ -601,11 +851,22 @@ function StatRow({ label, value }: { label: string; value: number }) {
       }}>
         {value}
       </div>
+      {/* Delta badge — only rendered when non-zero */}
+      {delta !== undefined && delta !== 0 && (
+        <div style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 7, letterSpacing: '0.1em',
+          color: delta > 0 ? 'rgba(200,242,90,0.8)' : 'rgba(251,146,60,0.7)',
+          minWidth: 20,
+        }}>
+          {delta > 0 ? `+${delta}` : `${delta}`}
+        </div>
+      )}
     </div>
   )
 }
 
-function EvoRow({ icon: Icon, title, desc, progress, target, status, reward, state }: {
+function EvoRow({ icon: Icon, title, desc, progress, target, status, reward, state, questsReady }: {
   icon: React.ElementType
   title: string
   desc: string
@@ -614,6 +875,7 @@ function EvoRow({ icon: Icon, title, desc, progress, target, status, reward, sta
   status: string
   reward: string
   state: EvoState
+  questsReady: boolean
 }) {
   const pct = Math.round((progress / target) * 100)
   const done = state === 'done'
@@ -666,10 +928,11 @@ function EvoRow({ icon: Icon, title, desc, progress, target, status, reward, sta
           <div className="mt-3 flex items-center gap-3">
             <div className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
               <div className="h-full rounded-full" style={{
-                width: `${pct}%`,
+                width: questsReady ? `${pct}%` : '0%',
                 background: done
                   ? 'linear-gradient(90deg, rgba(200,242,90,0.6), #C8F25A)'
                   : 'linear-gradient(90deg, rgba(200,242,90,0.4), rgba(200,242,90,0.85))',
+                transition: 'width 600ms cubic-bezier(0.16,1,0.3,1)',
               }} />
             </div>
             <span style={{

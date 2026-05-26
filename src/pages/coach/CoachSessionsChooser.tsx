@@ -78,7 +78,7 @@ export default function CoachSessionsChooser() {
             Full<br/>session.
           </span>
           <span className="text-xs text-white/22 leading-relaxed block">
-            Match or training with attendance, focus and notes for the squad.
+            Match or training with per-player minutes, goals, assists, cards and match notes.
           </span>
         </button>
       </div>

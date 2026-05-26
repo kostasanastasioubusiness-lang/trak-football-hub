@@ -21,7 +21,7 @@ export default function CoachPlayerProfilePage() {
 
   useEffect(() => {
     if (!id || !user) return
-    supabase.from('squad_players').select('*').eq('id', id).single().then(({ data }) => setPlayer(data))
+    supabase.from('squad_players').select('*').eq('id', id).eq('coach_user_id', user.id).maybeSingle().then(({ data }) => setPlayer(data))
     supabase.from('coach_assessments').select('*').eq('squad_player_id', id).eq('coach_user_id', user.id)
       .order('created_at', { ascending: false })
       .then(async ({ data }) => {
@@ -50,13 +50,21 @@ export default function CoachPlayerProfilePage() {
   const initials = player.player_name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
 
   return (
-    <MobileShell>
-      <div className="pt-6 pb-28 space-y-4">
-        {/* Back */}
-        <button onClick={() => navigate(-1)}
+    <div className="flex flex-col mx-auto max-w-[430px] bg-[#0A0A0B]" style={{ height: '100dvh' }}>
+      {/* Header — always visible, never scrolls */}
+      <div className="flex items-center gap-3 px-5 py-3 shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <button onClick={() => navigate('/coach/squad')}
           className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]">
           <ChevronLeft size={16} className="text-white/70" />
         </button>
+        <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90 -ml-[34px] pointer-events-none">
+          {player.player_name.split(' ')[0]}
+        </h1>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-28 space-y-4">
 
         {/* Player identity */}
         <div className="flex items-center gap-4 py-2">
@@ -100,13 +108,14 @@ export default function CoachPlayerProfilePage() {
                 <BandPill band={scoreToBand(avgScore(latest))} />
               </div>
             </div>
-            <div className="space-y-3">
-              <CategoryBar label="Work Rate" score={latest.work_rate} />
-              <CategoryBar label="Tactical" score={latest.tactical} />
-              <CategoryBar label="Attitude" score={latest.attitude} />
-              <CategoryBar label="Technical" score={latest.technical} />
-              <CategoryBar label="Physical" score={latest.physical} />
+            {/* Scores */}
+            <div className="space-y-2.5 mt-1">
+              <CategoryBar label="Work Rate"    score={latest.work_rate}    />
+              <CategoryBar label="Technical"    score={latest.technical}    />
+              <CategoryBar label="Physical"     score={latest.physical}     />
               <CategoryBar label="Coachability" score={latest.coachability} />
+              <CategoryBar label="Attitude"     score={latest.attitude}     />
+              <CategoryBar label="Tactical"     score={latest.tactical}     />
             </div>
             {notesById[latest.id] && (
               <p className="text-[11px] text-white/45 mt-3 italic"
@@ -162,6 +171,6 @@ export default function CoachPlayerProfilePage() {
           </button>
         </div>
       </div>
-    </MobileShell>
+    </div>
   )
 }
