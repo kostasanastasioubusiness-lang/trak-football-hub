@@ -26,7 +26,7 @@ export default function ParentHome() {
       const childId = links[0].player_user_id
 
       // Child profile
-      const { data: profile } = await supabase.from('profiles').select('full_name').eq('user_id', childId).single()
+      const { data: profile } = await supabase.from('profiles').select('full_name').eq('user_id', childId).maybeSingle()
       if (profile) setChildName(profile.full_name)
 
       // Child details
@@ -48,7 +48,7 @@ export default function ParentHome() {
           .order('created_at', { ascending: false }).limit(1)
         if (assessments?.length) {
           setAssessment(assessments[0])
-          const { data: coachProfile } = await supabase.from('profiles').select('full_name').eq('user_id', assessments[0].coach_user_id).single()
+          const { data: coachProfile } = await supabase.from('profiles').select('full_name').eq('user_id', assessments[0].coach_user_id).maybeSingle()
           if (coachProfile) setCoachName(coachProfile.full_name)
         }
 
@@ -66,9 +66,10 @@ export default function ParentHome() {
   const firstName = childName?.split(' ')[0] || 'your child'
 
   // Season summary (simple, observational)
-  const wins = matches.filter(m => m.team_score > m.opponent_score).length
-  const draws = matches.filter(m => m.team_score === m.opponent_score).length
-  const losses = matches.filter(m => m.team_score < m.opponent_score).length
+  const scoredMatches = matches.filter(m => m.team_score != null && m.opponent_score != null)
+  const wins = scoredMatches.filter(m => m.team_score > m.opponent_score).length
+  const draws = scoredMatches.filter(m => m.team_score === m.opponent_score).length
+  const losses = scoredMatches.filter(m => m.team_score < m.opponent_score).length
 
   const seasonAvg = matches.length
     ? matches.reduce((s, m) => s + (m.computed_rating || 6.5), 0) / matches.length

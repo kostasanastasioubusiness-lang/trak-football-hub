@@ -43,7 +43,7 @@ export default function ParentAlerts() {
             id: `match-${m.id}`,
             type: 'new_match',
             title: 'Match logged',
-            description: `vs ${m.opponent || m.competition || 'Unknown'} \u00B7 ${m.team_score}\u2013${m.opponent_score}`,
+            description: `vs ${m.opponent || m.competition || 'Unknown'}${m.team_score != null && m.opponent_score != null ? ` \u00B7 ${m.team_score}\u2013${m.opponent_score}` : ''}`,
             date: m.created_at,
             isNew: matchDate > cutoff,
           })
@@ -61,15 +61,23 @@ export default function ParentAlerts() {
           .limit(10)
 
         if (assessments) {
+          // Batch-fetch all coach profiles in one query
+          const coachIds = [...new Set(assessments.map((a: any) => a.coach_user_id).filter(Boolean))]
+          const { data: coachProfiles } = await supabase
+            .from('profiles').select('user_id, full_name').in('user_id', coachIds)
+          const coachMap: Record<string, string> = Object.fromEntries(
+            (coachProfiles ?? []).map((p: any) => [p.user_id, p.full_name])
+          )
+
           for (const a of assessments) {
             const aDate = new Date(a.created_at)
             const avgScore = (a.work_rate + a.tactical + a.attitude + a.technical + a.physical + a.coachability) / 6
-            const { data: coachProfile } = await supabase.from('profiles').select('full_name').eq('user_id', a.coach_user_id).single()
+            const coachName = coachMap[a.coach_user_id] || 'Coach'
             generated.push({
               id: `assess-${a.id}`,
               type: 'coach_assessment',
               title: 'New coach assessment',
-              description: `by ${coachProfile?.full_name || 'Coach'} \u00B7 ${scoreToBand(avgScore).charAt(0).toUpperCase() + scoreToBand(avgScore).slice(1)}`,
+              description: `by ${coachName} \u00B7 ${scoreToBand(avgScore).charAt(0).toUpperCase() + scoreToBand(avgScore).slice(1)}`,
               date: a.created_at,
               isNew: aDate > cutoff,
             })

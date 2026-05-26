@@ -26,13 +26,19 @@ export default function PlayerProfilePage() {
       if (!data) return
       setMatchHistory(data.map((m) => ({ created_at: m.created_at, computed_rating: m.computed_rating })))
     })
-    // Get latest coach assessment
-    supabase.from('coach_assessments').select('*')
-      .eq('squad_player_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => { if (data) setAssessment(data) })
+    // Get latest coach assessment — must go via squad_players since
+    // coach_assessments.squad_player_id is a row ID, not a user ID
+    supabase.from('squad_players').select('id').eq('linked_player_id', user.id)
+      .then(async ({ data: squadRows }) => {
+        if (!squadRows?.length) return
+        const ids = squadRows.map((r: any) => r.id)
+        const { data } = await supabase.from('coach_assessments').select('*')
+          .in('squad_player_id', ids)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (data) setAssessment(data)
+      })
   }, [user])
 
   // Track chart view once we have enough data

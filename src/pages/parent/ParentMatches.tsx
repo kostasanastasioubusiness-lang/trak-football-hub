@@ -21,7 +21,7 @@ export default function ParentMatches() {
       const childId = links[0].player_user_id
 
       // Fetch child name (first name only)
-      const { data: profile } = await supabase.from('profiles').select('full_name').eq('user_id', childId).single()
+      const { data: profile } = await supabase.from('profiles').select('full_name').eq('user_id', childId).maybeSingle()
       if (profile) setChildName(profile.full_name?.split(' ')[0] || 'Child')
 
       const { data } = await supabase.from('matches')
@@ -72,7 +72,9 @@ export default function ParentMatches() {
               const band = scoreToBand(m.computed_rating || 6.5)
               const bandConfig = BANDS.find(b => b.word.toLowerCase() === band)!
               const formattedDate = new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-              const resultLabel = m.team_score > m.opponent_score ? 'W'
+              const hasScore = m.team_score != null && m.opponent_score != null
+              const resultLabel = !hasScore ? null
+                : m.team_score > m.opponent_score ? 'W'
                 : m.team_score < m.opponent_score ? 'L' : 'D'
               const opponentName = m.opponent || m.competition || 'Match'
 
@@ -109,7 +111,7 @@ export default function ParentMatches() {
                       className="text-[9px] text-white/22 mt-1 tracking-[0.04em] text-right"
                       style={{ fontFamily: "'DM Mono', monospace" }}
                     >
-                      {resultLabel} {m.team_score}&ndash;{m.opponent_score}
+                      {resultLabel}{hasScore ? ` ${m.team_score}–${m.opponent_score}` : ''}
                     </p>
                   </div>
                 </div>
