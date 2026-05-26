@@ -78,7 +78,13 @@ const readPendingProfileFromLocalStorage = (): PendingProfileData | null => {
   if (!raw) return null;
 
   try {
-    return parsePendingProfile(JSON.parse(raw));
+    const parsed = JSON.parse(raw);
+    // Expire onboarding data after 24 hours to avoid stale state
+    if (parsed._savedAt && Date.now() - parsed._savedAt > 86_400_000) {
+      localStorage.removeItem(PENDING_PROFILE_KEY);
+      return null;
+    }
+    return parsePendingProfile(parsed);
   } catch {
     return null;
   }
