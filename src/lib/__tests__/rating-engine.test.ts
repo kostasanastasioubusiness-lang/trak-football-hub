@@ -48,6 +48,54 @@ describe('scoreToBand', () => {
     const result = scoreToBand(7.5)
     expect(typeof result).toBe('string')
   })
+
+  // Boundary condition tests
+  it('scoreToBand(10) → exceptional (top of scale)', () => {
+    expect(scoreToBand(10)).toBe('exceptional')
+  })
+
+  it('scoreToBand(0) → difficult (bottom of scale)', () => {
+    expect(scoreToBand(0)).toBe('difficult')
+  })
+
+  it('scoreToBand(5) → mixed (middle of scale)', () => {
+    expect(scoreToBand(5)).toBe('mixed')
+  })
+
+  it('scoreToBand(6.5) → steady (default fallback value used throughout the app)', () => {
+    expect(scoreToBand(6.5)).toBe('steady')
+  })
+
+  // Band boundary ±0.01 tests
+  it('boundary at 9.0: 8.99 → standout, 9.0 → exceptional', () => {
+    expect(scoreToBand(8.99)).toBe('standout')
+    expect(scoreToBand(9.0)).toBe('exceptional')
+  })
+
+  it('boundary at 8.0: 7.99 → good, 8.0 → standout', () => {
+    expect(scoreToBand(7.99)).toBe('good')
+    expect(scoreToBand(8.0)).toBe('standout')
+  })
+
+  it('boundary at 7.0: 6.99 → steady, 7.0 → good', () => {
+    expect(scoreToBand(6.99)).toBe('steady')
+    expect(scoreToBand(7.0)).toBe('good')
+  })
+
+  it('boundary at 6.0: 5.99 → mixed, 6.0 → steady', () => {
+    expect(scoreToBand(5.99)).toBe('mixed')
+    expect(scoreToBand(6.0)).toBe('steady')
+  })
+
+  it('boundary at 4.0: 3.99 → developing, 4.0 → mixed', () => {
+    expect(scoreToBand(3.99)).toBe('developing')
+    expect(scoreToBand(4.0)).toBe('mixed')
+  })
+
+  it('boundary at 2.0: 1.99 → difficult, 2.0 → developing', () => {
+    expect(scoreToBand(1.99)).toBe('difficult')
+    expect(scoreToBand(2.0)).toBe('developing')
+  })
 })
 
 describe('computeMatchScore', () => {
@@ -151,5 +199,39 @@ describe('computeMatchScore', () => {
       },
     })
     expect(scoreToBand(score)).toBe('mixed')
+  })
+
+  // Boundary condition tests
+  it('all-minimum inputs returns a finite number', () => {
+    const score = computeMatchScore({
+      ...baseMatch,
+      score_us: 0, score_them: 5,
+      minutes_played: 1,
+      card: 'red',
+      position_inputs: {},
+    })
+    expect(typeof score).toBe('number')
+    expect(isNaN(score)).toBe(false)
+    expect(score).toBeDefined()
+  })
+
+  it('all-maximum inputs returns a number between 0 and 10', () => {
+    const score = computeMatchScore({
+      ...baseMatch,
+      score_us: 5, score_them: 0,
+      minutes_played: 90,
+      card: 'none',
+      self_rating: 'excellent',
+      body_condition: 'fresh',
+      position_inputs: {},
+    })
+    expect(score).toBeGreaterThanOrEqual(0)
+    expect(score).toBeLessThanOrEqual(10)
+  })
+
+  it('empty position_inputs does not throw', () => {
+    expect(() =>
+      computeMatchScore({ ...baseMatch, position_inputs: {} })
+    ).not.toThrow()
   })
 })

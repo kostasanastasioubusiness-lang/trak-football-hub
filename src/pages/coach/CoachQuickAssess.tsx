@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { toast } from 'sonner'
 import { MobileShell } from '@/components/trak'
 import { SliderInput } from '@/components/trak/SliderInput'
 import { scoreToBand } from '@/lib/rating-engine'
@@ -139,7 +140,7 @@ export default function CoachQuickAssess() {
     setSaving(true)
 
     const cardStats = deriveCardStats({ workRate, tactical, attitude, technical, physical, coachability })
-    const { data: inserted } = await supabase.from('coach_assessments').insert([{
+    const { data: inserted, error: insertError } = await supabase.from('coach_assessments').insert([{
       coach_user_id: user.id,
       squad_player_id: currentPlayer.id,
       session_id: null,
@@ -154,12 +155,22 @@ export default function CoachQuickAssess() {
       // derived card stats
       ...cardStats,
     } as any]).select('id').maybeSingle()
+    if (insertError) {
+      console.error('Save failed:', insertError)
+      toast.error('Could not save assessment. Please try again.')
+      setSaving(false)
+      return
+    }
     if (inserted?.id && note.trim()) {
-      await supabase.from('coach_assessment_notes').insert({
+      const { error: noteError } = await supabase.from('coach_assessment_notes').insert({
         assessment_id: inserted.id,
         coach_user_id: user.id,
         note: note.trim(),
       })
+      if (noteError) {
+        console.error('Save failed:', noteError)
+        toast.error('Assessment saved but note could not be saved.')
+      }
     }
 
     setAssessedIds(prev => new Set(prev).add(currentPlayer.id))

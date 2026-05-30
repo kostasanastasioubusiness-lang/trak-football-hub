@@ -125,8 +125,8 @@ const PlayerOnboarding = () => {
     if (password !== confirmPassword) {
       toast.error('Passwords do not match'); return;
     }
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters'); return;
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters'); return;
     }
     setStep(2);
   };
@@ -210,7 +210,7 @@ const PlayerOnboarding = () => {
             {EUROPEAN_COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
           </StyledSelect>
           <Input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="bg-card" />
-          <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="bg-card" />
+          <Input type="password" placeholder="Password (at least 8 characters)" value={password} onChange={e => setPassword(e.target.value)} className="bg-card" />
           <Input type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="bg-card" />
           <Button onClick={handleStep1} className="w-full mt-2">Next</Button>
         </>
@@ -289,8 +289,8 @@ const CoachOnboarding = () => {
     if (password !== confirmPassword) {
       toast.error('Passwords do not match'); return;
     }
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters'); return;
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters'); return;
     }
     setStep(2);
   };
@@ -348,7 +348,7 @@ const CoachOnboarding = () => {
             {EUROPEAN_COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
           </StyledSelect>
           <Input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="bg-card" />
-          <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="bg-card" />
+          <Input type="password" placeholder="Password (at least 8 characters)" value={password} onChange={e => setPassword(e.target.value)} className="bg-card" />
           <Input type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="bg-card" />
           <Button onClick={handleStep1} className="w-full mt-2">Next</Button>
         </>
@@ -399,8 +399,8 @@ const ClubOnboarding = () => {
     if (password !== confirmPassword) {
       toast.error('Passwords do not match'); return;
     }
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters'); return;
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters'); return;
     }
     setLoading(true);
     try {
@@ -431,7 +431,7 @@ const ClubOnboarding = () => {
       <Input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} className="bg-card" />
       <Input placeholder="Academy / club name" value={academy} onChange={e => setAcademy(e.target.value)} className="bg-card" />
       <Input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="bg-card" />
-      <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="bg-card" />
+      <Input type="password" placeholder="Password (at least 8 characters)" value={password} onChange={e => setPassword(e.target.value)} className="bg-card" />
       <Input type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="bg-card" />
       <Button onClick={handleSubmit} disabled={loading} className="w-full mt-2">
         {loading ? 'Creating account…' : 'Create Administrator Account'}

@@ -6,31 +6,47 @@ import { MobileShell, NavBar, MatchCard } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
 
 const FILTERS = ['All', 'League', 'Cup', 'Friendly']
+const PAGE_SIZE = 20
 
 export default function PlayerMatches() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [matches, setMatches] = useState<any[]>([])
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  const fetchPage = async (pageIndex: number, append: boolean) => {
+    if (!user) return
+    if (pageIndex > 0) setLoadingMore(true)
+    const from = pageIndex * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+    const { data } = await supabase.from('matches').select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .range(from, to)
+    if (pageIndex > 0) setLoadingMore(false)
+    const rows = data || []
+    setHasMore(rows.length === PAGE_SIZE)
+    if (append) {
+      setMatches(prev => [...prev, ...rows])
+    } else {
+      setMatches(rows)
+    }
+  }
 
   useEffect(() => {
     if (!user) return
-    supabase.from('matches').select('*').eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        const groups = new Map<string, any>()
-        for (const m of (data || [])) {
-          const key = `${(m.opponent || '').toLowerCase()}|${m.team_score}|${m.opponent_score}`
-          const existing = groups.get(key)
-          if (!existing || (m.computed_rating ?? 0) > (existing.computed_rating ?? 0)) {
-            groups.set(key, m)
-          }
-        }
-        const deduped = Array.from(groups.values())
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        setMatches(deduped)
-      })
+    setPage(0)
+    fetchPage(0, false)
   }, [user])
+
+  const loadMore = () => {
+    const next = page + 1
+    setPage(next)
+    fetchPage(next, true)
+  }
 
   const [filter, setFilter] = useState('All')
   const filtered = filter === 'All' ? matches : matches.filter(m => m.competition === filter)
@@ -88,6 +104,18 @@ export default function PlayerMatches() {
               />
             ))}
           </div>
+        )}
+
+        {/* Load more */}
+        {hasMore && filter === 'All' && (
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="w-full mt-4 py-3 rounded-[12px] text-[11px] tracking-[0.08em] uppercase text-white/45 border border-white/[0.07] bg-transparent active:bg-white/[0.04] transition-colors"
+            style={{ fontFamily: "'DM Mono', monospace" }}
+          >
+            {loadingMore ? 'Loading…' : 'Load more'}
+          </button>
         )}
       </div>
       <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />

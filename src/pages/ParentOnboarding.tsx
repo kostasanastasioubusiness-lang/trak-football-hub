@@ -54,7 +54,7 @@ const ParentOnboarding = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) { toast.error('Passwords do not match'); return; }
-    if (password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    if (password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
 
     setSubmitting(true);
     try {
@@ -86,7 +86,7 @@ const ParentOnboarding = () => {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} required className="bg-card" />
         <Input type="email" value={email} readOnly className="bg-muted cursor-not-allowed" />
-        <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="bg-card" />
+        <Input type="password" placeholder="Password (at least 8 characters)" value={password} onChange={e => setPassword(e.target.value)} required className="bg-card" />
         <Input type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="bg-card" />
         <Button type="submit" disabled={submitting} className="w-full mt-2">
           {submitting ? 'Creating...' : 'Create Account'}
