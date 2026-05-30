@@ -2,7 +2,7 @@
 
 ## Item 01 — Supabase Anon Key in Git History
 
-**Status:** Mitigated — action required before external users sign in.
+**Status:** ✅ Resolved — key rotated 2026-05-30. Old key invalidated.
 
 **What happened:** The `.env` file containing the Supabase URL and anon (publishable) key was committed in `6cec37e` ("Changes") and removed from tracking in `2fe9422`. The key remains accessible via `git log`.
 
