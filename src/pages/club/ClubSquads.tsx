@@ -60,7 +60,7 @@ export default function ClubSquads() {
       .in('squad_player_id', squadIds)
       .order('created_at', { ascending: false })
 
-    const latestAssessment: Record<string, typeof assessments[0]> = {}
+    const latestAssessment: Record<string, NonNullable<typeof assessments>[0]> = {}
     for (const a of assessments ?? []) {
       if (!latestAssessment[a.squad_player_id]) latestAssessment[a.squad_player_id] = a
     }

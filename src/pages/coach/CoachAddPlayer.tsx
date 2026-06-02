@@ -23,7 +23,7 @@ export default function CoachAddPlayer() {
       position: position || null,
       shirt_number: shirtNumber ? Number(shirtNumber) : null,
       age: ageGroup || null,
-    })
+    } as any)
     navigate('/coach/squad')
   }
 

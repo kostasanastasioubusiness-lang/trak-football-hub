@@ -90,12 +90,12 @@ export default function PlayerPassport() {
           .in('squad_player_id', squadIds)
           .order('created_at', { ascending: false })
       : { data: null }
-    setAwards(awardsRes.data ?? [])
+    setAwards((awardsRes.data ?? []) as Award[])
 
     // Group by academic season
     const seasonMap: Record<string, typeof rawMatches> = {}
     for (const m of rawMatches ?? []) {
-      const lbl = seasonLabel(new Date(m.created_at))
+      const lbl = seasonLabel(new Date(m.created_at ?? ''))
       if (!seasonMap[lbl]) seasonMap[lbl] = []
       seasonMap[lbl]!.push(m)
     }

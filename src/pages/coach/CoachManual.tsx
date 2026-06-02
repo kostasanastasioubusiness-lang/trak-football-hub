@@ -9,7 +9,7 @@ import {
 
 // ─── Atoms (defined first so they're available everywhere) ───────────────────
 
-function Rule({ children }: { children: JSX.Element | JSX.Element[] | string }) {
+function Rule({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex gap-2.5 rounded-[10px] p-3" style={{ background: 'rgba(200,242,90,0.06)', border: '1px solid rgba(200,242,90,0.14)' }}>
       <span className="text-[#C8F25A] flex-shrink-0 mt-0.5 text-[11px]">→</span>

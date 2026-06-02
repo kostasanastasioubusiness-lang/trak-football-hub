@@ -65,7 +65,7 @@ export default function CoachRecognition() {
       .order('created_at', { ascending: false })
 
     // Build map: squadPlayerId → latest assessment
-    const latestAssessment: Record<string, typeof assessments[0]> = {}
+    const latestAssessment: Record<string, NonNullable<typeof assessments>[0]> = {}
     for (const a of assessments ?? []) {
       if (!latestAssessment[a.squad_player_id]) latestAssessment[a.squad_player_id] = a
     }
@@ -96,7 +96,7 @@ export default function CoachRecognition() {
     }
     for (const aw of recentAwards ?? []) {
       const t = aw.award_type as AwardType
-      if (!lastAward[t]) lastAward[t] = new Date(aw.created_at)
+      if (!lastAward[t] && aw.created_at) lastAward[t] = new Date(aw.created_at)
     }
     setCooldowns(lastAward)
   }

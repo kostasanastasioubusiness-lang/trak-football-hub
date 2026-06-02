@@ -634,6 +634,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_my_account: { Args: never; Returns: undefined }
       get_coach_id_by_invite_code: { Args: { p_code: string }; Returns: string }
       get_parent_invite_by_token: {
         Args: { p_token: string }

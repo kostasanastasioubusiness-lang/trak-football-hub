@@ -70,13 +70,13 @@ export default function ClubHome() {
       .in('squad_player_id', (squadPlayers ?? []).map(s => s.id))
 
     // Build map: squad_player_id → latest assessment
-    const latestAssessment: Record<string, typeof assessments[0]> = {}
+    const latestAssessment: Record<string, NonNullable<typeof assessments>[0]> = {}
     for (const a of assessments ?? []) {
       if (!latestAssessment[a.squad_player_id]) latestAssessment[a.squad_player_id] = a
     }
 
     // Weekly count
-    const weekCount = (assessments ?? []).filter(a => a.created_at >= weekAgo).length
+    const weekCount = (assessments ?? []).filter(a => (a.created_at ?? '') >= weekAgo).length
     setAssessmentsThisWeek(weekCount)
 
     // Unique linked players across all coaches
@@ -88,7 +88,7 @@ export default function ClubHome() {
       const mySquad = (squadPlayers ?? []).filter(s => s.coach_user_id === cd.user_id)
       const mySquadIds = new Set(mySquad.map(s => s.id))
 
-      const myWeekAssessments = (assessments ?? []).filter(a => mySquadIds.has(a.squad_player_id) && a.created_at >= weekAgo).length
+      const myWeekAssessments = (assessments ?? []).filter(a => mySquadIds.has(a.squad_player_id) && (a.created_at ?? '') >= weekAgo).length
 
       // Band distribution from latest assessment per player
       const bandDist: Record<string, number> = {}
