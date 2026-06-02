@@ -43,15 +43,19 @@ test.describe('Player onboarding', () => {
 
   test('password shorter than 8 characters shows an error', async ({ page }) => {
     await page.goto(`${BASE}/onboarding/player`)
+    // Fill all required step-1 fields so we reach the password length check
     await page.getByPlaceholder(/full name/i).fill('Test Player')
+    const selects = page.locator('select')
+    await selects.nth(0).selectOption({ index: 1 })  // DOB day
+    await selects.nth(1).selectOption({ index: 1 })  // DOB month
+    await selects.nth(2).selectOption({ index: 1 })  // DOB year
+    await selects.nth(3).selectOption({ index: 1 })  // nationality
     await page.getByPlaceholder(/email/i).fill('player@test.com')
     const pwInputs = page.locator('input[type="password"]')
     await pwInputs.nth(0).fill('short')
     await pwInputs.nth(1).fill('short')
-    // Submit step 1
     const continueBtn = page.getByRole('button', { name: /continue|next/i }).first()
     await continueBtn.click()
-    // Should see error toast or inline error
     await expect(page.getByText(/8 characters/i)).toBeVisible({ timeout: 3000 })
   })
 })
