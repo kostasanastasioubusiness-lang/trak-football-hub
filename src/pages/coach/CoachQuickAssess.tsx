@@ -88,7 +88,7 @@ export default function CoachQuickAssess() {
       // Build a map: squad_player_id -> latest assessment date
       const lastAssessedMap = new Map<string, string>()
       latestAssessments?.forEach(a => {
-        if (!lastAssessedMap.has(a.squad_player_id)) {
+        if (!lastAssessedMap.has(a.squad_player_id) && a.created_at) {
           lastAssessedMap.set(a.squad_player_id, a.created_at)
         }
       })

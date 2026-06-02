@@ -203,7 +203,7 @@ export default function Settings() {
     if (!confirmed) return
 
     try {
-      const { error } = await supabase.rpc('delete_my_account')
+      const { error } = await (supabase.rpc as any)('delete_my_account')
       if (error) {
         console.error('delete_my_account error:', error)
         toast.error('Could not delete account. Please contact support.')

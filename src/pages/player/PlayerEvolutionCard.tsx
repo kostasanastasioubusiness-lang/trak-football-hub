@@ -374,7 +374,7 @@ export default function PlayerEvolutionCard() {
 
       const awardCount = awardsRes.data?.length ?? 0
       const group = details?.position ? posGroupFromPosition(details.position) : 'mid'
-      setEvolutions(computePositionQuests(group, matches ?? [], awardCount))
+      setEvolutions(computePositionQuests(group, (matches ?? []) as any, awardCount))
       setTimeout(() => setQuestsReady(true), 150)
 
       const assessments = assessmentsRes.data

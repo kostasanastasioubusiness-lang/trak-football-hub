@@ -24,7 +24,7 @@ export default function PlayerProfilePage() {
     supabase.from('player_details').select('*').eq('user_id', user.id).maybeSingle().then(({ data }) => setDetails(data))
     supabase.from('matches').select('computed_rating, created_at').eq('user_id', user.id).order('created_at', { ascending: true }).then(({ data }) => {
       if (!data) return
-      setMatchHistory(data.map((m) => ({ created_at: m.created_at, computed_rating: m.computed_rating })))
+      setMatchHistory(data.map((m) => ({ created_at: m.created_at ?? '', computed_rating: m.computed_rating })))
     })
     // Get latest coach assessment — must go via squad_players since
     // coach_assessments.squad_player_id is a row ID, not a user ID

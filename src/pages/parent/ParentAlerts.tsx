@@ -38,13 +38,13 @@ export default function ParentAlerts() {
 
       if (matches) {
         matches.forEach(m => {
-          const matchDate = new Date(m.created_at)
+          const matchDate = new Date(m.created_at ?? '')
           generated.push({
             id: `match-${m.id}`,
             type: 'new_match',
             title: 'Match logged',
             description: `vs ${m.opponent || m.competition || 'Unknown'}${m.team_score != null && m.opponent_score != null ? ` \u00B7 ${m.team_score}\u2013${m.opponent_score}` : ''}`,
-            date: m.created_at,
+            date: m.created_at ?? '',
             isNew: matchDate > cutoff,
           })
         })
@@ -70,7 +70,7 @@ export default function ParentAlerts() {
           )
 
           for (const a of assessments) {
-            const aDate = new Date(a.created_at)
+            const aDate = new Date(a.created_at ?? '')
             const avgScore = (a.work_rate + a.tactical + a.attitude + a.technical + a.physical + a.coachability) / 6
             const coachName = coachMap[a.coach_user_id] || 'Coach'
             generated.push({
@@ -78,7 +78,7 @@ export default function ParentAlerts() {
               type: 'coach_assessment',
               title: 'New coach assessment',
               description: `by ${coachName} \u00B7 ${scoreToBand(avgScore).charAt(0).toUpperCase() + scoreToBand(avgScore).slice(1)}`,
-              date: a.created_at,
+              date: a.created_at ?? '',
               isNew: aDate > cutoff,
             })
           }

@@ -256,7 +256,7 @@ export default function CoachAddSession() {
           p_competition:     competition,
           p_venue:           venue,
           p_position:        p.position  || 'Midfielder',
-          p_age_group:       p.age       || 'U19+',
+          p_age_group:       p.age != null ? String(p.age) : 'U19+',
           p_minutes_played:  d.minutes,
           p_goals:           d.goals === 2 ? 2 : d.goals,
           p_assists:         d.assists === 2 ? 2 : d.assists,

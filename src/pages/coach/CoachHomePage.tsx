@@ -46,7 +46,7 @@ export default function CoachHomePage() {
           .then(({ data: allData }) => {
             const allAssess = allData || []
             setAllAssessments(allAssess)
-            const analytics = calculateSquadAnalytics(players, allAssess)
+            const analytics = calculateSquadAnalytics(players, allAssess as any)
             setSquadAnalytics(analytics)
             trackEvent('squad_analytics_viewed', {})
           })

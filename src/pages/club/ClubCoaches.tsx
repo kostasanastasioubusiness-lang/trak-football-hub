@@ -84,7 +84,7 @@ export default function ClubCoaches() {
       const coachId = spCoachMap[a.squad_player_id]
       if (!coachId) continue
       monthCountMap[coachId] = (monthCountMap[coachId] || 0) + 1
-      if (!lastDateMap[coachId]) lastDateMap[coachId] = a.created_at
+      if (!lastDateMap[coachId] && a.created_at) lastDateMap[coachId] = a.created_at
     }
 
     const rows: CoachRow[] = coachDetails.map(cd => ({
