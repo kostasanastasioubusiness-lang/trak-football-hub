@@ -78,7 +78,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <DevSwitcher />
+          {import.meta.env.DEV && <DevSwitcher />}
           <Suspense fallback={<RouteFallback />}>
           <Routes>
             {/* Public routes */}
