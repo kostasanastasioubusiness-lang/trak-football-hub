@@ -20,15 +20,15 @@ DECLARE
 BEGIN
 
   -- ── Look up user IDs by email ──────────────────────────────
-  SELECT id INTO v_coach_id  FROM auth.users WHERE email = 'demo.coach@trakfootball.com';
-  SELECT id INTO v_player_id FROM auth.users WHERE email = 'demo.player@trakfootball.com';
-  SELECT id INTO v_parent_id FROM auth.users WHERE email = 'demo.parent@trakfootball.com';
-  SELECT id INTO v_club_id   FROM auth.users WHERE email = 'demo.club@trakfootball.com';
+  SELECT id INTO v_coach_id  FROM auth.users WHERE email = 'coach@trak.dev';
+  SELECT id INTO v_player_id FROM auth.users WHERE email = 'player@trak.dev';
+  SELECT id INTO v_parent_id FROM auth.users WHERE email = 'parent@trak.dev';
+  SELECT id INTO v_club_id   FROM auth.users WHERE email = 'club@trak.dev';
 
-  IF v_coach_id IS NULL THEN RAISE EXCEPTION 'Coach account not found — create demo.coach@trakfootball.com first'; END IF;
-  IF v_player_id IS NULL THEN RAISE EXCEPTION 'Player account not found — create demo.player@trakfootball.com first'; END IF;
-  IF v_parent_id IS NULL THEN RAISE EXCEPTION 'Parent account not found — create demo.parent@trakfootball.com first'; END IF;
-  IF v_club_id IS NULL THEN RAISE EXCEPTION 'Club account not found — create demo.club@trakfootball.com first'; END IF;
+  IF v_coach_id IS NULL THEN RAISE EXCEPTION 'Coach account not found — run dev setup first'; END IF;
+  IF v_player_id IS NULL THEN RAISE EXCEPTION 'Player account not found — run dev setup first'; END IF;
+  IF v_parent_id IS NULL THEN RAISE EXCEPTION 'Parent account not found — run dev setup first'; END IF;
+  IF v_club_id IS NULL THEN RAISE EXCEPTION 'Club account not found — run dev setup first'; END IF;
 
   -- ── Profiles ───────────────────────────────────────────────
   INSERT INTO public.profiles (user_id, role, full_name, nationality)
