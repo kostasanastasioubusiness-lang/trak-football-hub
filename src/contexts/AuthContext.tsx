@@ -267,6 +267,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // If we're on the reset password page, don't auto-redirect — let
+      // the ResetPassword component handle the PASSWORD_RECOVERY event.
+      if (window.location.pathname === '/reset-password') {
+        setLoading(false);
+        return;
+      }
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       setLoading(true);
