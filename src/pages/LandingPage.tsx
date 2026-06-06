@@ -18,9 +18,11 @@ const DEV_ACCOUNTS = [
 
 const DEV_PASSWORD = 'TrakDev123';
 
+type View = 'signin' | 'register';
+
 const LandingPage = () => {
   const navigate = useNavigate();
-  const [loginMode, setLoginMode] = useState(false);
+  const [view, setView] = useState<View>('signin');
   const { user, profile, loading } = useAuth();
 
   useEffect(() => {
@@ -51,11 +53,15 @@ const LandingPage = () => {
         <p className="text-muted-foreground text-sm mt-3 tracking-wide">Own your career.</p>
       </div>
 
-      {!loginMode ? (
+      {view === 'signin' && (
+        <SignInForm
+          onCreateAccount={() => setView('register')}
+        />
+      )}
+
+      {view === 'register' && (
         <>
-          <h2 className="section-label mb-5">
-            Choose your account
-          </h2>
+          <h2 className="section-label mb-5">Choose your account</h2>
 
           <div className="flex flex-col gap-2.5 w-full">
             <RoleCard
@@ -77,7 +83,7 @@ const LandingPage = () => {
             <RoleCard
               icon={<IconRoleParent size={28} />}
               name="Parent"
-              desc="Follow your child's development, see both ratings and progress"
+              desc="Follow your child's development, see ratings and progress"
               bg="rgba(74,222,128,0.08)"
               border="rgba(74,222,128,0.18)"
               onClick={() => handleRoleSelect('parent')}
@@ -93,17 +99,15 @@ const LandingPage = () => {
           </div>
 
           <button
-            onClick={() => setLoginMode(true)}
+            onClick={() => setView('signin')}
             className="mt-8 text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             Already have an account? <span className="text-primary font-semibold">Sign in</span>
           </button>
-
-          {IS_DEV && <DevLoginPanel />}
         </>
-      ) : (
-        <LoginForm onBack={() => setLoginMode(false)} />
       )}
+
+      {IS_DEV && <DevLoginPanel />}
     </div>
   );
 };
@@ -129,43 +133,60 @@ const RoleCard = ({ icon, name, desc, bg, border, onClick }: {
   </button>
 );
 
-const LoginForm = ({ onBack }: { onBack: () => void }) => {
+const SignInForm = ({ onCreateAccount }: { onCreateAccount: () => void }) => {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const { error } = await signIn(email, password);
     setLoading(false);
-    if (error) {
-      toast.error(error.message);
-    }
-    // On success, the LandingPage useEffect handles role-aware redirect
-    // (coach → /coach/home, parent → /parent/home, etc.)
+    if (error) toast.error(error.message);
   };
 
   return (
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
       <h2 className="text-lg mb-2 text-foreground">Sign in</h2>
-      <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-card border-border" />
-      <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-card border-border" />
-      <button type="button" onClick={async () => {
-        if (!email) { toast.error('Enter your email first'); return }
-        const { error } = await supabase.auth.resetPasswordForEmail(email)
-        if (error) toast.error(error.message)
-        else toast.success('Password reset email sent!')
-      }} className="text-xs text-primary self-end -mt-2">
+      <Input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        className="bg-card border-border"
+      />
+      <Input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+        className="bg-card border-border"
+      />
+      <button
+        type="button"
+        onClick={async () => {
+          if (!email) { toast.error('Enter your email first'); return }
+          const { error } = await supabase.auth.resetPasswordForEmail(email)
+          if (error) toast.error(error.message)
+          else toast.success('Password reset email sent!')
+        }}
+        className="text-xs text-primary self-end -mt-2"
+      >
         Forgot password?
       </button>
       <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Signing in...' : 'Sign In'}
+        {loading ? 'Signing in...' : 'Sign in'}
       </Button>
-      <button type="button" onClick={onBack} className="text-sm text-muted-foreground hover:text-primary">
-        ← Back to role selection
+      <button
+        type="button"
+        onClick={onCreateAccount}
+        className="mt-2 text-sm text-muted-foreground hover:text-primary transition-colors text-center"
+      >
+        Don't have an account? <span className="text-primary font-semibold">Create account</span>
       </button>
     </form>
   );
