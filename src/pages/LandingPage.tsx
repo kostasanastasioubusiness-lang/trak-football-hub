@@ -122,9 +122,11 @@ function SignInForm({ onCreateAccount }: { onCreateAccount: () => void }) {
 
   const handleForgot = async () => {
     if (!email) { toast.error('Enter your email first'); return }
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     if (error) toast.error(error.message);
-    else toast.success('Password reset email sent');
+    else toast.success('Check your email for a reset link');
   };
 
   return (

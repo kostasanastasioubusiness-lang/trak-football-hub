@@ -169,9 +169,11 @@ export default function Settings() {
 
   const changePassword = async () => {
     if (!user?.email) return
-    const { error } = await supabase.auth.resetPasswordForEmail(user.email)
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
     if (error) toast.error('Could not send reset email')
-    else toast.success('Password reset email sent')
+    else toast.success('Check your email for a reset link')
   }
 
   const saveCoachProfile = async () => {

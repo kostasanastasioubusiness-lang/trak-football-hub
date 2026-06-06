@@ -11,6 +11,7 @@ import { DevSwitcher } from "@/components/trak/DevSwitcher";
 
 // Landing eagerly loaded so the first paint is instant
 import LandingPage from "./pages/LandingPage";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 // Lazy-loaded routes — split bundles so navigating between sections is fast
@@ -83,6 +84,7 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/onboarding/:role" element={<OnboardingPage />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/parent-info" element={<ParentInfoPage />} />
