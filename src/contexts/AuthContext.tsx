@@ -250,16 +250,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // On the reset password page, suppress all auth redirects so the
+      // form stays visible. ResetPassword.tsx handles its own auth events.
+      if (window.location.pathname === '/reset-password') {
+        if (event === 'PASSWORD_RECOVERY') return;
+        if (event === 'SIGNED_IN') return;
+      }
+
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
         window.location.replace('/');
         return;
       }
+
       if (event === 'PASSWORD_RECOVERY') {
         window.location.replace('/reset-password');
         return;
       }
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       setLoading(true);
