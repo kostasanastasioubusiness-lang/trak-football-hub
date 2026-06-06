@@ -12,17 +12,24 @@ export default function ResetPassword() {
   const [loading, setLoading]       = useState(false)
   const [ready, setReady]           = useState(false)
 
-  // Supabase sends the user here with a session already set in the URL hash.
-  // onAuthStateChange fires with event PASSWORD_RECOVERY once the session
-  // is exchanged — at that point we know the user is authenticated and
-  // ready to set a new password.
+  // The reset link lands here with a session already in the URL hash.
+  // We just need an active session to be ready — no need to wait for a
+  // specific event. Poll briefly then show the form.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+    // Supabase processes the hash token automatically — give it a moment
+    const check = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
         setReady(true)
+        return
       }
-    })
-    return () => subscription.unsubscribe()
+      // Retry once after a short delay in case the token exchange is in progress
+      setTimeout(async () => {
+        const { data: { session: s2 } } = await supabase.auth.getSession()
+        setReady(!!s2)
+      }, 1500)
+    }
+    check()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
