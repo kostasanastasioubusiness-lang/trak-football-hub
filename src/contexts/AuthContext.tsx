@@ -256,6 +256,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         window.location.replace('/');
         return;
       }
+      if (event === 'PASSWORD_RECOVERY') {
+        window.location.replace('/reset-password');
+        return;
+      }
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       setLoading(true);
