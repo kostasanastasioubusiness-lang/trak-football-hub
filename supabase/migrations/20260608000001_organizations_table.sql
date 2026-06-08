@@ -17,6 +17,14 @@ CREATE TABLE IF NOT EXISTS public.organizations (
 
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 
+-- 2. Add organization_id to coach_details (before policies that reference it)
+ALTER TABLE public.coach_details
+  ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_coach_details_org
+  ON public.coach_details (organization_id)
+  WHERE organization_id IS NOT NULL;
+
 -- Admin can manage their own org
 CREATE POLICY "Admin manages own org"
   ON public.organizations FOR SELECT TO authenticated
@@ -41,14 +49,6 @@ CREATE POLICY "Coaches can read own org"
         AND cd.organization_id = organizations.id
     )
   );
-
--- 2. Add organization_id to coach_details
-ALTER TABLE public.coach_details
-  ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL;
-
-CREATE INDEX IF NOT EXISTS idx_coach_details_org
-  ON public.coach_details (organization_id)
-  WHERE organization_id IS NOT NULL;
 
 -- 3. Lookup RPC for coaches joining an academy by code
 CREATE OR REPLACE FUNCTION public.get_org_id_by_join_code(p_code text)
