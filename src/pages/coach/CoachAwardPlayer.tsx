@@ -30,7 +30,7 @@ function OptPill({ label, icon: Icon, active, onClick }: { label: string; icon?:
 }
 
 export default function CoachAwardPlayer() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -52,6 +52,7 @@ export default function CoachAwardPlayer() {
     setSaving(true)
     const { error } = await supabase.from('recognition_awards').insert({
       coach_user_id: user.id,
+      coach_name_snapshot: profile?.full_name || null,
       squad_player_id: playerId,
       award_type: awardType,
       awarded_for: awardedFor.trim() || null,

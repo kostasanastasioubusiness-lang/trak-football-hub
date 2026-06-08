@@ -281,6 +281,7 @@ const CoachOnboarding = () => {
   const [club, setClub] = useState('');
   const [team, setTeam] = useState('');
   const [coachRole, setCoachRole] = useState('');
+  const [academyCode, setAcademyCode] = useState('');
 
   const handleStep1 = () => {
     if (!name || !nationality || !email || !password || !confirmPassword) {
@@ -309,6 +310,7 @@ const CoachOnboarding = () => {
           current_club: club,
           team,
           coach_role: coachRole,
+          ...(academyCode ? { academy_code: academyCode } : {}),
         },
       };
 
@@ -365,6 +367,13 @@ const CoachOnboarding = () => {
             <option value="">Select role</option>
             {COACH_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
           </StyledSelect>
+          <Input
+            placeholder="Academy code (optional)"
+            value={academyCode}
+            onChange={e => setAcademyCode(e.target.value)}
+            className="bg-card"
+          />
+          <p className="text-[10px] text-white/40 -mt-2">If your academy uses Trak, enter the code they gave you.</p>
           <div className="flex gap-2 mt-2">
             <Button variant="outline" onClick={() => setStep(1)} className="flex-1">Back</Button>
             <Button onClick={handleSubmit} disabled={loading} className="flex-1">

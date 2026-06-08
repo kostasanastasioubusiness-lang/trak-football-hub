@@ -17,7 +17,7 @@ const CATEGORIES = [
 ];
 
 const CoachAssess = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [players, setPlayers] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
@@ -48,6 +48,7 @@ const CoachAssess = () => {
     try {
       const { data: inserted, error } = await supabase.from('coach_assessments').insert({
         coach_user_id: user.id,
+        coach_name_snapshot: profile?.full_name || null,
         squad_player_id: selectedPlayer,
         session_id: selectedSession || null,
         appearance: appearance || null,

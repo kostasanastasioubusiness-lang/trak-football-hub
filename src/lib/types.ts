@@ -1,4 +1,4 @@
-export type Role = 'player' | 'coach' | 'parent'
+export type Role = 'player' | 'coach' | 'parent' | 'club'
 export type Position = 'gk' | 'def' | 'mid' | 'att'
 export type Competition = 'league' | 'cup' | 'tournament' | 'friendly'
 export type Venue = 'home' | 'away'

@@ -29,7 +29,7 @@ function initials(name: string) {
 
 export default function CoachRecognition() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
 
   const [players, setPlayers] = useState<SquadPlayer[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -125,6 +125,7 @@ export default function CoachRecognition() {
 
     const { error } = await supabase.from('recognition_awards').insert({
       coach_user_id: user.id,
+      coach_name_snapshot: profile?.full_name || null,
       squad_player_id: selectedId,
       award_type: activeAward,
       awarded_for: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),

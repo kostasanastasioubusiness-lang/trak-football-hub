@@ -21,6 +21,10 @@ interface PendingProfileData {
     current_club: string;
     team: string;
     coach_role: string;
+    academy_code?: string;
+  };
+  club_details?: {
+    academy_name: string;
   };
   parent_email?: string | null;
   coach_invite_code?: string | null;
@@ -68,6 +72,7 @@ const parsePendingProfile = (value: unknown): PendingProfileData | null => {
     nationality: typeof data.nationality === 'string' ? data.nationality : null,
     player_details: data.player_details as PendingProfileData['player_details'] | undefined,
     coach_details: data.coach_details as PendingProfileData['coach_details'] | undefined,
+    club_details: data.club_details as PendingProfileData['club_details'] | undefined,
     parent_email: typeof data.parent_email === 'string' ? data.parent_email : null,
     coach_invite_code: typeof data.coach_invite_code === 'string' ? data.coach_invite_code : null,
   };
@@ -136,12 +141,27 @@ async function writeProfileFromPendingData(userId: string, userEmail: string, da
 
   if (data.role === 'coach' && data.coach_details) {
     const cd = data.coach_details;
-    const { error: coachError } = await supabase.from('coach_details').upsert({
+    const coachRow: Record<string, unknown> = {
       user_id: userId,
       current_club: cd.current_club,
       team: cd.team,
       coach_role: cd.coach_role,
-    }, { onConflict: 'user_id' });
+    };
+
+    // If the coach provided an academy code, join the org
+    if (cd.academy_code) {
+      const rawOrgCode = cd.academy_code.replace(/^TRK-/i, '').toUpperCase();
+      const { data: orgId } = await supabase
+        .rpc('get_org_id_by_join_code', { p_code: rawOrgCode });
+      if (orgId) {
+        coachRow.organization_id = orgId;
+      }
+    }
+
+    const { error: coachError } = await supabase.from('coach_details').upsert(
+      coachRow as any,
+      { onConflict: 'user_id' },
+    );
     if (coachError) throw coachError;
 
     // Generate invite code for this coach if not already set
@@ -151,6 +171,16 @@ async function writeProfileFromPendingData(userId: string, userEmail: string, da
       const newCode = generateCode();
       await supabase.from('profiles').update({ invite_code: newCode }).eq('user_id', userId);
     }
+  }
+
+  // Create the organization record for club admins
+  if (data.role === 'club' && data.club_details?.academy_name) {
+    const orgJoinCode = generateCode();
+    await supabase.from('organizations').insert({
+      admin_user_id: userId,
+      name: data.club_details.academy_name,
+      join_code: orgJoinCode,
+    });
   }
 
   // When a parent signs up, find any pending invites for their email and

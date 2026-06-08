@@ -57,7 +57,7 @@ function OptPill({
 /* ========== main page ========== */
 
 export default function CoachAssessPage() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -116,6 +116,7 @@ export default function CoachAssessPage() {
     const cardStats = deriveCardStats({ workRate, tactical, attitude, technical, physical, coachability })
     const { data: inserted, error: insertError } = await supabase.from('coach_assessments').insert({
       coach_user_id: user.id,
+      coach_name_snapshot: profile?.full_name || null,
       squad_player_id: playerId,
       session_id: sessionId || null,
       appearance,

@@ -30,7 +30,7 @@ function initials(name: string) {
 /* ========== main page ========== */
 
 export default function CoachQuickAssess() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
 
   /* --- squad data --- */
@@ -142,6 +142,7 @@ export default function CoachQuickAssess() {
     const cardStats = deriveCardStats({ workRate, tactical, attitude, technical, physical, coachability })
     const { data: inserted, error: insertError } = await supabase.from('coach_assessments').insert([{
       coach_user_id: user.id,
+      coach_name_snapshot: profile?.full_name || null,
       squad_player_id: currentPlayer.id,
       session_id: null,
       appearance: 'training',
