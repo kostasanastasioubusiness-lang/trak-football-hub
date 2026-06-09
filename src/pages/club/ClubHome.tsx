@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ClubShell, ClubHeader, ClubCard, SectionLabel, Pill } from '@/components/club/ClubShell'
 import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 
@@ -21,33 +22,35 @@ function getBandColor(bandKey: string) {
 }
 
 export default function ClubHome() {
+  const { user } = useAuth()
   const [coaches, setCoaches] = useState<CoachRow[]>([])
   const [totalPlayers, setTotalPlayers] = useState(0)
   const [assessmentsThisWeek, setAssessmentsThisWeek] = useState(0)
   const [clubName, setClubName] = useState('Academy')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => { if (user) loadData() }, [user])
 
   const loadData = async () => {
-    // 1. Fetch all coaches
+    // 1. Fetch org name from organizations table
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .eq('admin_user_id', user!.id)
+      .maybeSingle()
+
+    if (org?.name) setClubName(org.name)
+
+    // 2. Fetch coaches in this org
     const { data: coachDetails } = await supabase
       .from('coach_details')
       .select('user_id, current_club, team, coach_role')
 
     if (!coachDetails || coachDetails.length === 0) { setLoading(false); return }
 
-    // Derive club name from most common current_club
-    const clubCounts: Record<string, number> = {}
-    for (const c of coachDetails) {
-      if (c.current_club) clubCounts[c.current_club] = (clubCounts[c.current_club] || 0) + 1
-    }
-    const topClub = Object.entries(clubCounts).sort((a, b) => b[1] - a[1])[0]?.[0]
-    if (topClub) setClubName(topClub)
-
     const coachIds = coachDetails.map(c => c.user_id)
 
-    // 2. Fetch profiles for coach names
+    // 3. Fetch profiles for coach names
     const { data: profiles } = await supabase
       .from('profiles')
       .select('user_id, full_name')
@@ -56,13 +59,13 @@ export default function ClubHome() {
     const nameMap: Record<string, string> = {}
     for (const p of profiles ?? []) { nameMap[p.user_id] = p.full_name || 'Coach' }
 
-    // 3. Fetch all squad_players across all coaches
+    // 4. Fetch all squad_players across all coaches
     const { data: squadPlayers } = await supabase
       .from('squad_players')
       .select('id, coach_user_id, linked_player_id')
       .in('coach_user_id', coachIds)
 
-    // 4. Fetch all assessments (for band distribution + this-week count)
+    // 5. Fetch all assessments (for band distribution + this-week count)
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
     const { data: assessments } = await supabase
       .from('coach_assessments')
@@ -145,7 +148,7 @@ export default function ClubHome() {
         {loading ? (
           <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>Loading…</div>
         ) : coaches.length === 0 ? (
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>No coaches registered yet.</div>
+          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>No coaches connected yet. Share your academy code with coaches to get started.</div>
         ) : (
           coaches.map(c => (
             <ClubCard key={c.userId} className="p-4">

@@ -27,7 +27,7 @@ export function SectionLabel({ children }: { children: ReactNode }) {
   )
 }
 
-export function ClubCard({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function ClubCard({ children, className = '', style }: { children: ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
     <div
       className={className}
@@ -35,6 +35,7 @@ export function ClubCard({ children, className = '' }: { children: ReactNode; cl
         background: '#101012',
         border: '1px solid rgba(255,255,255,0.07)',
         borderRadius: 18,
+        ...style,
       }}
     >
       {children}

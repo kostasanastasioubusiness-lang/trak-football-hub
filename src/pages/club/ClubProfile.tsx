@@ -1,12 +1,62 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
+import { ChevronRight, Settings as SettingsIcon, Copy, Check } from 'lucide-react'
 import { ClubShell, ClubCard, SectionLabel } from '@/components/club/ClubShell'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/integrations/supabase/client'
 import { IconHowItWorks } from '@/components/icons/TrakIcons'
+import { toast } from 'sonner'
 
 export default function ClubProfile() {
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
+
+  const [orgName, setOrgName] = useState<string | null>(null)
+  const [joinCode, setJoinCode] = useState<string | null>(null)
+  const [coachCount, setCoachCount] = useState(0)
+  const [playerCount, setPlayerCount] = useState(0)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (user) loadOrg()
+  }, [user])
+
+  const loadOrg = async () => {
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('id, name, join_code')
+      .eq('admin_user_id', user!.id)
+      .maybeSingle()
+
+    if (!org) return
+
+    setOrgName(org.name)
+    setJoinCode(org.join_code)
+
+    // Count coaches in this org
+    const { data: coaches } = await supabase
+      .from('coach_details')
+      .select('user_id')
+    setCoachCount(coaches?.length ?? 0)
+
+    // Count players across those coaches
+    if (coaches && coaches.length > 0) {
+      const coachIds = coaches.map(c => c.user_id)
+      const { data: squad } = await supabase
+        .from('squad_players')
+        .select('id')
+        .in('coach_user_id', coachIds)
+      setPlayerCount(squad?.length ?? 0)
+    }
+  }
+
+  const copyCode = () => {
+    if (!joinCode) return
+    navigator.clipboard.writeText(`TRK-${joinCode}`)
+    setCopied(true)
+    toast.success('Academy code copied')
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <ClubShell>
@@ -50,6 +100,53 @@ export default function ClubProfile() {
           Administrator
         </span>
       </div>
+
+      {/* Academy Info Card */}
+      {orgName && (
+        <ClubCard className="p-5 mb-5">
+          <SectionLabel>Academy</SectionLabel>
+          <div className="mt-2" style={{ fontSize: 20, fontWeight: 400, color: 'rgba(255,255,255,0.88)' }}>
+            {orgName}
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="px-3 py-2" style={{ background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12 }}>
+              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)' }}>
+                Coaches
+              </div>
+              <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.88)', marginTop: 2 }}>{coachCount}</div>
+            </div>
+            <div className="px-3 py-2" style={{ background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12 }}>
+              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)' }}>
+                Players
+              </div>
+              <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.88)', marginTop: 2 }}>{playerCount}</div>
+            </div>
+          </div>
+        </ClubCard>
+      )}
+
+      {/* Academy Join Code */}
+      {joinCode && (
+        <ClubCard className="p-5 mb-5">
+          <SectionLabel>Academy Join Code</SectionLabel>
+          <p className="mt-1" style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+            Share this code with coaches so they can join your academy.
+          </p>
+          <button
+            onClick={copyCode}
+            className="mt-3 w-full flex items-center justify-between px-4 py-3 rounded-[12px] transition-colors"
+            style={{ background: 'rgba(200,242,90,0.06)', border: '1px solid rgba(200,242,90,0.2)' }}
+          >
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, fontWeight: 500, color: '#C8F25A', letterSpacing: '0.08em' }}>
+              TRK-{joinCode}
+            </span>
+            {copied
+              ? <Check size={18} style={{ color: '#C8F25A' }} />
+              : <Copy size={18} style={{ color: 'rgba(200,242,90,0.5)' }} />
+            }
+          </button>
+        </ClubCard>
+      )}
 
       {/* Nav rows */}
       <div className="space-y-2.5 mb-8">

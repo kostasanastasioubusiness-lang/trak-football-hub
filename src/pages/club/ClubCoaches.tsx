@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { ClubShell, ClubHeader, ClubCard, SectionLabel } from '@/components/club/ClubShell'
 import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
+import { UserMinus } from 'lucide-react'
 
 type CoachRow = {
   userId: string
@@ -20,13 +22,25 @@ function initials(name: string) {
 }
 
 export default function ClubCoaches() {
+  const { user } = useAuth()
   const [coaches, setCoaches] = useState<CoachRow[]>([])
   const [loading, setLoading] = useState(true)
   const [clubName, setClubName] = useState('Academy')
+  const [removing, setRemoving] = useState<string | null>(null)
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => { if (user) loadData() }, [user])
 
   const loadData = async () => {
+    // Fetch org name
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .eq('admin_user_id', user!.id)
+      .maybeSingle()
+
+    if (org?.name) setClubName(org.name)
+
+    // Fetch coaches (RLS scoped to org)
     const { data: coachDetails } = await supabase
       .from('coach_details')
       .select('user_id, current_club, team, coach_role')
@@ -34,14 +48,6 @@ export default function ClubCoaches() {
     if (!coachDetails || coachDetails.length === 0) { setLoading(false); return }
 
     const coachIds = coachDetails.map(c => c.user_id)
-
-    // Club name from most common current_club
-    const clubCounts: Record<string, number> = {}
-    for (const c of coachDetails) {
-      if (c.current_club) clubCounts[c.current_club] = (clubCounts[c.current_club] || 0) + 1
-    }
-    const topClub = Object.entries(clubCounts).sort((a, b) => b[1] - a[1])[0]?.[0]
-    if (topClub) setClubName(topClub)
 
     // Profiles (names + invite codes)
     const { data: profiles } = await supabase
@@ -108,6 +114,22 @@ export default function ClubCoaches() {
     toast.success('Invite code copied')
   }
 
+  const handleRemoveCoach = async (coachUserId: string, coachName: string) => {
+    if (!confirm(`Remove ${coachName} from the academy? Their Trak account won't be affected — they just won't appear in your dashboard. Assessment history will be preserved.`)) return
+
+    setRemoving(coachUserId)
+    const { error } = await supabase.rpc('remove_coach_from_org', { p_coach_user_id: coachUserId })
+
+    if (error) {
+      toast.error('Failed to remove coach')
+      console.error(error)
+    } else {
+      toast.success(`${coachName} removed from academy`)
+      setCoaches(prev => prev.filter(c => c.userId !== coachUserId))
+    }
+    setRemoving(null)
+  }
+
   return (
     <ClubShell>
       <ClubHeader club={clubName} coaches={coaches.length} />
@@ -117,7 +139,7 @@ export default function ClubCoaches() {
         {loading ? (
           <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>Loading…</div>
         ) : coaches.length === 0 ? (
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>No coaches registered yet.</div>
+          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>No coaches connected yet. Share your academy code from your profile page.</div>
         ) : (
           coaches.map(c => (
             <ClubCard key={c.userId} className="p-4">
@@ -148,6 +170,16 @@ export default function ClubCoaches() {
                   ? new Date(c.lastAssessmentDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                   : '—'} />
               </div>
+              {/* Remove from academy */}
+              <button
+                onClick={() => handleRemoveCoach(c.userId, c.name)}
+                disabled={removing === c.userId}
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-[10px] transition-colors"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.3)', fontSize: 12 }}
+              >
+                <UserMinus size={13} />
+                {removing === c.userId ? 'Removing…' : 'Remove from academy'}
+              </button>
             </ClubCard>
           ))
         )}
