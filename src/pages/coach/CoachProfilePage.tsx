@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, TrakCard, MetadataLabel, InviteCodeDisplay } from '@/components/trak'
 import { IconProfile } from '@/components/icons/TrakIcons'
-import { formatCoachCode } from '@/lib/invite-codes'
+import { formatCoachCode, generateCode } from '@/lib/invite-codes'
 
 export default function CoachProfilePage() {
   const { user, profile } = useAuth()
@@ -18,10 +18,20 @@ export default function CoachProfilePage() {
     if (!user) return
     supabase.from('coach_details').select('*').eq('user_id', user.id).maybeSingle().then(({ data }) => {
       setDetails(data)
-      // Generate a deterministic invite code from coach id
-      const code = (data?.id || user.id).substring(0, 4).toUpperCase()
-      setInviteCode(formatCoachCode(code))
     })
+    // The real invite code lives on profiles.invite_code — it's what
+    // get_coach_id_by_invite_code matches when players link up.
+    supabase.from('profiles').select('invite_code').eq('user_id', user.id).maybeSingle()
+      .then(async ({ data }) => {
+        if (data?.invite_code) {
+          setInviteCode(formatCoachCode(data.invite_code))
+        } else {
+          // Self-heal: generate and persist one (same pattern as CoachHomePage)
+          const newCode = generateCode()
+          const { error } = await supabase.from('profiles').update({ invite_code: newCode }).eq('user_id', user.id)
+          if (!error) setInviteCode(formatCoachCode(newCode))
+        }
+      })
   }, [user])
 
   return (

@@ -51,7 +51,7 @@ export default function ClubSquads() {
     // Fetch all squad players (RLS scoped to org)
     const { data: squadData } = await supabase
       .from('squad_players')
-      .select('id, player_name, position, age, linked_player_id, coach_user_id, status')
+      .select('id, player_name, position, age, age_group, linked_player_id, coach_user_id, status')
       .order('player_name')
 
     if (!squadData) { setLoading(false); return }
@@ -111,7 +111,7 @@ export default function ClubSquads() {
         id: sp.id,
         name: sp.player_name,
         position: sp.position || '—',
-        ageGroup: sp.age != null ? String(sp.age) : '—',
+        ageGroup: (sp as any).age_group ?? (sp.age != null ? String(sp.age) : '—'),
         coachName: sp.coach_user_id ? (coachNameMap[sp.coach_user_id] || 'Coach') : 'No coach',
         latestBand: bandCfg.word,
         latestBandColor: bandCfg.color,

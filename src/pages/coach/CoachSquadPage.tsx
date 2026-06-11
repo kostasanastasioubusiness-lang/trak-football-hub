@@ -17,10 +17,13 @@ export default function CoachSquadPage() {
   const [posFilter, setPosFilter] = useState<string>('All')
   const [ageFilter, setAgeFilter] = useState<string>('All')
 
+  // Age group label: prefer the age_group text column ('U12'), fall back to legacy integer age
+  const ageLabel = (p: any): string | null => p.age_group ?? (p.age != null ? String(p.age) : null)
+
   // Derive age groups present in the squad (sorted)
   const ageGroups = Array.from(
-    new Set(players.map(p => p.age).filter(Boolean))
-  ).sort()
+    new Set(players.map(ageLabel).filter(Boolean))
+  ).sort() as string[]
 
   useEffect(() => {
     if (!user) return
@@ -53,7 +56,7 @@ export default function CoachSquadPage() {
 
   const filtered = players.filter(p => {
     const posMatch = posFilter === 'All' || p.position?.toLowerCase() === posFilter.toLowerCase()
-    const ageMatch = ageFilter === 'All' || p.age === ageFilter
+    const ageMatch = ageFilter === 'All' || ageLabel(p) === ageFilter
     return posMatch && ageMatch
   })
 
@@ -192,7 +195,7 @@ export default function CoachSquadPage() {
                     >
                       {p.position || 'N/A'}
                       {p.shirt_number ? ` · #${p.shirt_number}` : ''}
-                      {p.age ? ` · Age ${p.age}` : ''}
+                      {ageLabel(p) ? ` · ${ageLabel(p)}` : ''}
                     </p>
                   </div>
 

@@ -1,7 +1,47 @@
+import { useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 
 const DEV_MODE = import.meta.env.DEV
+
+/** Shown when a user is authenticated but has no profile row —
+ *  usually a provisioning failure during signup. Fail closed:
+ *  never render role-gated pages without a verified role. */
+function ProfileMissingScreen() {
+  const { refreshProfile, signOut } = useAuth()
+  const [retrying, setRetrying] = useState(false)
+
+  const retry = async () => {
+    setRetrying(true)
+    await refreshProfile()
+    setRetrying(false)
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0A0A0B] flex flex-col items-center justify-center px-8 text-center">
+      <h1 className="text-[20px] font-semibold text-white/90 mb-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        Finishing account setup
+      </h1>
+      <p className="text-[13px] text-white/45 mb-8 max-w-[300px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        Your account isn't fully set up yet. This can happen if something
+        interrupted sign-up. Tap retry to finish setting up your account.
+      </p>
+      <button
+        onClick={retry}
+        disabled={retrying}
+        className="w-full max-w-[280px] py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm disabled:opacity-50"
+      >
+        {retrying ? 'Retrying…' : 'Retry setup'}
+      </button>
+      <button
+        onClick={() => signOut()}
+        className="mt-4 text-[12px] text-white/30 hover:text-white/60"
+      >
+        Sign out
+      </button>
+    </div>
+  )
+}
 
 export function RouteGuard({ allowedRole, children }: { allowedRole: string; children: React.ReactNode }) {
   const { user, profile, loading } = useAuth()
@@ -17,7 +57,10 @@ export function RouteGuard({ allowedRole, children }: { allowedRole: string; chi
 
   if (!user) return <Navigate to="/" replace />
 
-  if (profile && profile.role !== allowedRole) {
+  // Fail closed: authenticated but no profile → setup screen, never the page
+  if (!profile) return <ProfileMissingScreen />
+
+  if (profile.role !== allowedRole) {
     const homeMap: Record<string, string> = {
       player: '/player/home',
       coach: '/coach/home',

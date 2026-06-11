@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { generateCode } from '@/lib/invite-codes';
+import { toast } from 'sonner';
 import type { User } from '@supabase/supabase-js';
 
 type UserRole = 'player' | 'coach' | 'parent' | 'club';
@@ -100,120 +100,18 @@ const readPendingProfileFromMetadata = (user: User): PendingProfileData | null =
   return parsePendingProfile(metadata?.trak_onboarding);
 };
 
-async function writeProfileFromPendingData(userId: string, userEmail: string, data: PendingProfileData): Promise<Profile | null> {
-  const { error: profileError } = await supabase.from('profiles').upsert({
-    user_id: userId,
-    role: data.role as any,
-    full_name: data.full_name,
-    nationality: data.nationality || null,
-  }, { onConflict: 'user_id' });
-  if (profileError) throw profileError;
+async function writeProfileFromPendingData(userId: string, data: PendingProfileData): Promise<Profile | null> {
+  // All provisioning happens server-side in ONE atomic SECURITY DEFINER RPC.
+  // This fixes: club profile creation (blocked by RLS for direct inserts),
+  // player→coach linking, parent→child linking, and partial-failure states.
+  const { data: result, error } = await supabase.rpc('provision_my_profile' as any, {
+    p: data as unknown as Record<string, unknown>,
+  });
+  if (error) throw error;
 
-  if (data.role === 'player' && data.player_details) {
-    const pd = data.player_details;
-    const { error: playerError } = await supabase.from('player_details').upsert({
-      user_id: userId,
-      date_of_birth: pd.date_of_birth,
-      position: pd.position,
-      current_club: pd.current_club,
-      age_group: pd.age_group,
-      shirt_number: pd.shirt_number,
-    }, { onConflict: 'user_id' });
-    if (playerError) throw playerError;
-
-    if (data.parent_email) {
-      const { data: existingInvites } = await supabase
-        .rpc('get_player_invites_for_current_user');
-
-      const existingInvite = existingInvites?.find(
-        invite => invite.player_user_id === userId && invite.parent_email === data.parent_email,
-      );
-
-      if (!existingInvite) {
-        const { error: inviteError } = await supabase.from('parent_invites').insert({
-          player_user_id: userId,
-          parent_email: data.parent_email,
-        });
-        if (inviteError) throw inviteError;
-      }
-    }
-  }
-
-  if (data.role === 'coach' && data.coach_details) {
-    const cd = data.coach_details;
-    const coachRow: Record<string, unknown> = {
-      user_id: userId,
-      current_club: cd.current_club,
-      team: cd.team,
-      coach_role: cd.coach_role,
-    };
-
-    // If the coach provided an academy code, join the org
-    if (cd.academy_code) {
-      const rawOrgCode = cd.academy_code.replace(/^TRK-/i, '').toUpperCase();
-      const { data: orgId } = await supabase
-        .rpc('get_org_id_by_join_code', { p_code: rawOrgCode });
-      if (orgId) {
-        coachRow.organization_id = orgId;
-      }
-    }
-
-    const { error: coachError } = await supabase.from('coach_details').upsert(
-      coachRow as any,
-      { onConflict: 'user_id' },
-    );
-    if (coachError) throw coachError;
-
-    // Generate invite code for this coach if not already set
-    const { data: existingProfile } = await supabase
-      .from('profiles').select('invite_code').eq('user_id', userId).single();
-    if (!existingProfile?.invite_code) {
-      const newCode = generateCode();
-      await supabase.from('profiles').update({ invite_code: newCode }).eq('user_id', userId);
-    }
-  }
-
-  // Create the organization record for club admins
-  if (data.role === 'club' && data.club_details?.academy_name) {
-    const orgJoinCode = generateCode();
-    await supabase.from('organizations').insert({
-      admin_user_id: userId,
-      name: data.club_details.academy_name,
-      join_code: orgJoinCode,
-    });
-  }
-
-  // When a parent signs up, find any pending invites for their email and
-  // create player_parent_links so their child's data is immediately visible.
-  // Direct query on parent_invites is blocked by RLS for parent users —
-  // the SECURITY DEFINER RPC handles the lookup and insert atomically.
-  if (data.role === 'parent' && userEmail) {
-    const { data: invites } = await supabase
-      .rpc('get_parent_pending_invites_for_current_user')
-    for (const invite of invites ?? []) {
-      await supabase
-        .from('player_parent_links')
-        .upsert(
-          { parent_user_id: userId, player_user_id: invite.player_user_id },
-          { onConflict: 'player_user_id,parent_user_id' }
-        )
-    }
-  }
-
-  if (data.role === 'player' && data.coach_invite_code) {
-    const rawCode = data.coach_invite_code.replace(/^TRK-/i, '').toUpperCase();
-    const { data: coachUserId } = await supabase
-      .rpc('get_coach_id_by_invite_code', { p_code: rawCode });
-    if (coachUserId) {
-      await supabase.from('squad_players').insert({
-        coach_user_id: coachUserId as unknown as string,
-        player_name: data.full_name,
-        position: data.player_details?.position || null,
-        shirt_number: data.player_details?.shirt_number || null,
-        linked_player_id: userId,
-      });
-    }
-  }
+  // Surface non-fatal warnings (e.g. unrecognised coach/academy code)
+  const warnings = (result as { warnings?: string[] } | null)?.warnings ?? [];
+  for (const w of warnings) toast.warning(w, { duration: 8000 });
 
   const { data: newProfile } = await supabase
     .from('profiles')
@@ -223,16 +121,27 @@ async function writeProfileFromPendingData(userId: string, userEmail: string, da
   return (newProfile as unknown as Profile | null);
 }
 
+async function clearPendingProfile() {
+  localStorage.removeItem(PENDING_PROFILE_KEY);
+  // Clear the metadata copy too so provisioning doesn't re-run every session
+  try {
+    await supabase.auth.updateUser({ data: { trak_onboarding: null } });
+  } catch {
+    // Non-critical — provisioning is idempotent if this fails
+  }
+}
+
 async function writePendingProfile(user: User): Promise<Profile | null> {
   const data = readPendingProfileFromLocalStorage() || readPendingProfileFromMetadata(user);
   if (!data) return null;
 
   try {
-    const created = await writeProfileFromPendingData(user.id, user.email ?? '', data);
-    if (created) localStorage.removeItem(PENDING_PROFILE_KEY);
+    const created = await writeProfileFromPendingData(user.id, data);
+    if (created) await clearPendingProfile();
     return created;
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to write pending profile:', err);
+    toast.error(`Account setup hit a problem: ${err?.message || 'unknown error'}. Pull to refresh or sign in again to retry.`);
     return null;
   }
 }
@@ -251,6 +160,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .maybeSingle();
 
     if (data) {
+      // Repair path: if pending onboarding data was never cleared, a previous
+      // provisioning run failed partway (e.g. profile created but details/org/
+      // links missing). Re-run it — the RPC is idempotent.
+      const pending = readPendingProfileFromLocalStorage() || readPendingProfileFromMetadata(currentUser);
+      if (pending && pending.role === (data as { role: string }).role) {
+        void writePendingProfile(currentUser);
+      }
       setProfile(data as unknown as Profile);
       return;
     }

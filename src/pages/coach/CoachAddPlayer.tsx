@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, PillSelector, MetadataLabel } from '@/components/trak'
 import { ChevronLeft } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function CoachAddPlayer() {
   const { user } = useAuth()
@@ -17,13 +18,20 @@ export default function CoachAddPlayer() {
   const handleSave = async () => {
     if (!user || !name || saving) return
     setSaving(true)
-    await supabase.from('squad_players').insert({
+    const { error } = await supabase.from('squad_players').insert({
       coach_user_id: user.id,
       player_name: name,
       position: position || null,
       shirt_number: shirtNumber ? Number(shirtNumber) : null,
-      age: ageGroup || null,
+      age_group: ageGroup || null,
+      status: 'active',
     } as any)
+    setSaving(false)
+    if (error) {
+      toast.error(`Couldn't add player: ${error.message}`)
+      return
+    }
+    toast.success(`${name} added to squad`)
     navigate('/coach/squad')
   }
 
