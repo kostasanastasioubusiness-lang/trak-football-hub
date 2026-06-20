@@ -41,7 +41,13 @@ const TYPE_LABEL: Record<EventType, string> = {
 const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 
 function toDateStr(d: Date) {
-  return d.toISOString().split('T')[0]
+  // Use LOCAL date parts — toISOString() converts to UTC, which shifts the
+  // date back a day for users in timezones ahead of UTC (e.g. Europe), making
+  // events land on the wrong calendar cell.
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 function buildMonthGrid(year: number, month: number): (Date | null)[] {

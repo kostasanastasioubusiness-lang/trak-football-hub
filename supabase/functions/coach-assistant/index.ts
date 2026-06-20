@@ -143,16 +143,16 @@ serve(async (req) => {
         const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
         const { data: assessments } = await supabase
           .from("coach_assessments")
-          .select("squad_player_id, technique, tactical, attitude, work_rate, physical")
+          .select("squad_player_id, technical, tactical, attitude, work_rate, physical")
           .eq("coach_user_id", user.id)
           .gte("created_at", since);
 
-        const byPlayer: Record<string, { count: number; technique: number; tactical: number; attitude: number; work_rate: number; physical: number }> = {};
+        const byPlayer: Record<string, { count: number; technical: number; tactical: number; attitude: number; work_rate: number; physical: number }> = {};
         (assessments || []).forEach((a: any) => {
           const k = a.squad_player_id;
-          byPlayer[k] = byPlayer[k] || { count: 0, technique: 0, tactical: 0, attitude: 0, work_rate: 0, physical: 0 };
+          byPlayer[k] = byPlayer[k] || { count: 0, technical: 0, tactical: 0, attitude: 0, work_rate: 0, physical: 0 };
           byPlayer[k].count += 1;
-          byPlayer[k].technique += a.technique;
+          byPlayer[k].technical += a.technical;
           byPlayer[k].tactical += a.tactical;
           byPlayer[k].attitude += a.attitude;
           byPlayer[k].work_rate += a.work_rate;
@@ -163,7 +163,7 @@ serve(async (req) => {
           const agg = byPlayer[p.id];
           if (!agg) return `- ${p.player_name} (${p.position || "—"}, age ${p.age ?? "—"}): no recent assessments`;
           const avg = (n: number) => (n / agg.count).toFixed(1);
-          return `- ${p.player_name} (${p.position || "—"}, age ${p.age ?? "—"}): tech ${avg(agg.technique)}, tact ${avg(agg.tactical)}, att ${avg(agg.attitude)}, work ${avg(agg.work_rate)}, phys ${avg(agg.physical)} (last 30d, n=${agg.count})`;
+          return `- ${p.player_name} (${p.position || "—"}, age ${p.age ?? "—"}): tech ${avg(agg.technical)}, tact ${avg(agg.tactical)}, att ${avg(agg.attitude)}, work ${avg(agg.work_rate)}, phys ${avg(agg.physical)} (last 30d, n=${agg.count})`;
         });
 
         contextBlock = `\n\nSquad snapshot (use only if relevant to the coach's question):\n${lines.join("\n")}`;

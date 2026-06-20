@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send, Sparkles, ClipboardList } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { toast } from 'sonner'
-import { supabase } from '@/integrations/supabase/client'
+import { supabase, SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel, PitchDiagram, detectDiagrams, PRESETS } from '@/components/trak'
 import type { DiagramData } from '@/components/trak'
@@ -141,11 +141,17 @@ export default function CoachAssistant() {
     }
 
     try {
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/coach-assistant`, {
+      // Use the user's session token so the function can load squad context;
+      // fall back to the anon key (the function tolerates it — verify_jwt=false).
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token || SUPABASE_ANON_KEY
+
+      const resp = await fetch(`${SUPABASE_FUNCTIONS_URL}/coach-assistant`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token}`,
+          apikey: SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           messages: [...messages, userMsg],

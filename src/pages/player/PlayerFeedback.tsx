@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '@/integrations/supabase/client'
+import { supabase, SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
 import { ChevronLeft, Sparkles, Send, Loader2, MessageSquare } from 'lucide-react'
@@ -291,13 +291,14 @@ export default function PlayerFeedback() {
         const token = session?.access_token
         if (!token) throw new Error('Not authenticated')
 
-        const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/player-feedback`
+        const fnUrl = `${SUPABASE_FUNCTIONS_URL}/player-feedback`
 
         const res = await fetch(fnUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
+            apikey: SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({ assessment_id: assessmentId }),
         })
@@ -374,13 +375,14 @@ export default function PlayerFeedback() {
       const token = session?.access_token
       if (!token) throw new Error('Not authenticated')
 
-      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/player-feedback`
+      const fnUrl = `${SUPABASE_FUNCTIONS_URL}/player-feedback`
 
       const res = await fetch(fnUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          apikey: SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           assessment_id: assessmentId,
