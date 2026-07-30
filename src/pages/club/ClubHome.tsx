@@ -82,9 +82,11 @@ export default function ClubHome() {
     const weekCount = (assessments ?? []).filter(a => (a.created_at ?? '') >= weekAgo).length
     setAssessmentsThisWeek(weekCount)
 
-    // Unique linked players across all coaches
-    const uniqueLinked = new Set((squadPlayers ?? []).filter(s => s.linked_player_id).map(s => s.linked_player_id))
-    setTotalPlayers(uniqueLinked.size || (squadPlayers ?? []).length)
+    // Total players on the academy roster.
+    // Must count squad rows, not linked accounts — the per-squad counts below
+    // use mySquad.length, so counting only signed-up players made the headline
+    // contradict the sum of the squads beneath it.
+    setTotalPlayers((squadPlayers ?? []).length)
 
     // Build per-coach data
     const rows: CoachRow[] = coachDetails.map(cd => {
