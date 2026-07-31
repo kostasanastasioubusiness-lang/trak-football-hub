@@ -49,6 +49,8 @@ function seasonLabel(date: Date) {
 // ── Card geometry (all px, no calc or %) ──────────────────────────────────
 const CARD_W   = 390
 const CARD_PAD = 28
+const SHELL_W   = 430  // MobileShell max-width
+const SHELL_PAD = 20   // MobileShell px-5
 const CONTENT  = CARD_W - CARD_PAD * 2   // 334
 const COL3_GAP = 8
 const COL3_W   = Math.floor((CONTENT - COL3_GAP * 2) / 3)  // 106
@@ -60,6 +62,7 @@ export default function PlayerPassport() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
   const cardRef = useRef<HTMLDivElement>(null)
+  const scaleRef = useRef<HTMLDivElement>(null)
 
   const [details,   setDetails]   = useState<any>(null)
   const [seasons,   setSeasons]   = useState<SeasonSummary[]>([])
@@ -67,6 +70,35 @@ export default function PlayerPassport() {
   const [awards,    setAwards]    = useState<Award[]>([])
   const [loading,   setLoading]   = useState(true)
   const [exporting, setExporting] = useState(false)
+
+  // The card is a fixed CARD_W px so the exported PNG is identical on every
+  // device. On viewports narrower than CARD_W + shell padding that overflows,
+  // so shrink it visually only — the card keeps its real px geometry, and
+  // captureCard() removes this transform before html2canvas runs.
+  const [cardScale, setCardScale] = useState(1)
+  const [cardH, setCardH]         = useState(0)
+
+  useEffect(() => {
+    const fit = () => {
+      // documentElement.clientWidth, not window.innerWidth: innerWidth grows
+      // with any horizontal overflow, which would feed back into the scale.
+      const vw = document.documentElement.clientWidth || window.innerWidth
+      const avail = Math.min(vw, SHELL_W) - SHELL_PAD * 2
+      setCardScale(Math.min(1, avail / CARD_W))
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [])
+
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setCardH(el.offsetHeight))
+    ro.observe(el)
+    setCardH(el.offsetHeight)
+    return () => ro.disconnect()
+  }, [loading, seasons, awards, career])
 
   useEffect(() => { if (user) loadData() }, [user])
 
@@ -126,7 +158,12 @@ export default function PlayerPassport() {
   // ── html2canvas capture ───────────────────────────────────────────────────
   const captureCard = async (): Promise<Blob | null> => {
     if (!cardRef.current) return null
+    // Render at true CARD_W geometry: drop the fit-to-viewport transform for
+    // the duration of the capture so the PNG is identical on every device.
+    const wrap = scaleRef.current
+    const prev = wrap?.style.transform ?? ''
     try {
+      if (wrap) wrap.style.transform = 'none'
       await document.fonts.ready
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: '#0D0D0F',
@@ -135,9 +172,12 @@ export default function PlayerPassport() {
         logging: false,
         scrollX: 0,
         scrollY: -window.scrollY,
+        width: CARD_W,
+        windowWidth: CARD_W,
       })
       return await new Promise(res => canvas.toBlob(b => res(b), 'image/png'))
     } catch { return null }
+    finally { if (wrap) wrap.style.transform = prev }
   }
 
   const handleShare = async () => {
@@ -190,6 +230,12 @@ export default function PlayerPassport() {
             All widths explicit px. No CSS gap/grid.
             No inline-flex. Overflow protected on every text node.
         ═══════════════════════════════════════ */}
+        <div style={{
+          width: CARD_W * cardScale,
+          height: cardH ? cardH * cardScale : undefined,
+          overflow: 'hidden',
+        }}>
+        <div ref={scaleRef} style={{ transform: `scale(${cardScale})`, transformOrigin: 'top left' }}>
         <div
           ref={cardRef}
           style={{ width: CARD_W, background: '#0D0D0F', borderRadius: 24, overflow: 'hidden', position: 'relative', ...SANS }}
@@ -425,6 +471,8 @@ export default function PlayerPassport() {
             </div>
 
           </div>
+        </div>
+        </div>
         </div>
         {/* ═══════════ END CARD ═══════════ */}
 
