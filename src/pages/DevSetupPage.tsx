@@ -182,12 +182,22 @@ export default function DevSetupPage() {
       update('Seed calendar events', 'done')
 
       update('Player of the Week award', 'running')
-      await supabase.from('recognition_awards').insert({
-        coach_user_id: coachId, squad_player_id: SQUAD_ID,
-        award_type: 'player_of_week', awarded_for: 'Week of 14 Apr',
-        note: 'Best performance vs Valley Rangers — 2 goals, 1 assist.',
-        created_at: new Date(now - 6 * 86400000).toISOString(),
-      })
+      // Plain insert here was not idempotent, so every re-run added another
+      // identical award and the player's passport showed duplicates.
+      const { data: existingAward } = await supabase.from('recognition_awards')
+        .select('id')
+        .eq('squad_player_id', SQUAD_ID)
+        .eq('award_type', 'player_of_week')
+        .eq('awarded_for', 'Week of 14 Apr')
+        .maybeSingle()
+      if (!existingAward) {
+        await supabase.from('recognition_awards').insert({
+          coach_user_id: coachId, squad_player_id: SQUAD_ID,
+          award_type: 'player_of_week', awarded_for: 'Week of 14 Apr',
+          note: 'Best performance vs Valley Rangers — 2 goals, 1 assist.',
+          created_at: new Date(now - 6 * 86400000).toISOString(),
+        })
+      }
       update('Player of the Week award', 'done')
 
       // ── 5. Sign in as parent to seed parent data ─────────────────────
