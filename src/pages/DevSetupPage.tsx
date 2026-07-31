@@ -100,15 +100,25 @@ export default function DevSetupPage() {
         { team_score: 2, opponent_score: 0, opponent: 'West United',      competition: 'League',  venue: 'Away', minutes_played: 85, goals: 1, assists: 0, self_rating: 7, body_condition: 'good',      card_received: 'None',   created_at: new Date(now - 57  * 86400000).toISOString() },
         { team_score: 1, opponent_score: 4, opponent: 'Crestwood FC',     competition: 'League',  venue: 'Away', minutes_played: 90, goals: 0, assists: 0, self_rating: 5, body_condition: 'tired',     card_received: 'None',   created_at: new Date(now - 64  * 86400000).toISOString() },
       ].map(m => ({ ...m, self_rating: String(m.self_rating), user_id: playerId, position: 'CM', age_group: 'U15' }))
-      await supabase.from('matches').insert(matches)
+      // Guarded: a plain insert here duplicated the whole match history on
+      // every re-run, despite this page promising it is safe to repeat.
+      const { data: existingMatches } = await supabase.from('matches')
+        .select('id').eq('user_id', playerId).limit(1)
+      if (!existingMatches?.length) {
+        await supabase.from('matches').insert(matches)
+      }
       update('Seed 10 matches', 'done')
 
       update('Player goals', 'running')
-      await supabase.from('player_goals').insert([
-        { user_id: playerId, goal_type: 'goals_scored',   target_value: 5,   category: 'performance', current_value: 4,   completed: false },
-        { user_id: playerId, goal_type: 'matches_logged', target_value: 10,  category: 'consistency', current_value: 10,  completed: false },
-        { user_id: playerId, goal_type: 'minutes_played', target_value: 500, category: 'consistency', current_value: 425, completed: false },
-      ])
+      const { data: existingGoals } = await supabase.from('player_goals')
+        .select('id').eq('user_id', playerId).limit(1)
+      if (!existingGoals?.length) {
+        await supabase.from('player_goals').insert([
+          { user_id: playerId, goal_type: 'goals_scored',   target_value: 5,   category: 'performance', current_value: 4,   completed: false },
+          { user_id: playerId, goal_type: 'matches_logged', target_value: 10,  category: 'consistency', current_value: 10,  completed: false },
+          { user_id: playerId, goal_type: 'minutes_played', target_value: 500, category: 'consistency', current_value: 425, completed: false },
+        ])
+      }
       update('Player goals', 'done')
 
       // ── 4. Sign back in as coach to create squad + assessments ───────
@@ -126,11 +136,15 @@ export default function DevSetupPage() {
         { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 6, tactical: 6, attitude: 7, technical: 6, physical: 7, coachability: 7, flag: 'generous', created_at: new Date(now - 8  * 86400000).toISOString(), _note: 'Struggled to keep the ball under pressure in an away environment. Passing tempo too slow — needs to play quicker one-touch combinations in tight areas and move immediately after playing the ball.' },
         { coach_user_id: coachId, squad_player_id: SQUAD_ID, appearance: 'started', work_rate: 9, tactical: 8, attitude: 9, technical: 8, physical: 9, coachability: 9, flag: 'fair',     created_at: new Date(now - 22 * 86400000).toISOString(), _note: 'Outstanding performance. To reach the next level focus on aerial duels — winning second balls in midfield — and work on the long switch of play to find wide players in space.' },
       ]
-      for (const a of seedAssessments) {
-        const { _note, ...row } = a
-        const { data: ins } = await supabase.from('coach_assessments').insert(row as any).select('id').maybeSingle()
-        if (ins?.id) {
-          await supabase.from('coach_assessment_notes').insert({ assessment_id: ins.id, coach_user_id: coachId, note: _note })
+      const { data: existingAssessments } = await supabase.from('coach_assessments')
+        .select('id').eq('squad_player_id', SQUAD_ID).limit(1)
+      if (!existingAssessments?.length) {
+        for (const a of seedAssessments) {
+          const { _note, ...row } = a
+          const { data: ins } = await supabase.from('coach_assessments').insert(row as any).select('id').maybeSingle()
+          if (ins?.id) {
+            await supabase.from('coach_assessment_notes').insert({ assessment_id: ins.id, coach_user_id: coachId, note: _note })
+          }
         }
       }
       update('3 coach assessments', 'done')
@@ -139,6 +153,9 @@ export default function DevSetupPage() {
       const dt = (daysFromNow: number, hour: number, min = 0) => {
         const d = new Date(); d.setDate(d.getDate() + daysFromNow); d.setHours(hour, min, 0, 0); return d.toISOString()
       }
+      const { data: existingEvents } = await supabase.from('coach_calendar_events')
+        .select('id').eq('coach_user_id', coachId).limit(1)
+      if (existingEvents?.length) { update('Seed calendar events', 'done') } else {
       await supabase.from('coach_calendar_events').insert([
         {
           coach_user_id: coachId,
@@ -180,6 +197,7 @@ export default function DevSetupPage() {
         },
       ])
       update('Seed calendar events', 'done')
+      }
 
       update('Player of the Week award', 'running')
       // Plain insert here was not idempotent, so every re-run added another
