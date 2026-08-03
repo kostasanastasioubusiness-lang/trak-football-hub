@@ -7,6 +7,7 @@ import { IconMatch, IconPassport, IconHowItWorks } from '@/components/icons/Trak
 import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
 import { trackEvent } from '@/lib/telemetry'
 import RatingTrendChart from '@/components/player/RatingTrendChart'
+import { ParentInviteCard } from '@/components/player/ParentInviteCard'
 
 type TrendFilter = 'last5' | 'last10' | 'all'
 
@@ -134,6 +135,9 @@ export default function PlayerProfilePage() {
           </div>
           <ChevronRight size={18} className="text-white/40" />
         </button>
+
+        {/* Parent access */}
+        <ParentInviteCard />
 
         {/* How TRAK works link */}
         <button
