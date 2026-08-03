@@ -19,9 +19,7 @@ The verification sweep cleared five of the six. One remains.
 
 ## 3. Partially built
 
-| | Feature | What is missing |
-|---|---|---|
-| A8 | Invite my parent — **no delivery mechanism** | The invite row and token are created correctly and a parent signing up with the invited address is linked. But nothing sends the invite: there is no email edge function, and the player cannot retrieve the token to share a link manually. In practice a parent is only linked by coincidence of using the exact address. The specced PAR-XXXX flow does not exist |
+Nothing outstanding — A8 was the last item here and is now delivered.
 
 ## 4. Open observations — not yet investigated
 
@@ -83,6 +81,9 @@ The most useful unblocked items are small: exercise parent alerts (P4) live, giv
 delivery mechanism, and settle the two product questions in group 4.
 
 ### Recently closed
+
+- **A8 parent invite delivery** — built (`5c91efe`). Players can now share an invite link from
+  their profile; previously a parent was only linked by coincidence of using the exact address.
 
 - **P5** — parent access to coach assessments and awards. Migration `20260612000001`, applied.
 - **Housekeeping** — `MatchLog.tsx` and `CoachProgress.tsx` deleted as orphaned and unreferenced.
