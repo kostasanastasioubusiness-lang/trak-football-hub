@@ -15,7 +15,7 @@ additionally exercised in a running app against the database, signed in as that 
 
 | | Use case | Status | Evidence |
 |---|---|---|---|
-| C1 | Sign up, onboard, pick club/team/role | ✅ | `provision_my_profile` RPC (atomic, SECURITY DEFINER) writes `profiles` + `coach_details` |
+| C1 | Sign up, onboard, pick club/team/role | ✅ | **Verified live on a fresh account**: `provision_my_profile` wrote `profiles` + `coach_details` (club, team, role) and auto-generated a unique `invite_code` in one atomic call |
 | C2 | Add a player to my squad manually | ✅ | `CoachAddPlayer` inserts `squad_players`; RLS correct |
 | C3 | View my squad | ✅ | `CoachSquadPage` |
 | C4 | Assess a player on 6 sliders → band | ✅ | `CoachAssess`; `coach_rating` is a generated column; RLS correct |
@@ -42,14 +42,14 @@ additionally exercised in a running app against the database, signed in as that 
 
 | | Use case | Status | Evidence |
 |---|---|---|---|
-| A1 | Sign up and onboard as a player | ✅ | `provision_my_profile` writes `profiles` + `player_details` atomically |
+| A1 | Sign up and onboard as a player | ✅ | **Verified live on a fresh account**: 3-step form wrote `profiles` + `player_details` (DOB, position, club, age group, shirt) atomically |
 | A2 | Connect to my coach via TRK code | ✅ | **Verified live** against the database. `link_player_to_coach` strips the `TRK-` prefix case-insensitively and trims, so `TRK-ALEX`, `ALEX`, `trk-alex` and `  TRK-ALEX  ` all resolve to the same squad row; `TRK-NOPE` is rejected with *Invalid coach code*. Idempotent — re-linking returns the existing row rather than duplicating |
 | A3 | Browse my match history + detail | ✅ | `PlayerMatches`, `PlayerMatchDetail` — populated by the coach (C7) |
 | A4 | See my band result | ✅ | Rating engine, well covered by tests |
 | A5 | See my coach's assessment + private note | ✅ | `PlayerFeedback.tsx` (664 lines) reads `coach_assessments` + `coach_assessment_notes` at `/player/feedback/:assessmentId`; RLS policy `Players read own assessments` |
 | A6 | Evolution Card | ✅ | `PlayerEvolutionCard.tsx` (960 lines) aggregating `matches`, `coach_assessments`, `recognition_awards`, `player_details`. A primary nav tab ("Card") — **this is the athlete's progression surface** |
 | A7 | Passport | ⚠️ | Verified live — career totals, season history and recognition all render. **Layout bug:** the card is a hard-coded 390px (`CARD_W`) inside a 375px viewport, so the page scrolls sideways by 35px. Geometry is intentional (captured by `html2canvas` for PNG export), so the fix must scale visually without changing export dimensions |
-| A8 | Invite my parent | ⚠️ | Parent email captured at signup → `parent_invites` row + token. The specced PAR-XXXX code flow does not exist |
+| A8 | Invite my parent | ⚠️ | **Verified live**: the email entered at signup creates a `parent_invites` row (status `pending`, unique `invite_token`), and a parent signing up with that address is linked to the child. **But there is no delivery** — no edge function sends the invite, and `get_player_invites_for_current_user` does not return `invite_token`, so the player cannot copy a link either. In practice a parent is only linked if they happen to sign up with the exact invited address. The specced PAR-XXXX code flow does not exist |
 | A9 | Profile | ✅ | `PlayerProfilePage` |
 | A10 | Self-log a match | ⬜ | **Removed by design.** `PlayerLogForm.tsx` no longer exists; no "Log" tab in the player nav. Matches come from the coach |
 | A11 | Create / track goals | ⬜ | **Removed by design.** No goals files, routes, or nav entry. The Evolution Card serves this purpose |
@@ -68,7 +68,7 @@ additionally exercised in a running app against the database, signed in as that 
 
 | | Use case | Status | Evidence |
 |---|---|---|---|
-| P1 | Accept invite, create account, link to child | ✅ | `ParentOnboarding` writes `player_parent_links` via a SECURITY DEFINER token RPC. The best-engineered flow in the app |
+| P1 | Accept invite, create account, link to child | ✅ | **Verified live**: a parent signing up with the invited address was linked to the correct child in `player_parent_links`. Linking is idempotent — `link_parent_to_players_by_email` returned 0 because `provision_my_profile` had already created the link |
 | P2 | See child's season band | ✅ | RLS policy `Parents can read linked child matches`: `user_id IN (SELECT player_user_id FROM player_parent_links WHERE parent_user_id = auth.uid())` |
 | P3 | See child's match feed | ✅ | Same policy — the previously reported wall is gone |
 | P4 | Alerts | ⚠️ | `ParentAlerts` implements a subset of the specced types; the underlying query is no longer blocked. Not yet exercised live |
@@ -132,6 +132,22 @@ build list:
   silently broken; the P5 pattern did not repeat. C11 proved stronger than documented: it is
   squad-aware and renders pitch diagrams.
 - **K5 club dashboard** — "TOTAL PLAYERS 1" displayed above squads summing to 29. Fixed (`3bd1507`).
+
+### End-to-end chain — verified this session
+
+A complete coach → player → parent chain was created from scratch against the live database
+(with email confirmation temporarily disabled), and every link held:
+
+1. **Coach signs up** → `profiles` + `coach_details`, unique `invite_code` auto-generated.
+2. **Player signs up entering `TRK-<code>`** → `profiles` + `player_details`.
+3. **Player appears in that coach's squad** → `squad_players` row whose `coach_user_id` matches
+   the new coach exactly, with name, position, shirt number and age group copied across.
+4. **Parent email at signup** → `parent_invites` row, status `pending`.
+5. **Parent signs up with that address** → `player_parent_links` row pointing at the right child.
+
+This is the relationship backbone of the product and had never previously been exercised end to
+end. Code matching is tolerant of `TRK-` prefix, case and surrounding whitespace, and every step
+is idempotent — repeating it returns the existing row rather than creating a duplicate.
 
 ### Signup / onboarding — verified this session
 
