@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 import { Eye, EyeOff } from 'lucide-react'
+import { validatePassword } from '@/lib/password'
 
 export default function ResetPassword() {
   const navigate = useNavigate()
@@ -34,8 +35,9 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password.length < 8) {
-      toast.error('Password must be at least 8 characters')
+    const pwError = validatePassword(password)
+    if (pwError) {
+      toast.error(pwError)
       return
     }
     if (password !== confirm) {
@@ -91,7 +93,7 @@ export default function ResetPassword() {
           className="text-white/35 text-[12px] mb-7"
           style={{ fontFamily: "'DM Sans', sans-serif" }}
         >
-          Choose a strong password of at least 8 characters.
+          Choose a strong password: 8+ characters with upper, lower, a number and a symbol.
         </p>
 
         {!ready ? (
