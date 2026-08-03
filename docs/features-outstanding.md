@@ -77,8 +77,9 @@ There are no open defects. What remains is genuine build work, and the two large
 character feature and the legal/billing layer — are gated on the psychologist and lawyer
 conversations rather than on engineering.
 
-The most useful unblocked items are small: exercise parent alerts (P4) live, give A8 a real
-delivery mechanism, and settle the two product questions in group 4.
+The remaining unblocked items are small: exercise parent alerts (P4) live, and settle the two
+product questions in group 4. Everything else of substance now waits on a conversation, not on
+engineering.
 
 ### Recently closed
 

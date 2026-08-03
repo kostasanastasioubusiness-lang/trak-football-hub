@@ -48,7 +48,7 @@ additionally exercised in a running app against the database, signed in as that 
 | A4 | See my band result | ✅ | Rating engine, well covered by tests |
 | A5 | See my coach's assessment + private note | ✅ | `PlayerFeedback.tsx` (664 lines) reads `coach_assessments` + `coach_assessment_notes` at `/player/feedback/:assessmentId`; RLS policy `Players read own assessments` |
 | A6 | Evolution Card | ✅ | `PlayerEvolutionCard.tsx` (960 lines) aggregating `matches`, `coach_assessments`, `recognition_awards`, `player_details`. A primary nav tab ("Card") — **this is the athlete's progression surface** |
-| A7 | Passport | ⚠️ | Verified live — career totals, season history and recognition all render. **Layout bug:** the card is a hard-coded 390px (`CARD_W`) inside a 375px viewport, so the page scrolls sideways by 35px. Geometry is intentional (captured by `html2canvas` for PNG export), so the fix must scale visually without changing export dimensions |
+| A7 | Passport | ✅ | Verified live — career totals, season history and recognition all render. The card is a fixed 390px so the exported PNG is identical on every device, which overflowed a 375px viewport; **fixed** (`866949a`) by scaling the card visually while `captureCard()` drops the transform for the html2canvas call, so exports keep full geometry. No overflow at 375px or 320px |
 | A8 | Invite my parent | ✅ | **Built and verified live** (`5c91efe`). The invite and `invite_token` were always created correctly, but nothing delivered them. A "Parent access" card on the player profile now lists pending and accepted invites and shares a `/parent-invite?token=…` link via the native share sheet, clipboard, or revealed text if both fail. New `create_parent_invite` RPC allows adding a parent after signup; idempotent and case-insensitive. The link pre-fills the parent's email read-only, guaranteeing the match that links them to the child |
 | A9 | Profile | ✅ | `PlayerProfilePage` |
 | A10 | Self-log a match | ⬜ | **Removed by design.** `PlayerLogForm.tsx` no longer exists; no "Log" tab in the player nav. Matches come from the coach |
@@ -119,10 +119,12 @@ The coach logs, the athlete receives, the parent observes. What remains is not a
 build list:
 
 1. **The character feature** — the athlete's only active role, and the reason for them to open the
-   app between matches.
+   app between matches. Gated on the sports psychologist review.
 2. **Legal and billing layers** — required before real users or revenue, independent of features.
-3. **Passport layout (A7)** — the only functional defect currently open.
-4. **Parent alerts (P4)** — the last feature never exercised live.
+   Gated on the lawyer conversation.
+3. **Parent alerts (P4)** — the last feature never exercised live.
+
+**There are no open defects.** Every fault found in this round was fixed and verified.
 
 ### Closed since the previous revision
 
@@ -168,6 +170,22 @@ is idempotent — repeating it returns the existing row rather than creating a d
 - A **U11s squad exists in the data**, but `AGE_GROUPS` in `constants.ts` starts at U13. The app
   holds data for an age group it does not officially offer — relevant to the character feature's
   age banding.
+
+### Change log — this round
+
+| Commit | Change |
+|---|---|
+| `f144688` | Parent access to assessments and awards unblocked (P5); dead code removed |
+| `3bd1507` | Club dashboard "TOTAL PLAYERS 1" contradicted squads summing to 29 |
+| `866949a` | Passport no longer scrolls sideways; PNG export geometry preserved |
+| `14976b2`, `42e43c3` | Dev seed made idempotent — it had duplicated data on every run |
+| `7c1593b` | Dead goals code removed (`PlayerGoals.tsx`, `lib/goals.ts`, seed block) |
+| `80826d3` | Cleanup script for duplicate rows from earlier seed runs (since applied) |
+| `fd1a30e` | Signup password rules aligned with what Supabase actually enforces |
+| `5c91efe` | A8 — players can now deliver a parent invite via a shareable link |
+
+Two database migrations were applied by hand: `20260612000001` (parent read access) and
+`20260613000001` (parent invite sharing).
 
 ### Method note
 
