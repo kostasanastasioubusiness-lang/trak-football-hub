@@ -109,17 +109,6 @@ export default function DevSetupPage() {
       }
       update('Seed 10 matches', 'done')
 
-      update('Player goals', 'running')
-      const { data: existingGoals } = await supabase.from('player_goals')
-        .select('id').eq('user_id', playerId).limit(1)
-      if (!existingGoals?.length) {
-        await supabase.from('player_goals').insert([
-          { user_id: playerId, goal_type: 'goals_scored',   target_value: 5,   category: 'performance', current_value: 4,   completed: false },
-          { user_id: playerId, goal_type: 'matches_logged', target_value: 10,  category: 'consistency', current_value: 10,  completed: false },
-          { user_id: playerId, goal_type: 'minutes_played', target_value: 500, category: 'consistency', current_value: 425, completed: false },
-        ])
-      }
-      update('Player goals', 'done')
 
       // ── 4. Sign back in as coach to create squad + assessments ───────
       update('Sign in as coach (squad + assessments)', 'running')
