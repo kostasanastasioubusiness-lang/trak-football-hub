@@ -28,9 +28,18 @@ FROM public.organizations o
 LEFT JOIN public.profiles p ON p.user_id = o.admin_user_id
 WHERE o.name = 'SECURITY PROBE' OR p.role IS DISTINCT FROM 'club';
 
-SELECT 'probe rows' AS what, 'coach_sessions' AS tbl, COUNT(*) FROM public.coach_sessions WHERE title = 'SECURITY PROBE'
-UNION ALL SELECT 'probe rows', 'coach_calendar_events', COUNT(*) FROM public.coach_calendar_events WHERE title = 'SECURITY PROBE'
-UNION ALL SELECT 'probe rows', 'squad_players', COUNT(*) FROM public.squad_players WHERE player_name = 'SECURITY PROBE';
+SELECT 'probe rows' AS what, 'coach_sessions' AS tbl, COUNT(*) FROM public.coach_sessions WHERE title IN ('SECURITY PROBE','REGRESSION CHECK')
+UNION ALL SELECT 'probe rows', 'coach_calendar_events', COUNT(*) FROM public.coach_calendar_events WHERE title IN ('SECURITY PROBE','REGRESSION CHECK')
+UNION ALL SELECT 'probe rows', 'squad_players', COUNT(*) FROM public.squad_players WHERE player_name IN ('SECURITY PROBE','REGRESSION CHECK')
+UNION ALL SELECT 'probe rows', 'recognition_awards', COUNT(*) FROM public.recognition_awards WHERE awarded_for IN ('SECURITY PROBE','REGRESSION CHECK');
+
+-- Rows written by the real coach account while confirming the fix did not
+-- break legitimate use. Harmless, but not real data.
+SELECT 'regression-check assessment' AS what, id, work_rate, created_at
+FROM public.coach_assessments
+WHERE work_rate = 8 AND tactical = 7 AND attitude = 7 AND technical = 7
+  AND physical = 7 AND coachability = 7
+ORDER BY created_at DESC LIMIT 2;
 
 
 -- ─── STEP 2: delete. Uncomment after reviewing step 1. ───────
@@ -50,12 +59,12 @@ UNION ALL SELECT 'probe rows', 'squad_players', COUNT(*) FROM public.squad_playe
 -- WHERE p.user_id = ca.coach_user_id AND p.role IS DISTINCT FROM 'coach';
 --
 -- DELETE FROM public.recognition_awards ra
--- WHERE ra.awarded_for = 'SECURITY PROBE'
+-- WHERE ra.awarded_for IN ('SECURITY PROBE','REGRESSION CHECK')
 --    OR ra.coach_user_id IN (SELECT user_id FROM public.profiles WHERE role IS DISTINCT FROM 'coach');
 --
 -- DELETE FROM public.organizations WHERE name = 'SECURITY PROBE';
--- DELETE FROM public.coach_sessions WHERE title = 'SECURITY PROBE';
--- DELETE FROM public.coach_calendar_events WHERE title = 'SECURITY PROBE';
--- DELETE FROM public.squad_players WHERE player_name = 'SECURITY PROBE';
+-- DELETE FROM public.coach_sessions WHERE title IN ('SECURITY PROBE','REGRESSION CHECK');
+-- DELETE FROM public.coach_calendar_events WHERE title IN ('SECURITY PROBE','REGRESSION CHECK');
+-- DELETE FROM public.squad_players WHERE player_name IN ('SECURITY PROBE','REGRESSION CHECK');
 --
 -- COMMIT;   -- or ROLLBACK;
