@@ -4,20 +4,35 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Trak Football</title>
-    <meta name="description" content="Track your football performance">
+    <meta name="description" content="Track your football performance — matches, coach assessments and progress.">
     <meta name="author" content="Trak Football" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
+    <!-- Installable web app: gives Trak a home-screen icon and a standalone
+         window instead of a browser tab -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0A0A0B" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Trak" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
     
     
+    <!-- NOTE: og:image and twitter:image must be ABSOLUTE URLs — WhatsApp,
+         Facebook and X will not resolve a relative path, so no preview shows.
+         Replace with https://<your-production-domain>/og-image.png once the
+         deployed domain is settled. This matters for the parent invite links
+         players now share. -->
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/555da581-c340-4707-a866-e284c88104db/id-preview-bc5c3b6b--3833b83d-feb5-4211-8935-4bf00ed1ceb1.lovable.app-1780366350367.png">
+    <meta property="og:image" content="/og-image.png">
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/555da581-c340-4707-a866-e284c88104db/id-preview-bc5c3b6b--3833b83d-feb5-4211-8935-4bf00ed1ceb1.lovable.app-1780366350367.png">
+    <meta name="twitter:image" content="/og-image.png">
     <meta property="og:title" content="Trak Football">
   <meta name="twitter:title" content="Trak Football">
   <meta property="og:description" content="Track your football performance">
