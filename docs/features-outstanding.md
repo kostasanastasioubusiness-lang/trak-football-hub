@@ -64,7 +64,7 @@ Content is gated on the sports psychologist review.
 | Item | Current state |
 |---|---|
 | Test coverage | 7 test files against 163 source files |
-| RLS security review | Two faults already found — recursion, then missing policies. Children's data raises the stakes |
+| RLS security review | **Done.** Full pass completed — see *Security review* below |
 | PWA manifest / install experience | None. No app icon; browser bookmark only |
 | Backups | Restore never tested |
 | Bundle size | Build warns on chunks over 500 kB |
@@ -80,6 +80,41 @@ conversations rather than on engineering.
 The remaining unblocked items are small: exercise parent alerts (P4) live, and settle the two
 product questions in group 4. Everything else of substance now waits on a conversation, not on
 engineering.
+
+## Security review — completed
+
+A full authorization pass was run against the live database, signed in as each role.
+
+**Read isolation: clean.** Anonymous users can read **zero rows** from every table. A player sees
+only their own records; a coach sees only their own squad and assessments, nothing from the other
+two coaches in the academy; a parent probed against **ten other children's** squad rows returned
+zero assessments and zero awards.
+
+**Write authorization: one serious flaw, now fixed** (`bf74447`). Every write policy on
+coach-owned tables read `WITH CHECK (coach_user_id = auth.uid())` — which asks *"are you claiming
+to be yourself?"* but never *"are you a coach?"*. Signed in as an ordinary player it was possible
+to:
+
+- insert a coach assessment with 10/10 in every category about oneself — feeding the band,
+  Evolution Card, passport, parent view and club dashboard
+- award oneself Player of the Week
+- insert coach sessions, calendar events and squad players
+- create an organization with oneself as admin
+
+Because `coach_assessments` and `recognition_awards` deliberately have no DELETE policy, the
+fabricated rows could not be removed through the app either.
+
+Fixed by requiring the writer to actually hold the role (`is_coach()`, `is_club_admin()`) on every
+INSERT and UPDATE. Verified afterwards that all six attacks are blocked, that coaches can still
+assess, award, create sessions and events and add players, and that a player joining by invite
+code still works (that path is `SECURITY DEFINER` and unaffected).
+
+`get_profile_role(uuid)` was also narrowed to the caller. It was **not** dropped despite appearing
+unused in the app: it is what the "users can update own profile" policy relies on to stop a user
+promoting themselves to coach.
+
+> **Why code review would not have caught this:** `coach_user_id = auth.uid()` reads like a correct
+> ownership check. It only failed when the write was actually attempted from the wrong account.
 
 ### Recently closed
 

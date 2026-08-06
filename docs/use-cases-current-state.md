@@ -187,6 +187,14 @@ is idempotent — repeating it returns the existing row rather than creating a d
 Two database migrations were applied by hand: `20260612000001` (parent read access) and
 `20260613000001` (parent invite sharing).
 
+### Security review
+
+A full authorization pass was run against the live database (`bf74447`). Read isolation was clean
+across player, coach, parent and anonymous access. One serious write flaw was found and fixed:
+policies on coach-owned tables checked ownership but never the writer's **role**, so any player
+could fabricate coach assessments and awards about themselves. Details in
+`docs/features-outstanding.md`.
+
 ### Method note
 
 Policies and files were confirmed to *exist* in source; they were not exercised against a live
