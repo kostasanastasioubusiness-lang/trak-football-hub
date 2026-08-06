@@ -11,11 +11,7 @@ None currently open. Every defect found in this round has been fixed — see *Re
 
 ## 2. Built but not yet exercised live
 
-The verification sweep cleared five of the six. One remains.
-
-| | Feature | Persona |
-|---|---|---|
-| P4 | Parent alerts — implements only a subset of the specced alert types | Parent |
+Nothing outstanding — every feature has now been exercised against the live database.
 
 ## 3. Partially built
 
@@ -117,6 +113,9 @@ promoting themselves to coach.
 > ownership check. It only failed when the write was actually attempted from the wrong account.
 
 ### Recently closed
+
+- **P4 parent alerts** — verified live and extended with recognition awards as a third alert type,
+  using the parent read access added in `20260612000001`.
 
 - **A8 parent invite delivery** — built (`5c91efe`). Players can now share an invite link from
   their profile; previously a parent was only linked by coincidence of using the exact address.

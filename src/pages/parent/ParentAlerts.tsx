@@ -7,7 +7,7 @@ import { scoreToBand } from '@/lib/rating-engine'
 
 interface Alert {
   id: string
-  type: 'new_match' | 'coach_assessment'
+  type: 'new_match' | 'coach_assessment' | 'recognition'
   title: string
   description: string
   date: string
@@ -60,9 +60,21 @@ export default function ParentAlerts() {
           .order('created_at', { ascending: false })
           .limit(10)
 
+        // Recognition awards — readable by parents since migration 20260612000001.
+        // The positive moment a parent most wants to hear about, so it belongs
+        // in the feed rather than only on the child's passport.
+        const { data: awards } = await supabase.from('recognition_awards')
+          .select('id, created_at, award_type, awarded_for, coach_user_id')
+          .in('squad_player_id', squadRows.map((r: any) => r.id))
+          .order('created_at', { ascending: false })
+          .limit(10)
+
         if (assessments) {
           // Batch-fetch all coach profiles in one query
-          const coachIds = [...new Set(assessments.map((a: any) => a.coach_user_id).filter(Boolean))]
+          const coachIds = [...new Set([
+            ...assessments.map((a: any) => a.coach_user_id),
+            ...(awards ?? []).map((a: any) => a.coach_user_id),
+          ].filter(Boolean))]
           const { data: coachProfiles } = await supabase
             .from('profiles').select('user_id, full_name').in('user_id', coachIds)
           const coachMap: Record<string, string> = Object.fromEntries(
@@ -80,6 +92,25 @@ export default function ParentAlerts() {
               description: `by ${coachName} \u00B7 ${scoreToBand(avgScore).charAt(0).toUpperCase() + scoreToBand(avgScore).slice(1)}`,
               date: a.created_at ?? '',
               isNew: aDate > cutoff,
+            })
+          }
+
+          const AWARD_LABELS: Record<string, string> = {
+            player_of_week: 'Player of the Week',
+            player_of_month: 'Player of the Month',
+            player_of_season: 'Player of the Season',
+          }
+          for (const aw of awards ?? []) {
+            const awDate = new Date(aw.created_at ?? '')
+            const label = AWARD_LABELS[aw.award_type] ?? 'Recognition'
+            const coachName = coachMap[aw.coach_user_id] || 'Coach'
+            generated.push({
+              id: `award-${aw.id}`,
+              type: 'recognition',
+              title: label,
+              description: aw.awarded_for ? `${aw.awarded_for} · by ${coachName}` : `Awarded by ${coachName}`,
+              date: aw.created_at ?? '',
+              isNew: awDate > cutoff,
             })
           }
         }
@@ -150,11 +181,16 @@ export default function ParentAlerts() {
                 key={a.id}
                 className={`flex items-start gap-3 py-[14px] border-b border-white/[0.04] last:border-b-0${!a.isNew ? ' opacity-50' : ''}`}
               >
-                {/* Status dot: amber for unread, gray for read */}
+                {/* Status dot: lime for recognition (the good news), amber for
+                    other unread items, gray once read */}
                 <div className="mt-1.5 flex-shrink-0">
                   <div
                     className="w-[6px] h-[6px] rounded-full"
-                    style={{ backgroundColor: a.isNew ? '#fb923c' : 'rgba(255,255,255,0.2)' }}
+                    style={{
+                      backgroundColor: !a.isNew
+                        ? 'rgba(255,255,255,0.2)'
+                        : a.type === 'recognition' ? '#C8F25A' : '#fb923c',
+                    }}
                   />
                 </div>
 

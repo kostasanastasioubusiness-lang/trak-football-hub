@@ -71,7 +71,7 @@ additionally exercised in a running app against the database, signed in as that 
 | P1 | Accept invite, create account, link to child | ✅ | **Verified live**: a parent signing up with the invited address was linked to the correct child in `player_parent_links`. Linking is idempotent — `link_parent_to_players_by_email` returned 0 because `provision_my_profile` had already created the link |
 | P2 | See child's season band | ✅ | RLS policy `Parents can read linked child matches`: `user_id IN (SELECT player_user_id FROM player_parent_links WHERE parent_user_id = auth.uid())` |
 | P3 | See child's match feed | ✅ | Same policy — the previously reported wall is gone |
-| P4 | Alerts | ⚠️ | `ParentAlerts` implements a subset of the specced types; the underlying query is no longer blocked. Not yet exercised live |
+| P4 | Alerts | ✅ | **Verified live and extended.** Was two of the specced types (match, assessment); recognition awards are now a third, using the parent read access added in `20260612000001` — the positive moment a parent most wants, previously only visible on the child's passport. Recognition carries a lime dot rather than amber so good news is distinguishable at a glance |
 | P5 | See coach assessments + awards | ✅ | UI existed but returned 0 rows — no parent policy. Fixed by migration `20260612000001` (helper `squad_player_is_my_child`) granting parent SELECT on `coach_assessments` and `recognition_awards`. Applied to the database. The coach's private note stays player-only |
 | P6 | Profile | ✅ | `ParentProfilePage` |
 | P7 | See child's goals | ⬜ | Removed by design, with goals |
