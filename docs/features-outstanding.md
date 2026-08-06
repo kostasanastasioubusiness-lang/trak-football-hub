@@ -61,7 +61,7 @@ Content is gated on the sports psychologist review.
 |---|---|
 | Test coverage | 7 test files against 163 source files |
 | RLS security review | **Done.** Full pass completed — see *Security review* below |
-| PWA manifest / install experience | None. No app icon; browser bookmark only |
+| PWA manifest / install experience | **Done** (`18b2fa4`). Manifest, icon set and Apple touch icon added — Trak installs to the home screen and opens standalone |
 | Backups | Restore never tested |
 | Bundle size | Build warns on chunks over 500 kB |
 
@@ -113,6 +113,11 @@ promoting themselves to coach.
 > ownership check. It only failed when the write was actually attempted from the wrong account.
 
 ### Recently closed
+
+- **PWA install experience** — Trak can now be added to a home screen and opens without browser
+  chrome (`18b2fa4`). Share previews also fixed: the Open Graph image pointed at a stale Lovable
+  screenshot. **One follow-up:** `og:image` is still relative, and social platforms need an
+  absolute URL — it must be set to the production domain before invite links preview correctly.
 
 - **P4 parent alerts** — verified live and extended with recognition awards as a third alert type,
   using the parent read access added in `20260612000001`.
