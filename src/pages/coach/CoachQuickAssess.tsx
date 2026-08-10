@@ -12,6 +12,11 @@ import { deriveCardStats } from '@/lib/cardStats'
 import { trackEvent } from '@/lib/telemetry'
 import { ChevronLeft, Check, MessageSquare } from 'lucide-react'
 
+type Scores = {
+  work_rate: number; tactical: number; attitude: number
+  technical: number; physical: number; coachability: number
+}
+
 /* ---------- helpers ---------- */
 
 function bandConfig(band: BandType) {
@@ -78,18 +83,28 @@ export default function CoachQuickAssess() {
         return
       }
 
-      // Get latest assessment date per player
+      // Latest assessment per player. The scores are fetched too, not just the
+      // date: a player rarely swings week to week, so starting each slider at
+      // their previous value means the coach only moves what actually changed
+      // instead of dragging six sliders from the midpoint every time.
       const { data: latestAssessments } = await supabase
         .from('coach_assessments')
-        .select('squad_player_id, created_at')
+        .select('squad_player_id, created_at, work_rate, tactical, attitude, technical, physical, coachability')
         .eq('coach_user_id', user.id)
         .order('created_at', { ascending: false })
 
       // Build a map: squad_player_id -> latest assessment date
       const lastAssessedMap = new Map<string, string>()
+      const lastScoresMap = new Map<string, Scores>()
       latestAssessments?.forEach(a => {
         if (!lastAssessedMap.has(a.squad_player_id) && a.created_at) {
           lastAssessedMap.set(a.squad_player_id, a.created_at)
+        }
+        if (!lastScoresMap.has(a.squad_player_id)) {
+          lastScoresMap.set(a.squad_player_id, {
+            work_rate: a.work_rate, tactical: a.tactical, attitude: a.attitude,
+            technical: a.technical, physical: a.physical, coachability: a.coachability,
+          })
         }
       })
 
@@ -103,7 +118,9 @@ export default function CoachQuickAssess() {
         return new Date(dateA).getTime() - new Date(dateB).getTime()
       })
 
-      setPlayers(sorted)
+      // Carry each player's previous scores onto the row so the sliders can
+      // start there rather than at the midpoint.
+      setPlayers(sorted.map(p => ({ ...p, _lastScores: lastScoresMap.get(p.id) ?? null })))
       setLoading(false)
     })()
   }, [user])
@@ -116,21 +133,24 @@ export default function CoachQuickAssess() {
   const total = players.length
   const displayIdx = Math.min(currentIdx + 1, total)
 
-  /* --- reset sliders for new player --- */
-  const resetSliders = () => {
-    setWorkRate(5)
-    setTactical(5)
-    setAttitude(5)
-    setTechnical(5)
-    setPhysical(5)
-    setCoachability(5)
+  /* --- seed sliders for whichever player is now on screen ---
+     Starts from their previous assessment when there is one, so the coach
+     adjusts what changed instead of re-entering six values from scratch.
+     A player with no history still starts at the neutral midpoint. */
+  useEffect(() => {
+    const prev = currentPlayer?._lastScores
+    setWorkRate(prev?.work_rate ?? 5)
+    setTactical(prev?.tactical ?? 5)
+    setAttitude(prev?.attitude ?? 5)
+    setTechnical(prev?.technical ?? 5)
+    setPhysical(prev?.physical ?? 5)
+    setCoachability(prev?.coachability ?? 5)
     setNote('')
     setNoteOpen(false)
-  }
+  }, [currentIdx, currentPlayer])
 
   /* --- advance to next player --- */
   const advance = () => {
-    resetSliders()
     setCurrentIdx(prev => prev + 1)
   }
 
