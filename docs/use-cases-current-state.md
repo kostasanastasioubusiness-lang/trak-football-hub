@@ -18,7 +18,7 @@ additionally exercised in a running app against the database, signed in as that 
 | C1 | Sign up, onboard, pick club/team/role | ✅ | **Verified live on a fresh account**: `provision_my_profile` wrote `profiles` + `coach_details` (club, team, role) and auto-generated a unique `invite_code` in one atomic call |
 | C2 | Add a player to my squad manually | ✅ | `CoachAddPlayer` inserts `squad_players`; RLS correct |
 | C3 | View my squad | ✅ | `CoachSquadPage` |
-| C4 | Assess a player on 6 sliders → band | ✅ | `CoachAssess`; `coach_rating` is a generated column; RLS correct |
+| C4 | Assess a player on 6 sliders → band | ✅ | `CoachAssess`; `coach_rating` is a generated column; RLS correct. **Quick Assess** walks the whole squad and, since `a282d34`, starts each slider at that player's previous assessment rather than the midpoint — the coach moves only what changed instead of ~108 drags per squad |
 | C5 | View a player's assessment history | ✅ | `CoachPlayerProfilePage` |
 | C6 | Log a training/match session | ✅ | `coach_sessions`; RLS correct |
 | C7 | Log a match on behalf of a player | ✅ | `log_match_for_player` SECURITY DEFINER RPC, used by `CoachQuickMatchLog` and `CoachAddSession`. **This is now the only path a match enters the system** |
@@ -172,6 +172,17 @@ is idempotent — repeating it returns the existing row rather than creating a d
   age banding.
 
 ### Change log — this round
+
+| Commit | Change |
+|---|---|
+| `a282d34` | Quick Assess sliders start from the player's last assessment, not the midpoint |
+| `a1f957d` | Dropped the unused `player_goals` table |
+| `aa446c0` | Age groups single-sourced; range starts at U13 |
+| `acbfd2f` | Recognition awards added to the parent alerts feed |
+| `18b2fa4` | Installable app (manifest, icons) and a real share preview |
+| `bf74447` | **Security:** coach/club writes now require the writer's role |
+
+### Earlier in this round
 
 | Commit | Change |
 |---|---|

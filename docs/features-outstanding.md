@@ -64,6 +64,7 @@ Content is gated on the sports psychologist review.
 | PWA manifest / install experience | **Done** (`18b2fa4`). Manifest, icon set and Apple touch icon added — Trak installs to the home screen and opens standalone |
 | Backups | Restore never tested |
 | Bundle size | Build warns on chunks over 500 kB |
+| Coach friction | **Partly done.** Quick Assess fixed (`a282d34`). Match logging and add-player not yet measured |
 
 ---
 
@@ -73,9 +74,11 @@ There are no open defects. What remains is genuine build work, and the two large
 character feature and the legal/billing layer — are gated on the psychologist and lawyer
 conversations rather than on engineering.
 
-The remaining unblocked items are small: exercise parent alerts (P4) live, and settle the two
-product questions in group 4. Everything else of substance now waits on a conversation, not on
-engineering.
+Both product questions are now settled — age groups start at U13, and `player_goals` is dropped.
+The most valuable unblocked work is **continuing the coach friction audit** (match logging and
+add-player), because that targets the biggest risk to the business rather than to the codebase.
+After that: test coverage, untested backups, bundle size, and the absolute `og:image` URL once the
+production domain is known.
 
 ## Security review — completed
 
@@ -112,7 +115,31 @@ promoting themselves to coach.
 > **Why code review would not have caught this:** `coach_user_id = auth.uid()` reads like a correct
 > ownership check. It only failed when the write was actually attempted from the wrong account.
 
+## Coach friction — the business risk being worked
+
+The business model matrix names **"coach stops logging"** as the single biggest threat to the
+product: the coach does all the work, is usually unpaid, and if the routine takes more than a
+couple of minutes it stops by week three. If the coach stops, there is nothing for the player,
+parent or club to see.
+
+**Measured and fixed:** Quick Assess reset all six sliders to the midpoint for every player —
+about **108 precise drags** to get through an 18-player squad on a phone. It also invited bad
+data, since tapping *Next* without touching anything recorded a real "Mixed 5.0" assessment
+indistinguishable from a considered one. Sliders now start from that player's previous
+assessment, so the coach moves only what changed. No extra query: the scores were already being
+fetched and discarded.
+
+**Not yet measured:** match logging, and the add-player flow.
+
 ### Recently closed
+
+- **Quick Assess friction** — sliders start from the player's last assessment instead of the
+  midpoint (`a282d34`). Verified live.
+- **Age groups single-sourced** — `CoachAddPlayer` carried its own U7–U19+ list while signup used
+  the shared constant. **Decision: the range starts at U13** (`aa446c0`).
+- **`player_goals` dropped** — the table behind the removed goals feature. Nothing read it; removed
+  rather than left dormant because it is children's data that would otherwise need declaring
+  (`a1f957d`).
 
 - **PWA install experience** — Trak can now be added to a home screen and opens without browser
   chrome (`18b2fa4`). Share previews also fixed: the Open Graph image pointed at a stale Lovable
