@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, PillSelector, MetadataLabel } from '@/components/trak'
 import { ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
+import { AGE_GROUPS } from '@/lib/constants'
 
 export default function CoachAddPlayer() {
   const { user } = useAuth()
@@ -60,15 +61,11 @@ export default function CoachAddPlayer() {
           { label: 'MID', value: 'Midfielder' }, { label: 'ATT', value: 'Attacker' },
         ]} value={position} onChange={setPosition} />
 
-        <PillSelector label="Age Group" options={[
-          { label: 'U7',   value: 'U7'   }, { label: 'U8',  value: 'U8'  },
-          { label: 'U9',   value: 'U9'   }, { label: 'U10', value: 'U10' },
-          { label: 'U11',  value: 'U11'  }, { label: 'U12', value: 'U12' },
-          { label: 'U13',  value: 'U13'  }, { label: 'U14', value: 'U14' },
-          { label: 'U15',  value: 'U15'  }, { label: 'U16', value: 'U16' },
-          { label: 'U17',  value: 'U17'  }, { label: 'U18', value: 'U18' },
-          { label: 'U19+', value: 'U19+' },
-        ]} value={ageGroup} onChange={setAgeGroup} />
+        {/* Age groups come from the shared constant. This screen used to carry
+            its own U7–U19+ list, so a coach could add a U11 player that signup
+            never offers — which is how U11 data exists in an app that starts
+            at U13. */}
+        <PillSelector label="Age Group" options={AGE_GROUPS.map(g => ({ label: g, value: g }))} value={ageGroup} onChange={setAgeGroup} />
 
         <div className="space-y-2">
           <MetadataLabel text="SHIRT NUMBER" />

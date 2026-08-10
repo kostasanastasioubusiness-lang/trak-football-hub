@@ -22,7 +22,7 @@ Nothing outstanding — A8 was the last item here and is now delivered.
 | Observation | Why it matters |
 |---|---|
 | The passport rendered **two identical "Player of the Week" entries** | Either duplicate rows in `recognition_awards` or a render duplication. Recognition is permanent and shown on the passport, so duplicates are visible to players |
-| A **U11s squad exists in the data**, but `AGE_GROUPS` in `constants.ts` starts at U13 | The app holds data for an age group it does not officially offer. Directly relevant to the character feature's age banding, which assumes ages 6–18 |
+| ~~A U11s squad exists in the data~~ — **resolved, and it was not what it looked like** | The "U11s" was a coach's free-text `team` label, not an `age_group` value. Every `squad_players.age_group` is NULL, so no sub-U13 data ever existed. The real defect was `CoachAddPlayer` carrying its own U7–U19+ list separate from `AGE_GROUPS`, which would eventually have produced exactly that data. Fixed — the screen now reads the shared constant. **Decision: the range starts at U13** |
 
 ## 5. Not built — the character feature
 
