@@ -113,11 +113,11 @@ serve(async (req) => {
       .eq("assessment_id", assessment_id)
       .maybeSingle();
 
-    if (!noteRow?.note) {
-      return new Response(JSON.stringify({ error: "No coaching note found for this assessment" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // A note is optional. Requiring one made the whole feedback screen
+    // unreachable whenever a coach assessed without writing anything — which,
+    // pitch-side, is most of the time. The six category scores are themselves
+    // enough to say what to work on, so fall back to them rather than 404.
+    const coachNote = noteRow?.note?.trim() ?? "";
 
     const position = squadRow.position || "outfield player";
     const rating = assessment.coach_rating?.toFixed(1) || "—";
@@ -130,8 +130,9 @@ Appearance type: ${appearance}
 Overall rating: ${rating}/10
 Work rate: ${assessment.work_rate}/10, Technical: ${assessment.technical}/10, Physical: ${assessment.physical}/10, Tactical: ${assessment.tactical}/10, Attitude: ${assessment.attitude}/10, Coachability: ${assessment.coachability}/10
 
-Coach's improvement notes:
-"${noteRow.note}"`;
+${coachNote
+  ? `Coach's improvement notes:\n"${coachNote}"`
+  : `The coach did not write a note for this assessment. Base the feedback only on the category scores above: pick the lowest one or two and say what to work on. Do not invent or imply anything the coach said.`}`;
 
     // If chat_messages provided → it's a follow-up chat, stream a conversational reply
     if (Array.isArray(chat_messages) && chat_messages.length > 0) {
@@ -175,7 +176,7 @@ ${contextBlock}`;
         stream: false,
         messages: [
           { role: "system", content: FEEDBACK_SYSTEM },
-          { role: "user", content: `Generate structured improvement feedback for this player based on their coach's notes:\n\n${contextBlock}` },
+          { role: "user", content: `Generate structured improvement feedback for this player:\n\n${contextBlock}` },
         ],
       }),
     });
