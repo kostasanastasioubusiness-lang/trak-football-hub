@@ -9,7 +9,11 @@ Sentry.init({
   environment: import.meta.env.MODE,
   integrations: [Sentry.browserTracingIntegration()],
   tracesSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1.0,
+  // No session replay. The option is deliberately absent rather than set to 0:
+  // replaysOnErrorSampleRate was here without replayIntegration(), so nothing
+  // recorded — but anyone adding that integration would have silently begun
+  // capturing children's screens, free text included, and shipping them to a
+  // US provider with no EU region. Removing the line removes the invitation.
 })
 
 // Catch unhandled promise rejections — forwards to Sentry in production.
