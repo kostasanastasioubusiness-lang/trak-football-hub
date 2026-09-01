@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -9,7 +9,7 @@ import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import type { BandType } from '@/lib/types'
 import { deriveCardStats } from '@/lib/cardStats'
-import { trackEvent } from '@/lib/telemetry'
+import { trackEvent, startTimer } from '@/lib/telemetry'
 import { ChevronLeft, Check, MessageSquare } from 'lucide-react'
 
 type Scores = {
@@ -206,15 +206,46 @@ export default function CoachQuickAssess() {
     advance()
   }
 
-  /* --- fire telemetry on completion --- */
+  /* --- fire telemetry on completion ---
+     Scorecard metric 4. The run is timed from the first player appearing;
+     `players` lets the view normalise a squad run to a per-player median. */
+  const runTimer = useRef<(() => number) | null>(null)
   useEffect(() => {
-    if (isComplete && players.length > 0) {
-      trackEvent('quick_assess_completed', {
-        assessed: assessedIds.size,
-        skipped: skippedIds.size,
-      })
-    }
+    if (players.length > 0 && !runTimer.current) runTimer.current = startTimer()
+  }, [players.length])
+
+  /* Reporting only on isComplete meant a coach had to walk the ENTIRE squad
+     before any timing was recorded. Someone who assessed five players and put
+     the phone down produced nothing at all — and abandoning halfway is exactly
+     the behaviour metric 4 exists to detect. Report on the way out too. */
+  const assessedRef = useRef(0)
+  const skippedRef = useRef(0)
+  const squadRef = useRef(0)
+  const reportedRef = useRef(false)
+
+  useEffect(() => { assessedRef.current = assessedIds.size }, [assessedIds])
+  useEffect(() => { skippedRef.current = skippedIds.size }, [skippedIds])
+  useEffect(() => { squadRef.current = players.length }, [players.length])
+
+  const reportRun = (completed: boolean) => {
+    if (reportedRef.current || assessedRef.current === 0) return
+    reportedRef.current = true
+    trackEvent('quick_assess_completed', {
+      mode: 'quick',
+      completed,
+      assessed: assessedRef.current,
+      skipped: skippedRef.current,
+      players: assessedRef.current,
+      squad_size: squadRef.current,
+      duration_ms: runTimer.current?.() ?? null,
+    })
+  }
+
+  useEffect(() => {
+    if (isComplete && players.length > 0) reportRun(true)
   }, [isComplete])
+
+  useEffect(() => () => reportRun(false), [])
 
   /* --- progress bar width --- */
   const progressPct = total > 0 ? (currentIdx / total) * 100 : 0

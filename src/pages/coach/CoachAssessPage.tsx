@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -9,7 +9,7 @@ import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import type { BandType } from '@/lib/types'
 import { deriveCardStats } from '@/lib/cardStats'
-import { trackEvent } from '@/lib/telemetry'
+import { trackEvent, startTimer } from '@/lib/telemetry'
 import { ChevronLeft, ChevronDown } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 
@@ -75,6 +75,14 @@ export default function CoachAssessPage() {
   const [coachability, setCoachability] = useState(5)
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+
+  /* Scorecard metric 4: median time to assess one player, target <90s.
+     The clock starts when a player is chosen, not on mount, so a page left
+     open on the drive home does not pollute the median. */
+  const timerRef = useRef<(() => number) | null>(null)
+  useEffect(() => {
+    timerRef.current = playerId ? startTimer() : null
+  }, [playerId])
 
   /* fetch squad players */
   useEffect(() => {
@@ -147,7 +155,14 @@ export default function CoachAssessPage() {
         toast.error('Assessment saved but note could not be saved.')
       }
     }
-    trackEvent('assessment', { player_id: playerId, band })
+    trackEvent('assessment_submitted', {
+      mode: 'full',
+      players: 1,
+      squad_player_id: playerId,
+      band,
+      has_note: note.trim().length > 0,
+      duration_ms: timerRef.current?.() ?? null,
+    })
     navigate('/coach/home')
   }
 
@@ -222,7 +237,7 @@ export default function CoachAssessPage() {
         {/* ---- 3. session selector ---- */}
         <div className="space-y-1.5">
           <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
-            SESSION
+            SESSION <span className="text-white/25">— OPTIONAL</span>
           </span>
           <div className="relative">
             <select
@@ -230,7 +245,7 @@ export default function CoachAssessPage() {
               onChange={e => setSessionId(e.target.value)}
               className="w-full px-4 py-3 pr-10 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none appearance-none"
             >
-              <option value="">Select session...</option>
+              <option value="">{sessions.length ? 'No session' : 'No sessions yet — leave blank'}</option>
               {sessions.map(s => (
                 <option key={s.id} value={s.id}>
                   {s.title || s.session_date || s.id}

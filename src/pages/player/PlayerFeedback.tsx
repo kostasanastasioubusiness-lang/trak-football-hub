@@ -4,6 +4,7 @@ import { supabase, SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from '@/integrati
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
 import { ChevronLeft, Sparkles, Send, Loader2, MessageSquare } from 'lucide-react'
+import { trackEvent } from '@/lib/telemetry'
 
 /* ---------- types (forward-declared so FEEDBACK_BANK can reference them) ---------- */
 
@@ -254,6 +255,7 @@ export default function PlayerFeedback() {
   /* ---- load initial feedback ---- */
   useEffect(() => {
     if (!user || !assessmentId) return
+    trackEvent('feedback_opened', { assessment_id: assessmentId })
 
     const load = async () => {
       setLoading(true)

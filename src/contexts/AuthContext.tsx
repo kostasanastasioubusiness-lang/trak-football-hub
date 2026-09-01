@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { User } from '@supabase/supabase-js';
+import { setTelemetryRole, trackSessionOpen } from '@/lib/telemetry';
 
 type UserRole = 'player' | 'coach' | 'parent' | 'club';
 const PENDING_PROFILE_KEY = 'trak_pending_profile';
@@ -236,6 +237,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Pilot instrumentation. One place, so every sign-in path is covered:
+  // the role stamps subsequent events, and `app_opened` fires once per
+  // browser session — the sole source for the week-6 return metrics.
+  useEffect(() => {
+    setTelemetryRole(profile?.role ?? null);
+    if (user && profile) trackSessionOpen(user.id, profile.role);
+  }, [user?.id, profile?.role]);
 
   const signUp = async (email: string, password: string, pendingProfile?: PendingProfileData) => {
     const { data, error } = await supabase.auth.signUp({

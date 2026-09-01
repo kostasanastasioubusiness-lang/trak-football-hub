@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
+import { trackEvent } from '@/lib/telemetry'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -246,6 +247,10 @@ export default function CoachSchedule() {
       })
       if (error || data?.error) throw new Error(data?.error || 'Parse failed')
       const list = data?.events || []
+      trackEvent('schedule_parsed', {
+        input_chars: importText.trim().length,
+        events_found: list.length,
+      })
       if (!list.length) toast.error('No events found. Try clearer dates/times.')
       else { setDrafts(list); toast.success(`Found ${list.length} event${list.length > 1 ? 's' : ''}`) }
     } catch (e: any) {
