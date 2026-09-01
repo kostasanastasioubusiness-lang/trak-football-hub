@@ -3,6 +3,12 @@
  *
  * Coach evaluates real, observable inputs. The Card derives from them so the
  * coach UX is grounded while the player UX is simple & gamified.
+ *
+ * These values are written straight into `coach_assessments`, whose card-stat
+ * columns are INTEGER. Rounding to one decimal produced values like 6.5 and
+ * Postgres rejected the whole insert with `invalid input syntax for type
+ * integer`, so an assessment failed whenever a derived average landed on a
+ * half — around three times in four. Whole numbers only.
  */
 export interface CoachInputs {
   workRate: number
@@ -21,14 +27,15 @@ export interface CardStats {
   spirit: number
 }
 
-const round1 = (n: number) => Math.round(n * 10) / 10
+/** Whole number, clamped to the 0..10 the columns and the Card both expect. */
+const stat = (n: number) => Math.min(10, Math.max(0, Math.round(n)))
 
 export function deriveCardStats(c: CoachInputs): CardStats {
   return {
-    consistency: round1(c.attitude),
-    impact:      round1(c.technical),
-    workrate:    round1(c.workRate),
-    technique:   round1((c.technical + c.tactical) / 2),
-    spirit:      round1((c.attitude + c.coachability) / 2),
+    consistency: stat(c.attitude),
+    impact:      stat(c.technical),
+    workrate:    stat(c.workRate),
+    technique:   stat((c.technical + c.tactical) / 2),
+    spirit:      stat((c.attitude + c.coachability) / 2),
   }
 }
