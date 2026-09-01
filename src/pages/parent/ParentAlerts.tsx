@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
+import { trackEvent } from '@/lib/telemetry'
 
 interface Alert {
   id: string
@@ -120,6 +121,7 @@ export default function ParentAlerts() {
       generated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
       setAlerts(generated)
+      trackEvent('alert_opened', { count: generated.length })
       setLoading(false)
     })
   }, [user])

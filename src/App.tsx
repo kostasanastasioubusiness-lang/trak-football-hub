@@ -37,7 +37,6 @@ const CoachAssessPage = lazy(() => import("./pages/coach/CoachAssessPage"));
 const CoachSessionsPage = lazy(() => import("./pages/coach/CoachSessionsPage"));
 const CoachAddSession = lazy(() => import("./pages/coach/CoachAddSession"));
 const CoachSessionsChooser = lazy(() => import("./pages/coach/CoachSessionsChooser"));
-const CoachQuickMatchLog = lazy(() => import("./pages/coach/CoachQuickMatchLog"));
 const CoachProfilePage = lazy(() => import("./pages/coach/CoachProfilePage"));
 const CoachManual = lazy(() => import("./pages/coach/CoachManual"));
 const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfilePage"));
@@ -108,7 +107,13 @@ const App = () => (
             <Route path="/coach/assess" element={<RouteGuard allowedRole="coach"><CoachAssessPage /></RouteGuard>} />
             <Route path="/coach/sessions" element={<RouteGuard allowedRole="coach"><CoachSessionsChooser /></RouteGuard>} />
             <Route path="/coach/sessions/list" element={<RouteGuard allowedRole="coach"><CoachSessionsPage /></RouteGuard>} />
-            <Route path="/coach/sessions/quick" element={<RouteGuard allowedRole="coach"><CoachQuickMatchLog /></RouteGuard>} />
+            {/* Quick match log now resolves to the full session screen, preset to Match.
+                 It wrote identical inputs for every attending player — 90 minutes, no
+                 goals, no assists — so a squad's computed bands varied only by position.
+                 CoachAddSession asks for exactly the same required fields and defaults
+                 each player the same way, with per-player detail available where it
+                 matters. CoachQuickMatchLog.tsx is left in the repo, unrouted. */}
+            <Route path="/coach/sessions/quick" element={<RouteGuard allowedRole="coach"><CoachAddSession /></RouteGuard>} />
             <Route path="/coach/sessions/add" element={<RouteGuard allowedRole="coach"><CoachAddSession /></RouteGuard>} />
             <Route path="/coach/profile" element={<RouteGuard allowedRole="coach"><CoachProfilePage /></RouteGuard>} />
             <Route path="/coach/manual" element={<CoachManual />} />

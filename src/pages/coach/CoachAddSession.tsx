@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, MetadataLabel } from '@/components/trak'
 import { computeMatchScore } from '@/lib/rating-engine'
+import { trackEvent } from '@/lib/telemetry'
 
 type SquadPlayer = {
   id: string
@@ -52,7 +53,12 @@ export default function CoachAddSession() {
   const location = useLocation()
 
   // Common
-  const [type,  setType]  = useState<'training' | 'match' | 'other'>('training')
+  /* Reached via /coach/sessions/quick? That entry point is the match one, so
+     open on Match — otherwise the redirect would cost the coach the extra tap
+     the quick log used to save. */
+  const [type,  setType]  = useState<'training' | 'match' | 'other'>(
+    () => (window.location.pathname.endsWith('/sessions/quick') ? 'match' : 'training'),
+  )
   const [title, setTitle] = useState('')
   const [date,  setDate]  = useState(new Date().toISOString().split('T')[0])
   const [notes, setNotes] = useState('')
@@ -264,8 +270,18 @@ export default function CoachAddSession() {
           p_body_condition:  'Average',
           p_self_rating:     'Average',
           p_computed_rating: computed_rating,
+          p_match_date:      date,
         })
       }
+
+      trackEvent('match_logged', {
+        actor: 'coach',
+        source: 'add_session',
+        players: attended.size,
+        match_date: date,
+        competition,
+        venue,
+      })
     } else {
       // Training / Other — simple attendance
       if (attended.size > 0) {

@@ -544,8 +544,12 @@ export default function PlayerHome() {
           </div>
         )}
 
-        {/* AI Feedback card — shown when coach left improvement notes */}
-        {coachAssessment && coachAssessmentNote && (
+        {/* Feedback card. Shown for ANY assessment, not only ones carrying a
+            written note: gating on the note made the whole feedback screen
+            unreachable whenever a coach assessed without typing anything, and
+            the note is optional for them. Without a note the screen works from
+            the six category scores instead. */}
+        {coachAssessment && (
           <button
             onClick={() => navigate(`/player/feedback/${coachAssessment.id}`)}
             className="w-full mt-3 text-left rounded-[18px] p-4 active:scale-[0.98] transition-transform"
@@ -560,8 +564,14 @@ export default function PlayerHome() {
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-white/88">Your coach left feedback</p>
-                <p className="text-[11px] text-white/40 mt-0.5 truncate">"{coachAssessmentNote}"</p>
+                <p className="text-[13px] font-semibold text-white/88">
+                  {coachAssessmentNote ? 'Your coach left feedback' : 'What to work on'}
+                </p>
+                <p className="text-[11px] text-white/40 mt-0.5 truncate">
+                  {coachAssessmentNote
+                    ? `"${coachAssessmentNote}"`
+                    : 'Based on your latest assessment'}
+                </p>
               </div>
               <span className="text-[#C8F25A] text-[13px] flex-shrink-0">→</span>
             </div>

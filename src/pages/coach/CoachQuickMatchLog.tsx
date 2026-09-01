@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { trackEvent } from '@/lib/telemetry'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
@@ -25,6 +26,10 @@ export default function CoachQuickMatchLog() {
   const [venue, setVenue] = useState<'Home' | 'Away'>('Home')
   const [attended, setAttended] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
+  /* Match coverage is measured against the fixture list by date, so the day the
+     match was PLAYED has to be recorded — a Sunday match logged on Monday would
+     otherwise miss its fixture entirely and read as uncovered. */
+  const [matchDate, setMatchDate] = useState(() => new Date().toISOString().slice(0, 10))
 
   useEffect(() => {
     if (!user) return
@@ -141,8 +146,17 @@ export default function CoachQuickMatchLog() {
             p_body_condition:  'Average',
             p_self_rating:     'Average',
             p_computed_rating: row.computed_rating,
+            p_match_date:      matchDate,
           })
         }
+
+        trackEvent('match_logged', {
+          actor: 'coach',
+          players: matchRows.length,
+          match_date: matchDate,
+          competition,
+          venue,
+        })
       }
     }
 
@@ -177,6 +191,24 @@ export default function CoachQuickMatchLog() {
       </div>
 
       <div className="pt-5 pb-32 space-y-5">
+        {/* Match date */}
+        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+          <span
+            className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45 block mb-3"
+            style={{ fontFamily: "'DM Mono', monospace" }}
+          >
+            DATE PLAYED
+          </span>
+          <input
+            type="date"
+            value={matchDate}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={e => setMatchDate(e.target.value)}
+            className="w-full bg-transparent text-[20px] text-white/88 outline-none"
+            style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}
+          />
+        </div>
+
         {/* Opponent + score */}
         <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
           <span

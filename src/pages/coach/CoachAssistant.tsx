@@ -7,6 +7,7 @@ import { supabase, SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from '@/integrati
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel, PitchDiagram, detectDiagrams, PRESETS } from '@/components/trak'
 import type { DiagramData } from '@/components/trak'
+import { trackEvent } from '@/lib/telemetry'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 type Segment = { type: 'text'; content: string } | { type: 'diagram'; data: DiagramData }
@@ -125,6 +126,7 @@ export default function CoachAssistant() {
     if (!text || isLoading) return
     const userMsg: Msg = { role: 'user', content: text }
     setMessages(prev => [...prev, userMsg])
+    trackEvent('assistant_used', { turn: messages.length + 1 })
     setInput('')
     setIsLoading(true)
 
