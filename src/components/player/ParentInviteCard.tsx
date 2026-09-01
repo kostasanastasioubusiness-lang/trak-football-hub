@@ -54,7 +54,7 @@ export function ParentInviteCard() {
     const url = linkFor(invite.invite_token)
     const text = `Follow my progress on Trak: ${url}`
     try {
-      if (navigator.share) {
+      if (typeof navigator.share === 'function') {
         await navigator.share({ title: 'Trak', text, url })
         return
       }
@@ -99,7 +99,7 @@ export function ParentInviteCard() {
             >
               {copied === invite.id
                 ? <><Check size={13} /> Copied</>
-                : <>{navigator.share ? <Share2 size={13} /> : <Copy size={13} />} Send link</>}
+                : <>{typeof navigator.share === 'function' ? <Share2 size={13} /> : <Copy size={13} />} Send link</>}
             </button>
           </div>
 

@@ -14,6 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notes: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          id: string
+          note: string
+          organization_id: string
+          target_coach_user_id: string | null
+          target_squad_player_id: string | null
+          target_type: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          id?: string
+          note: string
+          organization_id: string
+          target_coach_user_id?: string | null
+          target_squad_player_id?: string | null
+          target_type: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+          organization_id?: string
+          target_coach_user_id?: string | null
+          target_squad_player_id?: string | null
+          target_type?: string
+        }
+        Relationships: []
+      }
+      organizations: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          id: string
+          join_code: string
+          logo_url: string | null
+          name: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          id?: string
+          join_code: string
+          logo_url?: string | null
+          name: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          id?: string
+          join_code?: string
+          logo_url?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      pilot_config: {
+        Row: {
+          created_at: string
+          id: boolean
+          org_id: string | null
+          starts_on: string
+          weeks: number
+        }
+        Insert: {
+          created_at?: string
+          id?: boolean
+          org_id?: string | null
+          starts_on: string
+          weeks?: number
+        }
+        Update: {
+          created_at?: string
+          id?: boolean
+          org_id?: string | null
+          starts_on?: string
+          weeks?: number
+        }
+        Relationships: []
+      }
+      staff_compliance: {
+        Row: {
+          coach_user_id: string
+          dbs_expiry: string | null
+          dbs_status: string | null
+          first_aid_expiry: string | null
+          id: string
+          license_expiry: string | null
+          license_level: string | null
+          notes: string | null
+          organization_id: string
+          safeguarding_completed: boolean
+          updated_at: string
+        }
+        Insert: {
+          coach_user_id: string
+          dbs_expiry?: string | null
+          dbs_status?: string | null
+          first_aid_expiry?: string | null
+          id?: string
+          license_expiry?: string | null
+          license_level?: string | null
+          notes?: string | null
+          organization_id: string
+          safeguarding_completed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          coach_user_id?: string
+          dbs_expiry?: string | null
+          dbs_status?: string | null
+          first_aid_expiry?: string | null
+          id?: string
+          license_expiry?: string | null
+          license_level?: string | null
+          notes?: string | null
+          organization_id?: string
+          safeguarding_completed?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      telemetry_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       coach_assessment_notes: {
         Row: {
           assessment_id: string
@@ -50,6 +203,7 @@ export type Database = {
         Row: {
           appearance: string | null
           attitude: number
+          coach_name_snapshot: string | null
           coach_rating: number | null
           coach_user_id: string
           coachability: number
@@ -58,7 +212,9 @@ export type Database = {
           flag: string | null
           id: string
           impact: number
+          organization_id: string | null
           physical: number
+          private_note: string | null
           session_id: string | null
           spirit: number
           squad_player_id: string
@@ -71,6 +227,7 @@ export type Database = {
         Insert: {
           appearance?: string | null
           attitude?: number
+          coach_name_snapshot?: string | null
           coach_rating?: number | null
           coach_user_id: string
           coachability?: number
@@ -79,7 +236,9 @@ export type Database = {
           flag?: string | null
           id?: string
           impact?: number
+          organization_id?: string | null
           physical?: number
+          private_note?: string | null
           session_id?: string | null
           spirit?: number
           squad_player_id: string
@@ -92,6 +251,7 @@ export type Database = {
         Update: {
           appearance?: string | null
           attitude?: number
+          coach_name_snapshot?: string | null
           coach_rating?: number | null
           coach_user_id?: string
           coachability?: number
@@ -100,7 +260,9 @@ export type Database = {
           flag?: string | null
           id?: string
           impact?: number
+          organization_id?: string | null
           physical?: number
+          private_note?: string | null
           session_id?: string | null
           spirit?: number
           squad_player_id?: string
@@ -181,6 +343,7 @@ export type Database = {
           created_at: string | null
           current_club: string | null
           id: string
+          organization_id: string | null
           team: string | null
           user_id: string
         }
@@ -189,6 +352,7 @@ export type Database = {
           created_at?: string | null
           current_club?: string | null
           id?: string
+          organization_id?: string | null
           team?: string | null
           user_id: string
         }
@@ -197,6 +361,7 @@ export type Database = {
           created_at?: string | null
           current_club?: string | null
           id?: string
+          organization_id?: string | null
           team?: string | null
           user_id?: string
         }
@@ -252,6 +417,9 @@ export type Database = {
           created_at: string | null
           goals: number
           id: string
+          logged_by: string | null
+          logged_by_role: string | null
+          match_date: string | null
           minutes_played: number
           opponent: string | null
           opponent_score: number
@@ -271,6 +439,9 @@ export type Database = {
           created_at?: string | null
           goals?: number
           id?: string
+          logged_by?: string | null
+          logged_by_role?: string | null
+          match_date?: string | null
           minutes_played?: number
           opponent?: string | null
           opponent_score?: number
@@ -290,6 +461,9 @@ export type Database = {
           created_at?: string | null
           goals?: number
           id?: string
+          logged_by?: string | null
+          logged_by_role?: string | null
+          match_date?: string | null
           minutes_played?: number
           opponent?: string | null
           opponent_score?: number
@@ -396,39 +570,6 @@ export type Database = {
         }
         Relationships: []
       }
-      player_goals: {
-        Row: {
-          category: string | null
-          completed: boolean | null
-          created_at: string | null
-          current_value: number | null
-          goal_type: string
-          id: string
-          target_value: number
-          user_id: string
-        }
-        Insert: {
-          category?: string | null
-          completed?: boolean | null
-          created_at?: string | null
-          current_value?: number | null
-          goal_type: string
-          id?: string
-          target_value: number
-          user_id: string
-        }
-        Update: {
-          category?: string | null
-          completed?: boolean | null
-          created_at?: string | null
-          current_value?: number | null
-          goal_type?: string
-          id?: string
-          target_value?: number
-          user_id?: string
-        }
-        Relationships: []
-      }
       player_parent_links: {
         Row: {
           created_at: string | null
@@ -487,28 +628,34 @@ export type Database = {
         Row: {
           award_type: string
           awarded_for: string | null
+          coach_name_snapshot: string | null
           coach_user_id: string
           created_at: string | null
           id: string
           note: string | null
+          organization_id: string | null
           squad_player_id: string
         }
         Insert: {
           award_type: string
           awarded_for?: string | null
+          coach_name_snapshot?: string | null
           coach_user_id: string
           created_at?: string | null
           id?: string
           note?: string | null
+          organization_id?: string | null
           squad_player_id: string
         }
         Update: {
           award_type?: string
           awarded_for?: string | null
+          coach_name_snapshot?: string | null
           coach_user_id?: string
           created_at?: string | null
           id?: string
           note?: string | null
+          organization_id?: string | null
           squad_player_id?: string
         }
         Relationships: [
@@ -566,6 +713,7 @@ export type Database = {
       squad_players: {
         Row: {
           age: number | null
+          age_group: string | null
           coach_user_id: string
           created_at: string | null
           id: string
@@ -573,9 +721,11 @@ export type Database = {
           player_name: string
           position: string | null
           shirt_number: number | null
+          status: string
         }
         Insert: {
           age?: number | null
+          age_group?: string | null
           coach_user_id: string
           created_at?: string | null
           id?: string
@@ -583,9 +733,11 @@ export type Database = {
           player_name: string
           position?: string | null
           shirt_number?: number | null
+          status?: string
         }
         Update: {
           age?: number | null
+          age_group?: string | null
           coach_user_id?: string
           created_at?: string | null
           id?: string
@@ -593,6 +745,7 @@ export type Database = {
           player_name?: string
           position?: string | null
           shirt_number?: number | null
+          status?: string
         }
         Relationships: []
       }
@@ -634,6 +787,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_parent_invite: {
+        Args: { p_email: string }
+        Returns: {
+          id: string
+          invite_token: string
+          parent_email: string
+          status: string
+        }[]
+      }
       delete_my_account: { Args: never; Returns: undefined }
       get_coach_id_by_invite_code: { Args: { p_code: string }; Returns: string }
       get_parent_invite_by_token: {
@@ -662,6 +824,7 @@ export type Database = {
         Returns: {
           created_at: string
           id: string
+          invite_token: string
           parent_email: string
           player_user_id: string
           status: string
@@ -672,6 +835,7 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       is_club_admin: { Args: never; Returns: boolean }
+      remove_coach_from_org: { Args: { p_coach_user_id: string }; Returns: undefined }
       link_parent_to_players_by_email: {
         Args: { p_email: string }
         Returns: number
@@ -685,6 +849,7 @@ export type Database = {
           p_competition: string
           p_computed_rating: number
           p_goals: number
+          p_match_date?: string
           p_minutes_played: number
           p_opponent: string
           p_opponent_score: number
