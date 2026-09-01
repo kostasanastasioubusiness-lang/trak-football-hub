@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, PillSelector, MetadataLabel } from '@/components/trak'
 import { ChevronLeft } from 'lucide-react'
+import { trackEvent, startTimer } from '@/lib/telemetry'
 import { toast } from 'sonner'
 import { AGE_GROUPS } from '@/lib/constants'
 
@@ -16,8 +17,36 @@ export default function CoachAddPlayer() {
   const [ageGroup, setAgeGroup] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const handleSave = async () => {
-    if (!user || !name || saving) return
+  /* Building a roster is the coach's first real task and the scope calls it the
+     single biggest adoption barrier. Returning to the squad list after every
+     player made a 15-player roster fifteen round trips, and asked for the age
+     group fifteen times for what is by definition one squad. `addedCount`
+     tracks the run so the flow can stay put instead. */
+  const [addedCount, setAddedCount] = useState(0)
+  const nameRef = useRef<HTMLInputElement>(null)
+  const runTimer = useRef<(() => number) | null>(null)
+
+  /* UC-02's stopwatch number must survive the coach leaving by any route.
+     Reporting only on "Save & finish" lost the whole run whenever they used
+     the back button instead — which is most of the time. Refs, because the
+     unmount cleanup closes over stale state. */
+  const addedRef = useRef(0)
+  const reportedRef = useRef(false)
+
+  const reportRoster = () => {
+    if (reportedRef.current || addedRef.current === 0) return
+    reportedRef.current = true
+    trackEvent('roster_built', {
+      players: addedRef.current,
+      duration_ms: runTimer.current?.() ?? null,
+    })
+  }
+
+  useEffect(() => reportRoster, [])
+
+  const savePlayer = async () => {
+    if (!user || !name || saving) return false
+    if (!runTimer.current) runTimer.current = startTimer()
     setSaving(true)
     const { error } = await supabase.from('squad_players').insert({
       coach_user_id: user.id,
@@ -26,13 +55,34 @@ export default function CoachAddPlayer() {
       shirt_number: shirtNumber ? Number(shirtNumber) : null,
       age_group: ageGroup || null,
       status: 'active',
-    } as any)
+    })
     setSaving(false)
     if (error) {
       toast.error(`Couldn't add player: ${error.message}`)
-      return
+      return false
     }
-    toast.success(`${name} added to squad`)
+    return true
+  }
+
+  /* Save and stay. Name, position and shirt clear; age group persists, because
+     it is a property of the squad rather than of the player. */
+  const handleSaveAndNext = async () => {
+    if (!(await savePlayer())) return
+    toast.success(`${name} added`)
+    addedRef.current += 1
+    setAddedCount(c => c + 1)
+    setName('')
+    setPosition('')
+    setShirtNumber('')
+    nameRef.current?.focus()
+  }
+
+  const handleSaveAndFinish = async () => {
+    if (!(await savePlayer())) return
+    addedRef.current += 1
+    const total = addedRef.current
+    toast.success(total > 1 ? `${total} players added to squad` : `${name} added to squad`)
+    reportRoster()
     navigate('/coach/squad')
   }
 
@@ -52,7 +102,9 @@ export default function CoachAddPlayer() {
 
         <div className="space-y-2">
           <MetadataLabel text="PLAYER NAME" />
-          <input type="text" value={name} onChange={e => setName(e.target.value)}
+          <input type="text" ref={nameRef} value={name} onChange={e => setName(e.target.value)}
+            autoFocus
+            onKeyDown={e => { if (e.key === 'Enter') void handleSaveAndNext() }}
             className="w-full px-4 py-3 rounded-[10px] bg-[#202024] border border-white/[0.07] text-sm text-white/88 outline-none focus:border-[#C8F25A]/30" />
         </div>
 
@@ -73,10 +125,22 @@ export default function CoachAddPlayer() {
             className="w-full px-4 py-3 rounded-[10px] bg-[#202024] border border-white/[0.07] text-sm text-white/88 outline-none focus:border-[#C8F25A]/30" />
         </div>
 
-        <button onClick={handleSave} disabled={!name || saving}
-          className="w-full py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm disabled:opacity-50">
-          {saving ? 'Adding...' : 'Add to Squad'}
-        </button>
+        <div className="space-y-3">
+          <button onClick={handleSaveAndNext} disabled={!name || saving}
+            className="w-full py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm disabled:opacity-50">
+            {saving ? 'Adding...' : 'Save & add another'}
+          </button>
+          <button onClick={handleSaveAndFinish} disabled={!name || saving}
+            className="w-full py-3.5 rounded-[10px] bg-[#17171a] border border-white/[0.11] text-white/80 font-medium text-sm disabled:opacity-40">
+            Save & finish
+          </button>
+          {addedCount > 0 && (
+            <p className="text-center text-[12px] text-white/40"
+              style={{ fontFamily: "'DM Mono', monospace" }}>
+              {addedCount} added this session
+            </p>
+          )}
+        </div>
       </div>
     </MobileShell>
   )
