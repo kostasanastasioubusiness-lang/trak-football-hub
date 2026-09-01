@@ -358,7 +358,6 @@ GROUP BY 1, 2 ORDER BY 1;</code></pre>
           <li><span class="who-tag">F</span> Test the deletion path end to end on a throwaway account</li>
           <li><span class="who-tag">F</span> Seed the throwaway academy: <code>node seed-pilot-rehearsal.mjs</code> — 2 squads, 30 players, 6 weeks of fixtures, matches and assessments, so every <code>pilot_*</code> view returns a real number</li>
           <li><span class="who-tag">F</span> Rehearse all fourteen use cases against it, then <code>SELECT * FROM pilot_scorecard;</code> and confirm nothing is blank that should not be</li>
-          <li><span class="who-tag">F</span> Test at the academy's actual ground — an assessment must submit from the touchline</li>
           <li><span class="who-tag">F</span><span class="who-tag">D</span> Agree the WhatsApp nudge cadence <b>and who sends it</b></li>
         </ul>
       </div>
@@ -484,9 +483,9 @@ GROUP BY 1, 2 ORDER BY 1;</code></pre>
       <p class="small">Nothing tells a coach a match needs assessing. WhatsApp nudges weeks 1&ndash;4, logged every time. Weeks 5&ndash;7 measure life without them.</p>
     </div>
     <div class="card">
-      <div><span class="chip c-risk">Blocker</span></div>
+      <div><span class="chip c-ok">Closed</span></div>
       <h3>Pitch-side connectivity</h3>
-      <p class="small">No offline capture. A failed submit after fifteen minutes of input is the fastest way to lose a coach permanently. Test at the ground in week &minus;2; if it fails, coaches assess from home and say so in the call.</p>
+      <p class="small">There is still no offline capture, so submitting needs a live connection &mdash; but the signal at the academy's ground is known to be good, from direct knowledge of the venue. No test needed. Revisit only if a coach reports a failed submission, since losing fifteen minutes of input is the fastest way to lose a coach.</p>
     </div>
     <div class="card">
       <div><span class="chip c-ok">Closed</span></div>
