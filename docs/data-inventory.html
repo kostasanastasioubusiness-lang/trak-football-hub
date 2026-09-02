@@ -153,7 +153,7 @@
     <h3>Health-adjacent data on minors, in a table nothing writes to</h3>
     <p><code>wellness_logs</code> stores <b>mood, energy, sleep quality and free-text notes</b> per child per day. Under GDPR that is plausibly special category data, which raises the bar considerably &mdash; explicit consent, and likely a DPIA.</p>
     <p><b>Nothing writes to it.</b> Wellness check-ins were cut from the pilot and <code>WellnessCheck.tsx</code> is reachable from no route. So the table is dormant: it carries the full legal weight of children's health data and delivers nothing.</p>
-    <p><b>Recommendation: drop it</b> &mdash; the same call already made for <code>player_goals</code>, and for the same stated reason: children's data that would otherwise need declaring. Verify it is empty first.</p>
+    <p><b>Done.</b> Confirmed empty and dropped, along with <code>player_goals</code>, which turned out never to have been removed despite the repo recording it as such. <b>Trak therefore processes no special category data</b>, and the DPIA question that would have followed does not arise.</p>
   </div>
 
   <div class="grid-2">
@@ -309,7 +309,8 @@
 
   <div class="callout">
     <h4>Twelve of the twenty tables hold data about a child</h4>
-    <p>Deletion has to reach all twelve. <code>delete_my_account()</code> exists and is the mechanism &mdash; but it has never been tested end to end against a fully populated account, and <code>telemetry_events</code> post-dates it. <b>Test deletion on a throwaway account with matches, assessments, awards, a linked parent and telemetry, then confirm zero rows remain in every table above.</b></p>
+    <p>Deletion has to reach all twelve, and <code>delete_my_account()</code> is the mechanism. <b>It has now been tested end to end, twice</b>, against accounts carrying six matches each, coach assessments, awards and a linked parent: the account is removed, sign-in afterwards fails, and no roster rows remain. <code>telemetry_events</code> needs no explicit statement because it cascades from the auth user.</p>
+    <p>Testing it also found that the function referenced <code>player_goals</code>, a table a June migration claimed to have dropped but never did. Had that drop ever been applied, <b>every account deletion would have failed</b> — and nobody would have known, because until now nobody had run one. Both are fixed: the table is gone and the function no longer references it.</p>
   </div>
 </section>
 
