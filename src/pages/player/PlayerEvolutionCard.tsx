@@ -47,13 +47,16 @@ const TIERS: Record<Tier, {
   ring: string; label: string; glow: string
   shimmerOpacity: number
   min: number; max: number; nextLabel: string | null
+  /** True when `label` is light enough that the share button needs dark text.
+      Silver and Icon both had this false while their labels composite to near
+      white, so the button read as blank. */
   darkText: boolean
 }> = {
   Bronze: { ring: 'rgba(205,127,50,0.55)', label: 'rgba(205,127,50,0.85)', glow: 'rgba(205,127,50,0.18)', shimmerOpacity: 0.04, min: 0,  max: 64,  nextLabel: 'Silver', darkText: false },
-  Silver: { ring: 'rgba(220,220,230,0.55)', label: 'rgba(220,220,230,0.85)', glow: 'rgba(220,220,230,0.16)', shimmerOpacity: 0.07, min: 65, max: 74,  nextLabel: 'Gold',   darkText: false },
+  Silver: { ring: 'rgba(220,220,230,0.55)', label: 'rgba(220,220,230,0.85)', glow: 'rgba(220,220,230,0.16)', shimmerOpacity: 0.07, min: 65, max: 74,  nextLabel: 'Gold',   darkText: true  },
   Gold:   { ring: 'rgba(245,200,80,0.65)',  label: 'rgba(245,200,80,0.95)',  glow: 'rgba(245,200,80,0.20)',  shimmerOpacity: 0.10, min: 75, max: 84,  nextLabel: 'Volt',   darkText: true  },
   Volt:   { ring: 'rgba(200,242,90,0.75)',  label: '#C8F25A',                glow: 'rgba(200,242,90,0.28)',  shimmerOpacity: 0.14, min: 85, max: 91,  nextLabel: 'Icon',   darkText: true  },
-  Icon:   { ring: 'rgba(255,255,255,0.85)', label: '#FFFFFF',                glow: 'rgba(200,242,90,0.35)',  shimmerOpacity: 0.20, min: 92, max: 100, nextLabel: null,     darkText: false },
+  Icon:   { ring: 'rgba(255,255,255,0.85)', label: '#FFFFFF',                glow: 'rgba(200,242,90,0.35)',  shimmerOpacity: 0.20, min: 92, max: 100, nextLabel: null,     darkText: true  },
 }
 
 function currentSeasonLabel() {
