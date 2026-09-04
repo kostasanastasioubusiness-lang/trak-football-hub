@@ -84,6 +84,36 @@ export default function CoachAssessPage() {
     timerRef.current = playerId ? startTimer() : null
   }, [playerId])
 
+  /* Today's existing assessment for the selected player, if any.
+     The page only ever INSERTed, so a coach who saved and then came back to
+     add a note created a SECOND assessment — with every slider at its default
+     5, which reads as a real "Mixed" verdict. Same bad-data trap the quick
+     assess fix closed. Now the day's assessment is loaded and updated. */
+  const [existingId, setExistingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user || !playerId) { setExistingId(null); return }
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0)
+    supabase
+      .from('coach_assessments')
+      .select('id, work_rate, tactical, attitude, technical, physical, coachability, appearance, session_id')
+      .eq('coach_user_id', user.id)
+      .eq('squad_player_id', playerId)
+      .gte('created_at', startOfDay.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) { setExistingId(null); return }
+        setExistingId(data.id)
+        setWorkRate(data.work_rate); setTactical(data.tactical)
+        setAttitude(data.attitude); setTechnical(data.technical)
+        setPhysical(data.physical); setCoachability(data.coachability)
+        if (data.appearance) setAppearance(data.appearance as 'started' | 'sub' | 'training')
+        if (data.session_id) setSessionId(data.session_id)
+      })
+  }, [user, playerId])
+
   /* fetch squad players */
   useEffect(() => {
     if (!user) return
@@ -122,7 +152,7 @@ export default function CoachAssessPage() {
     if (!user || !playerId || saving) return
     setSaving(true)
     const cardStats = deriveCardStats({ workRate, tactical, attitude, technical, physical, coachability })
-    const { data: inserted, error: insertError } = await supabase.from('coach_assessments').insert({
+    const payload = {
       coach_user_id: user.id,
       coach_name_snapshot: profile?.full_name || null,
       squad_player_id: playerId,
@@ -137,22 +167,31 @@ export default function CoachAssessPage() {
       coachability,
       // derived card stats
       ...cardStats,
-    } as any).select('id').maybeSingle()
-    if (insertError) {
-      console.error('Save failed:', insertError)
-      toast.error('Could not save assessment. Please try again.')
+    }
+
+    const { data: saved, error: saveError } = existingId
+      ? await supabase.from('coach_assessments')
+          .update(payload).eq('id', existingId).select('id').maybeSingle()
+      : await supabase.from('coach_assessments')
+          .insert(payload).select('id').maybeSingle()
+
+    if (saveError) {
+      console.error('Save failed:', saveError)
+      toast.error(`Could not save assessment: ${saveError.message}`)
       setSaving(false)
       return
     }
-    if (inserted?.id && note.trim()) {
-      const { error: noteError } = await supabase.from('coach_assessment_notes').insert({
-        assessment_id: inserted.id,
+
+    if (saved?.id && note.trim()) {
+      // upsert, so re-saving replaces the note rather than stacking another
+      const { error: noteError } = await supabase.from('coach_assessment_notes').upsert({
+        assessment_id: saved.id,
         coach_user_id: user.id,
         note: note.trim(),
-      })
+      }, { onConflict: 'assessment_id' })
       if (noteError) {
-        console.error('Save failed:', noteError)
-        toast.error('Assessment saved but note could not be saved.')
+        console.error('Note save failed:', noteError)
+        toast.error(`Assessment saved, note failed: ${noteError.message}`)
       }
     }
     trackEvent('assessment_submitted', {
@@ -160,6 +199,7 @@ export default function CoachAssessPage() {
       players: 1,
       squad_player_id: playerId,
       band,
+      updated: existingId !== null,
       has_note: note.trim().length > 0,
       duration_ms: timerRef.current?.() ?? null,
     })

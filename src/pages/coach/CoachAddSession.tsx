@@ -193,18 +193,22 @@ export default function CoachAddSession() {
           }
           return notes || null
         })(),
+        // coach_sessions has no `opponent` column — sending one made PostgREST
+        // reject the whole insert, so every match save failed with "Could not
+        // save session". The opponent already lives in the title ("vs X") and
+        // on each player's match row.
         ...(isMatch && {
-          opponent:    opponent.trim(),
           competition,
           venue,
-          notes:       `${scoreUs}-${scoreThem}${notes ? ' · ' + notes : ''}`,
-        } as any),
+          notes: `${scoreUs}-${scoreThem}${notes ? ' · ' + notes : ''}`,
+        }),
       })
       .select()
       .single()
 
     if (error || !session) {
-      toast.error('Could not save session')
+      console.error('Session save failed:', error)
+      toast.error(error?.message ? `Could not save: ${error.message}` : 'Could not save session')
       setSaving(false)
       return
     }
