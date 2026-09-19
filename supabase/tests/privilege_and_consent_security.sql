@@ -219,6 +219,31 @@ SELECT pg_temp.pc_expect_ok(format(
   pg_temp.pc_id(1), 'coach', 'assessment_submitted', '{"duration_ms":1}'), 'A2 coach: appends own telemetry');
 SELECT pg_temp.pc_expect_denied('SELECT 1 FROM public.telemetry_events LIMIT 1', 'A2 coach: cannot read telemetry (no SELECT grant, no policy)');
 SELECT pg_temp.pc_expect_denied(format('DELETE FROM public.profiles WHERE user_id = %L', pg_temp.pc_id(1)), 'A2 coach: cannot DELETE profiles (no grant, no policy)');
+
+-- A2b. A deny policy is a request for the privilege it forbids.
+--
+-- Kostas found this on coach_shared_feedback: FOR DELETE USING (false) made
+-- section 2 grant DELETE, because the derivation asks whether a policy exists
+-- for an operation, not whether it permits anything. Scanning for the shape
+-- found three more, all holding children's records — coach_assessments,
+-- coach_assessment_notes and recognition_awards — each granted DELETE by the
+-- policy written to forbid it. 20260919180000 drops those policies so RLS
+-- denies by default, which is two barriers rather than one.
+--
+-- Asserted behaviourally as well as structurally, and the control comes first:
+-- "the delete removed nothing" is satisfied by there being nothing to remove.
+SELECT pg_temp.pc_assert(
+  (SELECT count(*) FROM public.coach_assessments WHERE squad_player_id = pg_temp.pc_id(201)) > 0,
+  'A2b-control the child has an assessment for the delete to fail against');
+SELECT pg_temp.pc_expect_denied(format(
+  'DELETE FROM public.coach_assessments WHERE squad_player_id = %L', pg_temp.pc_id(201)),
+  'A2b coach: cannot DELETE a child''s assessment (no grant, no policy)');
+SELECT pg_temp.pc_assert(
+  (SELECT count(*) FROM public.coach_assessments WHERE squad_player_id = pg_temp.pc_id(201)) > 0,
+  'A2b the child''s assessment survived the attempt');
+SELECT pg_temp.pc_expect_denied(format(
+  'DELETE FROM public.recognition_awards WHERE squad_player_id = %L', pg_temp.pc_id(201)),
+  'A2b coach: cannot DELETE a child''s award (no grant, no policy)');
 SELECT pg_temp.pc_expect_denied(format(
   'INSERT INTO public.parental_consents (player_user_id, parent_user_id, relationship_declared, verification_method, purposes, notice_version, consent_text, threshold_age, player_age_at_consent) VALUES (%L, %L, %L, %L, %L, %L, %L, 15, 10)',
   pg_temp.pc_id(3), pg_temp.pc_id(1), 'parent', 'email_confirmed', '{"coaching_records":true}', 'v1', 'x'),
