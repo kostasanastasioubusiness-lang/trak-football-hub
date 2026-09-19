@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, MetadataLabel } from '@/components/trak'
 import { computeMatchScore } from '@/lib/rating-engine'
+import { goalsKey, assistsKey } from '@/lib/match-input-keys'
 import { trackEvent } from '@/lib/telemetry'
 
 type SquadPlayer = {
@@ -25,8 +26,8 @@ type PlayerDetail = {
   played:  boolean
   role:    'starter' | 'sub'
   minutes: number
-  goals:   0 | 1 | 2         // 2 means "2+"
-  assists: 0 | 1 | 2
+  goals:   number            // real count; 6 is the ceiling the form offers
+  assists: number            // real count; 6 is the ceiling the form offers
   card:    CardType
 }
 
@@ -35,16 +36,19 @@ const DEFAULT_DETAIL: PlayerDetail = {
   goals: 0, assists: 0, card: 'None',
 }
 
+// A hat-trick was previously unrecordable: the picker stopped at "2+", so the
+// engine's '3+' tier for attackers was unreachable from the form. The ceiling
+// is a display cap on the rating key, not on the stored count.
+const GOAL_CEILING = 6
+const GOAL_OPTIONS = [0, 1, 2, 3, 4, 5, GOAL_CEILING] as const
+const ASSIST_OPTIONS = [0, 1, 2, 3, 4, 5, GOAL_CEILING] as const
+
 function mapPosition(raw: string | null) {
   const p = (raw || '').toLowerCase()
   if (p.includes('goalkeeper') || p === 'gk') return 'gk'
   if (p.includes('defender')   || ['def','cb','lb','rb'].includes(p)) return 'def'
   if (p.includes('attacker')   || ['att','cf','st','lw','rw'].includes(p)) return 'att'
   return 'mid'
-}
-
-function goalsKey(g: 0 | 1 | 2): string {
-  return g === 2 ? '2+' : String(g)
 }
 
 export default function CoachAddSession() {
@@ -252,8 +256,11 @@ export default function CoachAddSession() {
           body_condition:  'good',
           self_rating:     'average',
           position_inputs: {
-            goals:   goalsKey(d.goals),
-            assists: goalsKey(d.assists),
+            // Position-aware: an attacker's scale is finer than a
+            // midfielder's, and sending one dialect to both is what made a
+            // brace worth nothing.
+            goals:   goalsKey(mapPosition(p.position), d.goals),
+            assists: assistsKey(d.assists),
           },
           is_friendly: competition === 'Friendly',
         })
@@ -268,8 +275,9 @@ export default function CoachAddSession() {
           p_position:        p.position  || 'Midfielder',
           p_age_group:       p.age != null ? String(p.age) : 'U19+',
           p_minutes_played:  d.minutes,
-          p_goals:           d.goals === 2 ? 2 : d.goals,
-          p_assists:         d.assists === 2 ? 2 : d.assists,
+          // The real numbers. The rating key is a band; the record is not.
+          p_goals:           d.goals,
+          p_assists:         d.assists,
           p_card_received:   d.card,
           p_body_condition:  'Average',
           p_self_rating:     'Average',
@@ -538,7 +546,7 @@ export default function CoachAddSession() {
                               <span className="text-[8px] tracking-[0.1em] uppercase text-white/30 w-[44px] flex-shrink-0"
                                 style={{ fontFamily: "'DM Mono', monospace" }}>GOALS</span>
                               <div className="flex gap-1.5">
-                                {([0, 1, 2] as const).map(g => (
+                                {GOAL_OPTIONS.map(g => (
                                   <button key={g} onClick={() => setDetail(p.id, { goals: g })}
                                     className="px-2.5 py-1 rounded-full text-[10px] transition-colors"
                                     style={{
@@ -547,7 +555,7 @@ export default function CoachAddSession() {
                                       border: `1px solid ${d.goals === g ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.07)'}`,
                                       fontFamily: "'DM Mono', monospace",
                                     }}>
-                                    {g === 2 ? '2+' : g}
+                                    {g === GOAL_CEILING ? `${g}+` : g}
                                   </button>
                                 ))}
                               </div>
@@ -558,7 +566,7 @@ export default function CoachAddSession() {
                               <span className="text-[8px] tracking-[0.1em] uppercase text-white/30 w-[44px] flex-shrink-0"
                                 style={{ fontFamily: "'DM Mono', monospace" }}>ASSISTS</span>
                               <div className="flex gap-1.5">
-                                {([0, 1, 2] as const).map(a => (
+                                {ASSIST_OPTIONS.map(a => (
                                   <button key={a} onClick={() => setDetail(p.id, { assists: a })}
                                     className="px-2.5 py-1 rounded-full text-[10px] transition-colors"
                                     style={{
