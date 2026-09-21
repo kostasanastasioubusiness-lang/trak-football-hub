@@ -47,6 +47,34 @@ const BASELINE_PROBE_FIX =
   'img[src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"]' +
   '{display:inline !important}'
 
+/**
+ * html2canvas 1.4.1 does not implement `text-overflow: ellipsis`, so a long
+ * name that the screen shows as "Abdulrahman Al-Maktoum Fer…" was exported
+ * cut mid-letter. Called on the laid-out capture clone, this shortens every
+ * element the screen would ellipsize to the widest prefix that fits, plus "…".
+ *
+ * Deliberately narrow: only elements styled for an ellipsis (an overflow box
+ * without one is clipped on screen too, and the export should match), and only
+ * elements holding plain text, so no markup is ever rewritten.
+ */
+export function ellipsizeOverflowingText(root: Element, win: Window): void {
+  const nodes = [root, ...Array.from(root.querySelectorAll('*'))] as HTMLElement[]
+  for (const node of nodes) {
+    if (node.childElementCount > 0 || !node.textContent) continue
+    if (win.getComputedStyle(node).textOverflow !== 'ellipsis') continue
+    if (node.scrollWidth <= node.clientWidth) continue
+    const full = node.textContent
+    let lo = 0, hi = full.length
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2)
+      node.textContent = full.slice(0, mid).trimEnd() + '\u2026'
+      if (node.scrollWidth <= node.clientWidth) lo = mid
+      else hi = mid - 1
+    }
+    node.textContent = full.slice(0, lo).trimEnd() + '\u2026'
+  }
+}
+
 /** Renders `el` to a PNG blob, or null if it could not be captured. */
 export async function captureElementToPng(
   el: HTMLElement | null,
@@ -72,6 +100,9 @@ export async function captureElementToPng(
       scrollX: 0,
       scrollY: typeof window === 'undefined' ? 0 : -window.scrollY,
       ...(width ? { width, windowWidth: width } : {}),
+      onclone: (doc, clonedEl) => {
+        if (doc.defaultView) ellipsizeOverflowingText(clonedEl, doc.defaultView)
+      },
     })
     return await new Promise<Blob | null>(resolve => canvas.toBlob(b => resolve(b), 'image/png'))
   } catch {
