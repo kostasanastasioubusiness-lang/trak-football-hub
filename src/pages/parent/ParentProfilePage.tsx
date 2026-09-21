@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useAvatarUrl } from '@/hooks/use-avatar-url'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { ParentChildSelector, ParentFamilyContent } from '@/components/parent/ParentFamily'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
@@ -8,6 +9,8 @@ import { IconProfile, IconHowItWorks } from '@/components/icons/TrakIcons'
 
 export default function ParentProfilePage() {
   const { user, profile } = useAuth()
+  // Signed, never the stored value: the avatars bucket is private (F-3).
+  const avatarUrl = useAvatarUrl(profile?.avatar_url)
   const navigate = useNavigate()
   const location = useLocation()
   const { children, selectedChild } = useParentChildren()
@@ -22,8 +25,8 @@ export default function ParentProfilePage() {
         {/* Avatar + Identity */}
         <div className="text-center mb-6">
           <div className="w-[72px] h-[72px] rounded-[22px] overflow-hidden bg-[#202024] border border-[rgba(200,242,90,0.18)] mx-auto mb-3 flex items-center justify-center">
-            {profile?.avatar_url
-              ? <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+            {avatarUrl
+              ? <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
               : <IconProfile size={32} color="#C8F25A" />
             }
           </div>
