@@ -646,7 +646,9 @@ export default function PlayerEvolutionCard() {
                   fontSize: 9, letterSpacing: '0.16em',
                   textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
                 }}>
-                  {club || 'Unaffiliated'}
+                  {/* Same fallback as PlayerPassport. "Unaffiliated" was false for a
+                      rostered player with no stored club text, on the image they share. */}
+                  {club || 'Academy'}
                 </div>
               </div>
 
