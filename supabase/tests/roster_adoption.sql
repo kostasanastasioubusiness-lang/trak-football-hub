@@ -1,4 +1,4 @@
--- @trak-suite mode=--roster-adoption-review in-all=false
+-- @trak-suite mode=--roster-adoption-review in-all=true
 -- T4 — does a player joining with a TRK code actually keep the assessments the
 -- coach already recorded against them?
 --
@@ -116,16 +116,18 @@ BEGIN
   v_sq := public.link_player_to_coach('ADOPTC');
 
   SELECT count(*) INTO v_count FROM public.coach_assessments WHERE squad_player_id = v_sq;
-  PERFORM pg_temp.rassert(v_count = 2,
-    'a one-letter misspelling still keeps the player''s assessments',
+  -- Linking alone does not guess (Tarek, 22 Sep: no fuzzy matching). The
+  -- repair is the coach's merge, asserted in section 5.
+  PERFORM pg_temp.rassert(v_count = 0,
+    'linking alone: a one-letter misspelling lands the player on a new, empty row',
     v_count || ' assessment(s) on the row the player actually landed on');
 
   -- The coach's original row, still carrying the history, now linked to nobody.
   SELECT count(*) INTO v_orphan
   FROM public.squad_players
   WHERE id = pg_temp.rid(31) AND linked_player_id IS NULL;
-  PERFORM pg_temp.rassert(v_orphan = 0,
-    'the coach''s original row is not left orphaned with the history on it',
+  PERFORM pg_temp.rassert(v_orphan = 1,
+    'linking alone: the coach''s original row keeps the history until the coach merges',
     v_orphan || ' orphaned row(s) still holding assessments');
 END;
 $test$;
@@ -147,8 +149,8 @@ BEGIN
     AND player_name = 'Ali Khan'
     AND linked_player_id IS NULL;
 
-  PERFORM pg_temp.rassert(v_unlinked <= 1,
-    'an ambiguous name does not leave two unlinked rows plus a third new one',
+  PERFORM pg_temp.rassert(v_unlinked = 2,
+    'linking alone: an ambiguous name adopts neither same-named row',
     v_unlinked || ' unlinked "Ali Khan" row(s) remain');
 END;
 $test$;
@@ -183,6 +185,38 @@ BEGIN
   PERFORM pg_temp.rassert((v_yu->>'assessments')::integer = 2,
     'CONTROL: the adopted player is reported as having their assessments',
     coalesce(v_yu->>'assessments', 'null'));
+END;
+$test$;
+
+-- ── 5. The coach merges, and the history is where the player is ──────────
+--
+-- coach_merge_squad_rows (20260922130000). The coach knows which "Ali Khan"
+-- is which; the function does not guess. After the merges, the outcomes the
+-- earlier sections could not reach by linking alone.
+DO $test$
+DECLARE v_mo uuid; v_ali uuid; v_count integer; v_unlinked integer; v_out jsonb;
+BEGIN
+  SELECT id INTO v_mo  FROM public.squad_players WHERE linked_player_id = pg_temp.rid(21);
+  SELECT id INTO v_ali FROM public.squad_players WHERE linked_player_id = pg_temp.rid(22);
+  PERFORM pg_temp.become(pg_temp.rid(10));
+  PERFORM public.coach_merge_squad_rows(pg_temp.rid(31), v_mo);
+  PERFORM public.coach_merge_squad_rows(pg_temp.rid(32), v_ali);
+
+  SELECT count(*) INTO v_count FROM public.coach_assessments WHERE squad_player_id = v_mo;
+  PERFORM pg_temp.rassert(v_count = 2,
+    'after the coach merges, the misspelt player keeps both assessments', v_count || ' on their row');
+  PERFORM pg_temp.rassert(NOT EXISTS (SELECT 1 FROM public.squad_players WHERE id = pg_temp.rid(31)),
+    'after the coach merges, no orphaned row holds the history');
+  SELECT count(*) INTO v_unlinked FROM public.squad_players
+  WHERE coach_user_id = pg_temp.rid(10) AND player_name = 'Ali Khan' AND linked_player_id IS NULL;
+  PERFORM pg_temp.rassert(v_unlinked <= 1,
+    'after the coach merges, an ambiguous name no longer leaves two unlinked rows plus a new one',
+    v_unlinked || ' unlinked "Ali Khan" row(s) remain');
+
+  PERFORM pg_temp.become(pg_temp.rid(21));
+  v_out := public.my_link_outcome(v_mo);
+  PERFORM pg_temp.rassert((v_out->>'may_have_missed_history')::boolean IS FALSE,
+    'after the merge the misspelt player is no longer warned', coalesce(v_out::text, 'null'));
 END;
 $test$;
 
