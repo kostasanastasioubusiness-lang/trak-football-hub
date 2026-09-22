@@ -6,6 +6,7 @@ import { MobileShell, MetadataLabel, CategoryBar, BandPill, LoadError} from '@/c
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import { ChevronLeft, Trophy } from 'lucide-react'
+import { RosterMergeCard } from '@/components/coach/RosterMergeCard'
 
 function avgScore(a: any) {
   return (a.work_rate + a.tactical + a.attitude + a.technical + a.physical + a.coachability) / 6
@@ -219,6 +220,11 @@ export default function CoachPlayerProfilePage() {
               )
             })}
           </div>
+        )}
+
+        {/* T4: this unclaimed row holds history; its player may have joined under another spelling. */}
+        {!player.linked_player_id && assessments.length > 0 && user && (
+          <RosterMergeCard orphan={player} coachId={user.id} assessmentCount={assessments.length} />
         )}
 
         {/* Action buttons */}
