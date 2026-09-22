@@ -120,15 +120,26 @@ export default function CoachSchedule() {
   const [parsing,    setParsing]    = useState(false)
   const [drafts,     setDrafts]     = useState<any[]>([])
 
+  // A failed read is not an empty day. `opponent` was requested from
+  // coach_sessions here from 26 May, a column that table has never had, and
+  // with the errors ignored every coach's sessions silently vanished behind
+  // "Nothing planned". Both errors are now surfaced.
+  const [loadError, setLoadError] = useState(false)
   const loadData = async () => {
     if (!user) return
-    const [{ data: evData }, { data: sessData }] = await Promise.all([
+    setLoadError(false)
+    const [{ data: evData, error: evError }, { data: sessData, error: sessError }] = await Promise.all([
       supabase.from('coach_calendar_events')
         .select('*').eq('coach_user_id', user.id).order('starts_at'),
       supabase.from('coach_sessions')
-        .select('id, title, session_type, session_date, opponent, competition, venue, notes')
+        .select('id, title, session_type, session_date, competition, venue, notes')
         .eq('coach_user_id', user.id).order('session_date'),
     ])
+    if (evError || sessError) {
+      console.error('[schedule] load failed', evError?.message ?? sessError?.message)
+      setLoadError(true)
+      return
+    }
     setCalEvents(evData || [])
     setSessions(sessData || [])
   }
@@ -156,11 +167,11 @@ export default function CoachSchedule() {
     for (const s of sessions) {
       ev.push({
         id:       s.id,
-        title:    s.title || (s.session_type === 'match' ? `vs ${s.opponent}` : 'Training'),
+        // coach_sessions has no opponent column; never render "vs undefined".
+        title:    s.title || (s.session_type === 'match' ? 'Match' : 'Training'),
         type:     (s.session_type === 'match' ? 'match' : s.session_type === 'training' ? 'training' : 'other') as EventType,
         date:     s.session_date ?? '',
         source:   'session',
-        opponent: s.opponent,
         venue:    s.venue,
         notes:    s.notes,
       })
@@ -487,7 +498,13 @@ export default function CoachSchedule() {
             </button>
           </div>
 
-          {selectedEvents.length === 0 ? (
+          {loadError ? (
+            <div role="alert" className="rounded-[14px] border border-white/[0.08] px-4 py-5 text-center"
+              style={{ background: '#101012' }}>
+              <p className="text-[12px] text-white/60">Couldn't load your schedule.</p>
+              <button onClick={() => loadData()} className="mt-2 text-[12px] underline text-[#C8F25A]">Retry</button>
+            </div>
+          ) : selectedEvents.length === 0 ? (
             <div className="rounded-[14px] border border-white/[0.05] px-4 py-5 text-center"
               style={{ background: '#101012' }}>
               <p className="text-[12px] text-white/30">Nothing planned. Tap + Add to schedule an event.</p>
