@@ -50,6 +50,8 @@ function Controls() {
 }
 beforeEach(async () => {
   vi.clearAllMocks()
+  localStorage.removeItem('trak_deleted_account:a')
+  localStorage.removeItem('trak_deleted_account:b')
   await supabase.auth.initialize()
   localStorage.setItem('sb-test-auth-token', JSON.stringify(session('a')))
   // A bare object key — what a real upload stores since F-3 (the avatars
@@ -84,6 +86,7 @@ beforeEach(async () => {
     http.get(`${url}/rest/v1/player_parent_links`, () => HttpResponse.json([])),
     // Settings resolves every avatar_url through createSignedUrl(); the
     // storage-js client prefixes this relative field with its own base url.
+    http.delete(`${url}/storage/v1/object/avatars`, () => HttpResponse.json([])),
     http.post(`${url}/storage/v1/object/sign/avatars/:key`, ({ params }) =>
       HttpResponse.json({ signedURL: `/object/sign/avatars/${params.key}?token=synthetic` })),
   )
@@ -347,6 +350,128 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
     expect(requests.filter(r => r.path === 'logout')).toEqual([{ method: 'POST', path: 'logout', authorization: 'Bearer token-a' }])
   })
 
+  it.each((['player', 'parent', 'coach', 'club'] as const).flatMap(role =>
+    [401, 403, 404].map(status => ({ role, status }))))(
+    '$role clears the deleted session when logout returns $status', async ({ role, status }) => {
+      profiles.a.role = role
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      let deleted = false
+      server.use(
+        http.post(`${url}/rest/v1/rpc/delete_my_account`, ({ request }) => {
+          expect(request.headers.get('Authorization')).toBe('Bearer token-a')
+          deleted = true
+          delete profiles.a
+          return HttpResponse.json(null)
+        }),
+        http.post(`${url}/auth/v1/logout`, ({ request }) => {
+          expect(deleted).toBe(true)
+          requests.push({ method: 'POST', path: 'logout', authorization: request.headers.get('Authorization') })
+          return HttpResponse.json({ code: 'user_not_found', msg: 'Account no longer exists' }, { status })
+        }),
+      )
+      mount(); await ready()
+      fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }))
+      await screen.findByRole('heading', { name: 'Signed out landing' })
+      expect((await supabase.auth.getSession()).data.session).toBeNull()
+      expect(localStorage.getItem('sb-test-auth-token')).toBeNull()
+      expect(requests.filter(r => r.path === 'logout')).toEqual([
+        { method: 'POST', path: 'logout', authorization: 'Bearer token-a' },
+      ])
+      expect(messages.error).not.toHaveBeenCalled()
+    },
+  )
+
+  it('does not report an active account after deletion commits but logout is unavailable', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    let deletions = 0
+    let logoutUnavailable = true
+    server.use(
+      http.post(`${url}/rest/v1/rpc/delete_my_account`, () => {
+        deletions++
+        delete profiles.a
+        return HttpResponse.json(null)
+      }),
+      http.post(`${url}/auth/v1/logout`, () => logoutUnavailable
+        ? HttpResponse.json({ message: 'temporarily unavailable' }, { status: 500 })
+        : new HttpResponse(null, { status: 204 })),
+    )
+    mount(); await ready()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }))
+    await waitFor(() => expect(messages.error).toHaveBeenCalled())
+    expect(deletions).toBe(1)
+    expect(profiles.a).toBeUndefined()
+    // The deletion is acknowledged. It must not return to editable profile
+    // controls or invite another irreversible deletion as though it failed.
+    expect(screen.queryByRole('button', { name: 'Delete my account' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Synthetic Parent A' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Account deleted' })).toBeInTheDocument()
+    expect(localStorage.getItem('trak_deleted_account:a')).toBe('1')
+    expect(messages.error).toHaveBeenCalledWith('Your account was deleted. Reconnect and retry to finish signing out on this device.')
+    logoutUnavailable = false
+    fireEvent.click(screen.getByRole('button', { name: 'Finish signing out' }))
+    await screen.findByRole('heading', { name: 'Signed out landing' })
+    expect(deletions).toBe(1)
+    expect((await supabase.auth.getSession()).data.session).toBeNull()
+  })
+
+  it('keeps the current profile usable when account deletion itself fails', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    server.use(http.post(`${url}/rest/v1/rpc/delete_my_account`, () =>
+      HttpResponse.json({ message: 'deletion unavailable' }, { status: 500 })))
+    mount(); await ready()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }))
+    await waitFor(() => expect(messages.error).toHaveBeenCalledWith('Could not delete account. Please contact support.'))
+    expect(localStorage.getItem('trak_deleted_account:a')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Synthetic Parent A' })).toBeInTheDocument()
+    expect(requests.filter(r => r.path === 'logout')).toEqual([])
+  })
+
+  it('blocks a deleted identity on provider remount without loading or repairing its profile', async () => {
+    localStorage.setItem('trak_deleted_account:a', '1')
+    const first = mount()
+    await screen.findByRole('heading', { name: 'Account deleted' })
+    expect(requests.filter(r => r.path === 'profiles')).toEqual([])
+    first.unmount()
+    mount()
+    await screen.findByRole('heading', { name: 'Account deleted' })
+    expect(requests.filter(r => r.path === 'profiles')).toEqual([])
+    expect(screen.queryByRole('button', { name: 'Delete my account' })).not.toBeInTheDocument()
+  })
+
+  it('finishes a deleted session even on the confirmation callback route', async () => {
+    localStorage.setItem('trak_deleted_account:a', '1')
+    window.history.replaceState({}, '', '/auth/confirm')
+    try {
+      mount()
+      await screen.findByRole('heading', { name: 'Account deleted' })
+      fireEvent.click(screen.getByRole('button', { name: 'Finish signing out' }))
+      await waitFor(() => expect(screen.queryByRole('heading', { name: 'Account deleted' })).not.toBeInTheDocument())
+      expect((await supabase.auth.getSession()).data.session).toBeNull()
+    } finally { window.history.replaceState({}, '', '/') }
+  })
+
+  it('does not apply a deleted identity marker to a different signed-in account', async () => {
+    localStorage.setItem('trak_deleted_account:a', '1')
+    mount()
+    await screen.findByRole('heading', { name: 'Account deleted' })
+    await act(async () => { await supabase.auth.signInWithPassword({ email: 'b@synthetic.test.invalid', password: 'Synthetic-only-Password123!' }) })
+    await screen.findByRole('button', { name: 'Synthetic Parent B' })
+    expect(screen.queryByRole('heading', { name: 'Account deleted' })).not.toBeInTheDocument()
+    expect((await supabase.auth.getSession()).data.session?.user.id).toBe('b')
+    expect(requests.filter(r => r.path === 'logout')).toEqual([])
+  })
+
+  it('hides the current account after another tab records its acknowledged deletion', async () => {
+    mount(); await ready()
+    await act(async () => {
+      localStorage.setItem('trak_deleted_account:a', '1')
+      window.dispatchEvent(new StorageEvent('storage', { key: 'trak_deleted_account:a', newValue: '1' }))
+    })
+    await screen.findByRole('heading', { name: 'Account deleted' })
+    expect(screen.queryByRole('button', { name: 'Delete my account' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Synthetic Parent A' })).not.toBeInTheDocument()
+  })
+
   it('keeps Settings and the session on a failed SDK sign-out, then signs out on retry', async () => {
     let fail = true
     server.use(http.post(`${url}/auth/v1/logout`, () => fail
@@ -375,5 +500,49 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
     profiles.a = original
     fireEvent.click(screen.getByRole('button', { name: 'Retry setup' }))
     await ready()
+  })
+})
+
+
+describe('avatar cleanup before account deletion', () => {
+  it('stops before deleting the account if Storage cleanup fails', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    let deletions=0
+    server.use(
+      http.delete(`${url}/storage/v1/object/avatars`, () => HttpResponse.json({ message:'unavailable' },{status:500})),
+      http.post(`${url}/rest/v1/rpc/delete_my_account`, () => { deletions++; return HttpResponse.json(null) }),
+    )
+    mount(); await ready(); fireEvent.click(screen.getByRole('button',{name:'Delete my account'}))
+    await waitFor(() => expect(messages.error).toHaveBeenCalled())
+    expect(deletions).toBe(0)
+    expect(localStorage.getItem('trak_deleted_account:a')).toBeNull()
+  })
+  it('removes only the initiating account key before the deletion RPC', async () => {
+    vi.spyOn(window,'confirm').mockReturnValue(true)
+    const order:string[]=[]
+    server.use(
+      http.delete(`${url}/storage/v1/object/avatars`,async ({request}) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer token-a')
+        expect(await request.json()).toEqual({prefixes:['a']});order.push('storage');return HttpResponse.json([])
+      }),
+      http.post(`${url}/rest/v1/rpc/delete_my_account`,()=>{order.push('account');return HttpResponse.json(null)}),
+    )
+    mount(); await ready();fireEvent.click(screen.getByRole('button',{name:'Delete my account'}))
+    await screen.findByRole('heading',{name:'Signed out landing'})
+    expect(order).toEqual(['storage','account'])
+  })
+  it('does not delete either account after an account switch during Storage cleanup', async () => {
+    vi.spyOn(window,'confirm').mockReturnValue(true)
+    const held=deferred();let started=false;let deletions=0
+    server.use(
+      http.delete(`${url}/storage/v1/object/avatars`,async ({request}) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer token-a');started=true;await held.promise;return HttpResponse.json([])
+      }),
+      http.post(`${url}/rest/v1/rpc/delete_my_account`,()=>{deletions++;return HttpResponse.json(null)}),
+    )
+    mount();await ready();fireEvent.click(screen.getByRole('button',{name:'Delete my account'}))
+    await waitFor(()=>expect(started).toBe(true));await switchToB()
+    await act(async()=>{held.resolve();await held.promise;await new Promise(resolve=>setTimeout(resolve,20))})
+    expect(deletions).toBe(0);expect(screen.getByTestId('identity')).toHaveTextContent('b:b')
   })
 })
