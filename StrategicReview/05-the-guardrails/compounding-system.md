@@ -210,8 +210,7 @@ rerun at the end of the pilot season.
 ## Governance Policy
 
 One page, in the workshop's five sections. It applies to every agent in the
-[Agent Topology](#agent-topology) below. The full policy, with the reasons behind
-each rule, lives in Product Office: `product/strategy/trak-guardrails/ai-governance-policy.md`.
+[Agent Topology](#agent-topology) below.
 
 **Status today:** pilot guarantee G7 keeps every product agent off. This policy is
 the set of conditions for switching them back on.
