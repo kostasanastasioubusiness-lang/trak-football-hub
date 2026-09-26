@@ -58,6 +58,7 @@ contract modules use the workshop's own paths, `03-the-margin/cost-curve.md` and
 | File | Question it answers |
 |---|---|
 | [compounding-system.md](05-the-guardrails/compounding-system.md) | Which loops learn, which just scale, where are the knowledge silos, and does Trak pass the freeze test? Which agents should Trak build, what may each one do, and who approves? |
+| [governance-policy-drafter.md](05-the-guardrails/governance-policy-drafter.md) | The course's worked governance policy (SupportCopilot v1.2). Trak's own policy and agent topology are in compounding-system.md. |
 
 `00-Makis` is an existing placeholder in this folder and was left untouched.
 
