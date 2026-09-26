@@ -50,15 +50,15 @@ contract modules use the workshop's own paths, `03-the-margin/cost-curve.md` and
 | File | Question it answers |
 |---|---|
 | [golden-dataset.md](04-the-contract/golden-dataset.md) | How do we test the agent's output, how does the coach see its confidence, and what reliability do we promise? |
-| [confidence-ux.md](04-the-contract/confidence-ux.md) | What does the coach see at each confidence tier, and what can they control? The course tool's output and how the tool works. |
-| [reliability-contract-builder.md](04-the-contract/reliability-contract-builder.md) | The course's worked reliability contract, and how its builder works. Trak's own contract is section 5 of golden-dataset.md. |
+| [confidence-ux.md](04-the-contract/confidence-ux.md) | What does the coach see at each confidence tier, and what can they control? The tool's output and how the tool works. |
+| [reliability-contract-builder.md](04-the-contract/reliability-contract-builder.md) | The worked reliability contract, and how its builder works. Trak's own contract is section 5 of golden-dataset.md. |
 
 ### [05-the-guardrails/](05-the-guardrails/)
 
 | File | Question it answers |
 |---|---|
 | [compounding-system.md](05-the-guardrails/compounding-system.md) | Which loops learn, which just scale, where are the knowledge silos, and does Trak pass the freeze test? Which agents should Trak build, what may each one do, and who approves? |
-| [governance-policy-drafter.md](05-the-guardrails/governance-policy-drafter.md) | The course's worked governance policy (SupportCopilot v1.2). Trak's own policy and agent topology are in compounding-system.md. |
+| [governance-policy-drafter.md](05-the-guardrails/governance-policy-drafter.md) | The worked governance policy (SupportCopilot v1.2). Trak's own policy and agent topology are in compounding-system.md. |
 
 `00-Makis` is an existing placeholder in this folder and was left untouched.
 

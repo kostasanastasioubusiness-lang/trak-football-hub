@@ -142,7 +142,7 @@ and Greek. Add one row for every correction a pilot coach makes that no existing
 
 ## 2. Confidence UX — three modes, not one "here's the answer"
 
-*Taken from the course's Confidence UX Designer on 19 September, from its own "Copy as Text"
+*Taken from the Confidence UX Designer on 19 September, from its own "Copy as Text"
 output. [confidence-ux.md](confidence-ux.md) explains how the tool works.*
 
 ## Confidence UX Design
@@ -299,7 +299,7 @@ Built so an academy director can be shown it in a sales call.
 
 ## 5. Reliability contract
 
-*Drafted in the course's Reliability Contract Builder on 19 September and taken from its own
+*Drafted in the Reliability Contract Builder on 19 September and taken from its own
 "Copy Reliability Contract" output, starting from the worked example.
 [reliability-contract-builder.md](reliability-contract-builder.md) has the worked example and how
 the builder works. Every number is provisional: the pilot has not yet measured a baseline.*

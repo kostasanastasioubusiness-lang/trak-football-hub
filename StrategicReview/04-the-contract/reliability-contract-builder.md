@@ -1,6 +1,6 @@
 # Reliability Contract Builder, Module 4
 
-*Session: 19 September 2026. The course's capstone tool for Module 4. Trak's contract is in
+*Session: 19 September 2026. The capstone tool for Module 4. Trak's contract is in
 [golden-dataset.md, section 5](golden-dataset.md#5-reliability-contract). This file keeps the
 worked example and records how the builder works.*
 

@@ -1,6 +1,6 @@
 # Confidence UX Designer, Module 4
 
-*Session: 19 September 2026, second run. Trak's run of the course's Confidence UX Designer, taken from the
+*Session: 19 September 2026, second run. Trak's run of the Confidence UX Designer, taken from the
 tool's own "Copy as Text" output. The tool says its output mirrors the Confidence UX Design section
 of [golden-dataset.md](golden-dataset.md); section 2 there adds the workflow paths for
 each tier.*
@@ -35,7 +35,7 @@ Every draft has five buttons: "accurate", "wrong band", "not what I said", "wron
 
 ## How the tool works
 
-Worked out on 19 September by filling the course's tool, capturing its "Copy as Text" output and
+Worked out on 19 September by filling in the tool, capturing its "Copy as Text" output and
 changing one field at a time. The page's script could not be read directly. Described in our own
 terms.
 

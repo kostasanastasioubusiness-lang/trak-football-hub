@@ -32,7 +32,7 @@ figure is correct.*
 
 ## How the calculator works
 
-Rules worked out on 19 September by setting inputs on the course's M3 calculator and reading the
+Rules worked out on 19 September by setting inputs on the M3 calculator and reading the
 outputs; every rule below matched every probe exactly. Described in our own terms.
 
 **Inputs, per user per month:** requests (R), blended cost per request (C — tokens plus infrastructure

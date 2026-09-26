@@ -1,6 +1,6 @@
 # Agent Governance Policy Drafter, Module 5
 
-*Session: 26 September 2026. This is the course's Governance Policy Drafter tool for Module 5.
+*Session: 26 September 2026. This is the Governance Policy Drafter tool for Module 5.
 Trak's own policy is in
 [compounding-system.md, Governance Policy](compounding-system.md#governance-policy), and its agents
 are in [Agent Topology](compounding-system.md#agent-topology). This file keeps the worked example.*
