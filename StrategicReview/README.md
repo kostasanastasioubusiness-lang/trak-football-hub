@@ -202,6 +202,8 @@ Folder: [06-the-pitch/](06-the-pitch/)
 | File | Question it answers |
 |---|---|
 | [roadmap.md](06-the-pitch/roadmap.md) | What goes in H1, H2 and H3, what is unmapped, and does the backlog execute the strategy? |
+| [pitch-builder.md](06-the-pitch/pitch-builder.md) | How the Pitch Builder works, which audience to pitch, and how the README and roadmap fit it. The pitch itself goes under Board Pitch in roadmap.md. |
+| [roadmap-builder.md](06-the-pitch/roadmap-builder.md) | How the Roadmap Builder works, and how Trak's README and backlog fit its loader and parser. |
 | [backlog.csv](06-the-pitch/backlog.csv) | The backlog the roadmap was built from: 74 rows, assembled from TRAK issues in PR titles, the parked and cut lists in MVP Requirements, and the guardrails fix plan. Linear was not reachable. |
 
 **Findings**

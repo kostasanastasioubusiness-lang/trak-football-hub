@@ -148,3 +148,30 @@ Three H1 items, none of them code:
 
 **First item in H2:** the passport comes back before AI does. The Leader matters more than the
 Filler.
+
+---
+
+## Board Pitch
+
+*Not written yet. Run the [Pitch Builder](pitch-builder.md) on the README and this file, then paste
+its output here. Choose the audience and set the ask first.*
+
+### Thesis
+
+### The case
+
+#### Why now
+
+#### What's defensible
+
+#### The economics
+
+### The risks
+
+#### Trust
+
+#### Scale
+
+#### Competitive
+
+### The ask
