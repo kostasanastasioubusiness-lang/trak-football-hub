@@ -202,6 +202,7 @@ Folder: [06-the-pitch/](06-the-pitch/)
 | File | Question it answers |
 |---|---|
 | [roadmap.md](06-the-pitch/roadmap.md) | What goes in H1, H2 and H3, what is unmapped, and does the backlog execute the strategy? |
+| [board-simulation.md](06-the-pitch/board-simulation.md) | The presenter's sheet: opening line, a five-minute run order through the repo, and short answers to the hard questions, including the kill plan. |
 | [ai-bet-evaluator.md](06-the-pitch/ai-bet-evaluator.md) | How the AI Bet Evaluator critiques the strategy, which dimensions to run, and why only 1 of 5 README sections loaded on the first try. |
 | [pitch-builder.md](06-the-pitch/pitch-builder.md) | How the Pitch Builder works, which audience to pitch, and how the README and roadmap fit it. The pitch itself goes under Board Pitch in roadmap.md. |
 | [roadmap-builder.md](06-the-pitch/roadmap-builder.md) | How the Roadmap Builder works, and how Trak's README and backlog fit its loader and parser. |

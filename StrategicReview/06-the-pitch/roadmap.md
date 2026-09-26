@@ -153,25 +153,96 @@ Filler.
 
 ## Board Pitch
 
-*Not written yet. Run the [Pitch Builder](pitch-builder.md) on the README and this file, then paste
-its output here. Choose the audience and set the ask first.*
+*Audience: **founders / funding committee**. Ask: **no new money, three decisions and one rule.**
+Drafted in the Pitch Builder's shape from the README and this file. The
+[board simulation sheet](board-simulation.md) has the run order and the answers to the hard
+questions.*
 
 ### Thesis
+
+Trak becomes the **coach-signed, consent-backed development record** for young athletes: the one
+record an academy can lawfully hold about a child and another institution will accept. The pilot
+proves we can build that record safely. This season has to prove two more things: that families
+pay for it through the academy, and that someone outside the academy accepts it.
 
 ### The case
 
 #### Why now
 
+- **Anyone can now make an assessment for free. A signature can't be copied that way.** Once AI
+  can write any coach's report, the only believable record is one a named coach signed. Trak is
+  built around that signature, and the database enforces it (G4).
+- **Child-data rules are tightening in our first markets.** A record built consent-first is hard
+  for anyone to retrofit. Ours already is: roster-only admission, consent on every write, and one
+  tap to withdraw.
+- **The window is open for 6 to 9 months.** Veo could staple a coach assessment to footage it
+  already captures and ship it free to its installed base. We have to be the accepted record
+  before that happens.
+
 #### What's defensible
 
+- **The regulatory half of the moat is built, and tested under real roles.** Roster-only
+  admission, consent on every development write, isolation between academies, a coach approval
+  that AI cannot bypass, and AI switched off with a test that proves it. 30% of the backlog built
+  this.
+- **The network half isn't built yet.** No school, federation or trial partner accepts the record
+  today. That is the moat, and it is this season's first ask.
+- **We say plainly that there is no moat today.** None of the eight classic moats scores above
+  2 / 5. What we have is the only position that can become one: Regulatory × Network.
+
 #### The economics
+
+- **Price:** a $100 season pass ($10 a month), about 20% of the ~€500 academy fee, on the
+  academy's own invoice. Parents pay for extras only if they choose them.
+- **Margin:** 75.7% at 100 players on illustrative costs. About 78 paying players cover a $200
+  platform bill.
+- **Under stress:** 66.9% if AI costs triple, 71.3% if usage doubles, and 35.9% if we go fully
+  agentic at 10× cost. **AI is the margin risk, not the product.** That is why the passport comes
+  back before AI does.
+- **Untested:** billing is out of the pilot, and no academy has agreed to collect the pass yet.
 
 ### The risks
 
 #### Trust
 
+- **The risk:** one invented sentence about a child, or one child's data reaching an unapproved
+  vendor, ends the product.
+- **Mitigations:**
+  - AI is off for the pilot, with a test proving it.
+  - A coach signs everything.
+  - When AI returns, a Safety Sentinel sits in front of it: invented claims below 1%, zero safety
+    leaks.
+- **Known gap:** corrections are being thrown away today. The fix migration is due 3 October.
+
 #### Scale
+
+- **The risk:** the pilot is one squad at one UAE academy, loaded by hand, and every message is
+  written by a coach.
+- **What that means:** scale depends on coach time per assessment.
+- **How we'll know:** we measure it now, as the baseline AI must beat later. The rubber-stamp alarm
+  stops speed from turning into unread approvals.
 
 #### Competitive
 
+- **The risk:** Veo ships a free coach report on footage to thousands of academies.
+- **Our defence:** it isn't features. It is being the record institutions accept, backed by
+  consent records Veo would have to rebuild academy by academy.
+
 ### The ask
+
+**No new money.** Before the pilot starts on Monday 5 October (provisional), decide:
+
+1. **Price test.** Founders ask the pilot academy for a signed letter of intent to collect the
+   season pass in H2, at $100 or at a named alternative price.
+2. **Acceptance test.** Founders hold one conversation with a UAE school or trial partner: would
+   they accept a coach-signed, consent-backed record, and in what form?
+3. **Fix plan into Linear.** One TRAK issue per fix, with the first migration merged by 3 October.
+
+**And one rule for H2: the passport comes back before AI does.**
+
+**How we'll know by the end of the pilot:**
+
+- the share of coach messages opened within 7 days
+- the share of players receiving a message every 14 days
+- whether the letter of intent is signed
+- whether the institution says yes
