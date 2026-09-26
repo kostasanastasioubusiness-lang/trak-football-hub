@@ -1,9 +1,10 @@
 # Strategic Review — Trak Football
 
 Outputs of a strategy workshop run against the Trak codebase and docs on **12 September 2026**, with
-the margin and contract modules added on 19 September: where Trak places its bet, a working
-prototype of the most critical use case, a stress test of whether anything about the business is
-defensible, how it should package and price, and why anyone should trust what its AI writes.
+the margin and contract modules added on 19 September and the guardrails module on 26 September:
+where Trak places its bet, a working prototype of the most critical use case, a stress test of
+whether anything about the business is defensible, how it should package and price, why anyone
+should trust what its AI writes, and which of its loops learn rather than just scale.
 
 **Read [What has changed since](#what-has-changed-since) first.** The analysis is kept exactly as
 delivered, but several facts it rested on have been superseded by the
@@ -52,6 +53,12 @@ contract modules use the workshop's own paths, `03-the-margin/cost-curve.md` and
 | [confidence-ux.md](04-the-contract/confidence-ux.md) | What does the coach see at each confidence tier, and what can they control? The course tool's output and how the tool works. |
 | [reliability-contract-builder.md](04-the-contract/reliability-contract-builder.md) | The course's worked reliability contract, and how its builder works. Trak's own contract is section 5 of golden-dataset.md. |
 
+### [05-the-guardrails/](05-the-guardrails/)
+
+| File | Question it answers |
+|---|---|
+| [compounding-system.md](05-the-guardrails/compounding-system.md) | Which loops learn, which just scale, where are the knowledge silos, and does Trak pass the freeze test? Which agents should Trak build, what may each one do, and who approves? |
+
 `00-Makis` is an existing placeholder in this folder and was left untouched.
 
 ---
@@ -87,6 +94,13 @@ contract modules use the workshop's own paths, `03-the-margin/cost-curve.md` and
   safeguarding disclosure), three confidence tiers where no tier signs for the coach, and a
   reliability contract: fidelity ≥ 92%, invented claims < 1%, safety leaks zero and checked on
   every live draft.
+
+- **Nothing compounds yet: 0 of 3 learning loops, and AI is off for the pilot (G7).** The
+  partner audit found the broken loop: **corrections are trashed.** Coach message edits are
+  overwritten in place, AI drafts can be deleted, and no consent purpose allows learning. The fix
+  plan's first migration (revision history, discard instead of delete, `prompt_version` and band
+  fields) is due 3 October. Six agents are recommended, the Safety Sentinel first, and no agent
+  ever converses with a child, parent or buyer.
 
 ---
 
