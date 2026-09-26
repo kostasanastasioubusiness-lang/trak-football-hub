@@ -320,7 +320,7 @@ export default function CoachManual() {
           <ChevronLeft size={14} className="text-white/88" />
         </button>
         <div>
-          <p className="text-[16px] font-medium text-white/88 leading-tight" style={{ fontFamily: "'DM Sans', sans-serif" }}>Coach Manual</p>
+          <p className="text-[16px] font-medium text-white/88 leading-tight" style={{ fontFamily: "'DM Sans', sans-serif" }}>How Trak works</p>
           <p className="text-[10px] text-white/30" style={{ fontFamily: "'DM Mono', monospace" }}>{SECTIONS.length} SECTIONS</p>
         </div>
       </div>
