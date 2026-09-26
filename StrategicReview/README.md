@@ -19,6 +19,7 @@ processing and the player passport from the first pilot.
 The review has five components, one per workshop module: [The Bet](#the-bet),
 [The Moat](#the-moat), [The Margin](#the-margin), [The Contract](#the-contract) and
 [The Guardrails](#the-guardrails). Each section lists its files, then its findings.
+[The Pitch](#the-pitch) turns them into an H1 / H2 / H3 roadmap built from the backlog.
 
 `00-Makis` is an existing placeholder in this folder and was left untouched.
 
@@ -191,6 +192,32 @@ While G7 holds, every signal reads zero. Say so plainly rather than showing a da
 
 **One metric to add: outcome parity.** Are AI-assisted messages opened by children as often as
 hand-written ones (J7)? That is where quality meets retention.
+
+---
+
+## The Pitch
+
+Folder: [06-the-pitch/](06-the-pitch/)
+
+| File | Question it answers |
+|---|---|
+| [roadmap.md](06-the-pitch/roadmap.md) | What goes in H1, H2 and H3, what is unmapped, and does the backlog execute the strategy? |
+| [backlog.csv](06-the-pitch/backlog.csv) | The backlog the roadmap was built from: 74 rows, assembled from TRAK issues in PR titles, the parked and cut lists in MVP Requirements, and the guardrails fix plan. Linear was not reachable. |
+
+**Findings**
+
+- **The backlog executes trust rigorously and value not at all.** Of 43 TRAK issues, 47% build
+  The Bet's coach-signed record and 30% build The Moat's regulatory half. None touch The Margin or
+  The Contract.
+- **The pilot cannot prove the three sources of value:**
+  - the passport (the Leader) is cut
+  - nothing tests whether an academy will collect the season pass
+  - no institution is being asked to accept the record
+- **Recommended H1 additions, none of them code:**
+  - a price letter of intent from the pilot academy
+  - one UAE acceptance conversation with a school or trial partner
+  - the fix plan entered in Linear
+- **First item in H2:** the passport comes back before AI does.
 
 ---
 

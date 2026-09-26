@@ -1,0 +1,75 @@
+Issue key,Summary,Status,Labels,Source
+TRAK-6,Recover player readback errors and stale responses,Done,J6,GitHub PRs #133
+TRAK-7,"match log: no invented defaults for minutes, goals, assists, position or age",Done,J4,GitHub PRs #120
+TRAK-10,Pilot measurement from real UI events,Done,J7,GitHub PRs #155
+TRAK-11,"Spec: consent-first admission (docs, for review)",Done,J2/J3,GitHub PRs #148
+TRAK-12,test: no staff self-signup without an academy code either (follow-up to #151),Done,G3,GitHub PRs #163 #152 #151
+TRAK-13,Parent chooses the child to approve and withdraws consent from Profile,In Progress,G6/J2,GitHub PRs #112
+TRAK-14,Require consent on every development write,In Progress,G1,GitHub PRs #123
+TRAK-15,Parents do not read the coach's message; live G4 probe,Done,G4,GitHub PRs #154
+TRAK-17,"Close deferred AI, photo and passport access for the pilot",Done,G7,GitHub PRs #119
+TRAK-18,A rostered child can't choose a guardian's email (stacked on #144),Done,G2,GitHub PRs #150 #129
+TRAK-19,"registry: park code linking, rewrite UC-C02 and UC-P07, add J1–J4",Done,J1/J2,GitHub PRs #116
+TRAK-23,Pilot start moves to Monday 5 October (provisional),Done,launch gate 6,GitHub PRs #160 #118
+TRAK-24,Rehearsal seed --purge reports only what the app key removed,Done,tooling,GitHub PRs #153
+TRAK-39,"Correct the 23 Sep docs push: account rights, acceptance pointers, agent workflow, review channel",Done,scope,GitHub PRs #156
+TRAK-40,docs: remove superseded pilot-scope.html v2 and CEO SCOPE,Done,scope,GitHub PRs #114
+TRAK-42,Restrict avatar reads and repair owner deletion,Done,G7,GitHub PRs #113
+TRAK-43,docs: decide the three open pilot routes,Done,scope,GitHub PRs #115
+TRAK-45,"Pin Node 22 for contributors, matching CI",Done,tooling,GitHub PRs #122
+TRAK-47,Academy compliance records are read-only while /club/* is Coming soon,Done,G7 G7/scope,GitHub PRs #159 #134
+TRAK-48,"slice 4: the roster is the only way into a squad (no code linking, no coach inserts)",In Progress,J1,GitHub PRs #164 #144 #127
+TRAK-49,Roster tables and the operator's concierge load,Done,J1,GitHub PRs #128
+TRAK-50,"one-screen assessment: message to the player, private note, publish",Done,J5,GitHub PRs #117
+TRAK-52,Refuse the child's own email as the parent's,Done,G5,GitHub PRs #124
+TRAK-53,Player signup asks for no club or coach code (stacked on #144),Done,J1,GitHub PRs #145
+TRAK-54,Player signup asks for no club or coach code (stacked on #144),Done,J1,GitHub PRs #145
+TRAK-56,Parent home shows the coach's published message,Done,J6,GitHub PRs #121
+TRAK-57,Session screen offers only consent-confirmed players,In Progress,J4/G1,GitHub PRs #126
+TRAK-59,Close meeting_requests to app roles,Done,G5,GitHub PRs #132
+TRAK-60,Profiles are created only through provision_my_profile,Done,J1,GitHub PRs #130
+TRAK-61,Pin the Supabase CLI to 2.117.0,Done,CI,GitHub PRs #131
+TRAK-63,"Parents see the bands, never the coach's message",Done,J6,GitHub PRs #135
+TRAK-64,"One Save button that also sends the message (stacked on #135, #136)",Done,J5,GitHub PRs #138
+TRAK-66,A match can't have more scorers than the team's goals,Done,J4,GitHub PRs #139
+TRAK-67,A session or match can't be dated in the future (stacked on #139),In Progress,J4,GitHub PRs #140
+TRAK-68,An assessment belongs to a session that already happened,Done,J5,GitHub PRs #136
+TRAK-69,Open a saved assessment and edit that row (stacked on #138),Done,J5,GitHub PRs #143
+TRAK-70,test: a seeded session stays valid on the real clock (flaky greeting test),Done,J6,GitHub PRs #158 #137
+TRAK-71,"Player Profile order, assessment history, Connections (part 2)",Done,J6,GitHub PRs #142 #141
+TRAK-72,"One Player overview on coach home (item 4, stacked on #161)",In Progress,J4/J5,GitHub PRs #162 #161
+TRAK-73,Parent opens a match's detail (part 1 of 4; stacked on #133),In Progress,J6,GitHub PRs #147
+TRAK-75,Store the training focus as structured training_type,Done,J4,GitHub PRs #146
+TRAK-76,Player sees the training their coach logged (family read path + screen),In Progress,J6,GitHub PRs #157
+TRAK-79,Squad consent chips stay on screen across a token refresh,Done,J5,GitHub PRs #149
+PARKED-1,Player passport and evolution card,Backlog,coming-soon,MVP Requirements
+PARKED-2,Passport export and sharing,Backlog,cut,MVP Requirements
+PARKED-3,AI feedback drafting with coach review (/coach/feedback),Backlog,cut,MVP Requirements
+PARKED-4,Coach AI assistant (/coach/assistant),Backlog,cut,MVP Requirements
+PARKED-5,Schedule parsing from pasted fixtures (/coach/schedule),Backlog,cut,MVP Requirements
+PARKED-6,"Recognition and awards (/coach/recognition, /coach/award)",Backlog,cut,MVP Requirements
+PARKED-7,Parent alerts (/parent/alerts),Backlog,coming-soon,MVP Requirements
+PARKED-8,"Academy console: home, squads, coaches, profile, radar (/club/*)",Backlog,coming-soon,MVP Requirements
+PARKED-9,Child photos and avatars,Backlog,cut,MVP Requirements
+PARKED-10,Parent goals,Backlog,cut,MVP Requirements
+PARKED-11,Player-entered match logging (UC-A02/A03),Backlog,cut,MVP Requirements
+PARKED-12,Lead guardian invites another adult,Backlog,cut,MVP Requirements
+PARKED-13,Household entity,Backlog,cut,MVP Requirements
+PARKED-14,Per-child training notes,Backlog,cut,MVP Requirements
+PARKED-15,Transfers between academies,Backlog,cut,MVP Requirements
+PARKED-16,Automatic retry on failure,Backlog,cut,MVP Requirements
+PARKED-17,Billing: season pass on the academy invoice,Backlog,out-of-scope,MVP Requirements
+PARKED-18,Account data export screen (export_my_account exists),Backlog,no-screen,MVP Requirements
+NEW-1,Append-only revision history for coach_shared_feedback,To Do,guardrails fix-1,StrategicReview/05-the-guardrails
+NEW-2,Discard instead of delete for ai_feedback_drafts,To Do,guardrails fix-2,StrategicReview/05-the-guardrails
+NEW-3,"prompt_version, drafted_band and signed_band fields",To Do,guardrails fix-3,StrategicReview/05-the-guardrails
+NEW-4,Safety Sentinel block log (draft_safety_blocks),To Do,guardrails fix-4,StrategicReview/05-the-guardrails
+NEW-5,Model-improvement consent purpose and DPIA section,To Do,guardrails fix-5,StrategicReview/05-the-guardrails
+NEW-6,Named safeguarding lead per academy and escalation route,To Do,guardrails fix-6,StrategicReview/05-the-guardrails
+NEW-7,Coach rule: never paste children's data into any AI tool,To Do,guardrails fix-8,StrategicReview/05-the-guardrails
+NEW-8,"Schedule parser: text only, roster names replaced",To Do,guardrails fix-9,StrategicReview/05-the-guardrails
+NEW-9,Remove the UEFA coaching principles claim,To Do,guardrails fix-10,StrategicReview/05-the-guardrails
+NEW-10,Commitment-language block (escalation trigger 8),To Do,guardrails fix-11,StrategicReview/05-the-guardrails
+NEW-11,Processor agreement with the model vendor (lifts G7 for AI),To Do,guardrails,StrategicReview/05-the-guardrails
+NEW-12,Revoke LOVABLE_API_KEY and retire the Lovable workspace,To Do,guardrails,StrategicReview/05-the-guardrails
+NEW-13,Fix no-committed-credentials test path separators on Windows,To Do,tooling,StrategicReview/05-the-guardrails
