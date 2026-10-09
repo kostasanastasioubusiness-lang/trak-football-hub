@@ -44,6 +44,8 @@ export interface FixtureRow {
 
 export interface FixturesRead {
   rows: FixtureRow[]
+  /** Slash dates in this file are month-first; edited rows must be read the same way. */
+  monthFirstFile: boolean
   /** The file as a whole cannot be used. */
   fileErrors: string[]
   /** The file is usable, but something in it is being left out. */
@@ -257,7 +259,7 @@ export function readFixturesCsv(text: string): FixturesRead {
   const clean = (text ?? '').replace(/^\uFEFF/, '')
   const table = parseTable(clean, detectSeparator(clean))
     .filter(r => r.cells.some(c => c.trim() !== ''))
-  if (table.length === 0) return { rows: [], fileErrors: ['The file is empty.'], warnings: [] }
+  if (table.length === 0) return { rows: [], monthFirstFile: false, fileErrors: ['The file is empty.'], warnings: [] }
 
   const [header, ...body] = table
   const columns: (FixtureField | null)[] = []
@@ -280,7 +282,7 @@ export function readFixturesCsv(text: string): FixturesRead {
   if (body.length > MAX_FIXTURE_ROWS) {
     fileErrors.push(`The file has ${body.length} rows; the limit is ${MAX_FIXTURE_ROWS}. Split it into smaller files.`)
   }
-  if (fileErrors.length > 0) return { rows: [], fileErrors, warnings }
+  if (fileErrors.length > 0) return { rows: [], monthFirstFile: false, fileErrors, warnings }
 
   const valuesOf = (cells: string[]): FixtureValues => {
     const values = Object.fromEntries(FIELDS.map(f => [f, ''])) as FixtureValues
@@ -290,23 +292,28 @@ export function readFixturesCsv(text: string): FixturesRead {
     return values
   }
 
-  const allValues = body.map(r => valuesOf(r.cells))
-  const monthFirst = isMonthFirstFile(allValues.map(v => v.date))
-  const firstLineByKey = new Map<string, number>()
+  const rows = body.map(r => ({ line: r.line, values: valuesOf(r.cells) }))
+  const monthFirstFile = isMonthFirstFile(rows.map(r => r.values.date))
+  return { rows: checkRows(rows, monthFirstFile), monthFirstFile, fileErrors: [], warnings }
+}
 
-  const rows = body.map((r, i): FixtureRow => {
-    const values = allValues[i]
-    const { fixture, problems } = validateFixture(values, r.line, monthFirst)
+/**
+ * Check every row, and flag a row that repeats an earlier one. The preview
+ * calls this again after each edit or removal, so a fixed duplicate clears and
+ * a duplicate made by an edit shows.
+ */
+export function checkRows(rows: { line: number; values: FixtureValues }[], monthFirstFile: boolean): FixtureRow[] {
+  const firstLineByKey = new Map<string, number>()
+  return rows.map(({ line, values }): FixtureRow => {
+    const { fixture, problems } = validateFixture(values, line, monthFirstFile)
     if (fixture) {
       const key = fixtureKey(fixture)
       const earlier = firstLineByKey.get(key)
       if (earlier !== undefined) {
-        return { line: r.line, values, fixture: null, problems: [`Same fixture as line ${earlier}.`] }
+        return { line, values, fixture: null, problems: [`Same fixture as line ${earlier}.`] }
       }
-      firstLineByKey.set(key, r.line)
+      firstLineByKey.set(key, line)
     }
-    return { line: r.line, values, fixture, problems }
+    return { line, values, fixture, problems }
   })
-
-  return { rows, fileErrors: [], warnings }
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   FIXTURE_TEMPLATE_CSV,
+  checkRows,
   fixtureKey,
   readFixturesCsv,
   validateFixture,
@@ -216,5 +217,41 @@ describe('the downloadable template', () => {
     expect(fileErrors).toEqual([])
     expect(warnings).toEqual([])
     expect(rows.map(r => r.fixture?.kind)).toEqual(['match', 'training'])
+  })
+})
+
+describe('checkRows: the preview re-checks every row after an edit or a removal', () => {
+  it('reports the file as month-first so edited rows are read the same way', () => {
+    expect(read('11/13/2026,18:00,,Rivals FC,,,').monthFirstFile).toBe(true)
+    expect(read('13/11/2026,18:00,,Rivals FC,,,').monthFirstFile).toBe(false)
+  })
+
+  it('clears "Same fixture" once the coach edits one of the two rows', () => {
+    const { rows, monthFirstFile } = read('2026-11-10,18:00,,Rivals FC,,,', '2026-11-10,18:00,,Rivals FC,,,')
+    expect(rows[1].problems).toEqual(['Same fixture as line 2.'])
+    const edited = rows.map(r => r.line === 3 ? { line: r.line, values: { ...r.values, kickoff: '19:00' } } : r)
+    const checked = checkRows(edited, monthFirstFile)
+    expect(checked.every(r => r.problems.length === 0 && r.fixture)).toBe(true)
+  })
+
+  it('clears "Same fixture" once the earlier row is removed', () => {
+    const { rows, monthFirstFile } = read('2026-11-10,18:00,,Rivals FC,,,', '2026-11-10,18:00,,Rivals FC,,,')
+    const checked = checkRows(rows.slice(1), monthFirstFile)
+    expect(checked[0].problems).toEqual([])
+    expect(checked[0].fixture?.line).toBe(3)
+  })
+
+  it('flags a duplicate created by an edit', () => {
+    const { rows, monthFirstFile } = read('2026-11-10,18:00,,Rivals FC,,,', '2026-11-11,18:00,,Rivals FC,,,')
+    const edited = rows.map(r => r.line === 3 ? { line: r.line, values: { ...r.values, date: '2026-11-10' } } : r)
+    expect(checkRows(edited, monthFirstFile)[1].problems).toEqual(['Same fixture as line 2.'])
+  })
+
+  it('keeps refusing slash dates in a month-first file after an edit', () => {
+    const { rows, monthFirstFile } = read('11/13/2026,18:00,,Rivals FC,,,')
+    const edited = [{ line: rows[0].line, values: { ...rows[0].values, date: '11/12/2026' } }]
+    expect(checkRows(edited, monthFirstFile)[0].fixture).toBeNull()
+    const fixed = [{ line: rows[0].line, values: { ...rows[0].values, date: '2026-11-12' } }]
+    expect(checkRows(fixed, monthFirstFile)[0].fixture?.date).toBe('2026-11-12')
   })
 })
