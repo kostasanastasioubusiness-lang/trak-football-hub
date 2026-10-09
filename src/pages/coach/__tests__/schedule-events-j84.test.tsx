@@ -95,7 +95,10 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
 
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0].method).toBe('post')
-    expect(writes[0].body).toMatchObject({
+    // One event is a one-row insert; a weekly series (J8.5) is the same insert with more rows.
+    expect(writes[0].body).toHaveLength(1)
+    const [inserted] = writes[0].body as Record<string, unknown>[]
+    expect(inserted).toMatchObject({
       coach_user_id: COACH.id, title: 'vs Synthetic United', event_type: 'match',
       starts_at: toInstant(today, '16:00'),
       ends_at: new Date(new Date(toInstant(today, '16:00')!).getTime() + 75 * 60_000).toISOString(),
@@ -104,8 +107,9 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
       home_away: 'away', kit: 'Red shirts', published: false, source: 'manual',
     })
     // The app never writes the status or the sequence number.
-    expect(writes[0].body).not.toHaveProperty('status')
-    expect(writes[0].body).not.toHaveProperty('sequence')
+    expect(inserted).not.toHaveProperty('status')
+    expect(inserted).not.toHaveProperty('sequence')
+    expect(inserted).not.toHaveProperty('series_id')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
