@@ -118,6 +118,12 @@ views. The screen, enforcement and final notice must agree before relying on
 that approval. This documentation update records the discrepancy; it does not
 resolve it or change consent code.
 
+**Proposed resolution (TRAK-145, PR #251, approved 9 October, not yet merged):**
+remove the optional "I can see their progress" box, state parent viewing of
+bands and history inside the required purpose, and move the notice version to
+`2026-10-09.1`. Until that change is merged and seen on the deployed consent
+screen, the discrepancy above stands.
+
 Withdrawal blocks new covered development writes and hides covered records
 through the ordinary family read policies while consent is required. It does
 not erase the records or remove the coach's authorized history. Reapproval can
@@ -135,15 +141,17 @@ each kind of evidence?
 
 ## 4. Planned J8 data and later profile features
 
-The confirmed J8 scope is TRAK-25 as updated on 8 October at 14:19 UTC, split
-into 18 slices (TRAK-124–141), all Todo when reviewed. The source baseline still
-has the parked legacy calendar. Its existing published family-read policies
-must not be confused with the new, consent-gated J8 access requirements.
+The confirmed J8 scope is TRAK-25 as updated on 8 October, split into 18
+slices (TRAK-124–141); delivery status lives in Linear. Since 8 October the
+per-academy switch (TRAK-124) turns events on for the synthetic rehearsal
+academy only. The older family-read policies on published events do not yet
+check consent; TRAK-125 replaces them with the consent-gated J8 rules before
+any real family receives events.
 
 | Planned flow | Data and agreed boundaries |
 | --- | --- |
-| Events and weekly series | Squad/academy, type, date/time, duration, meet time, venue and saved venues; match opponent, home/away and kit; status, optional cancellation reason, series ID and change sequence. Weekly repeats create dated event rows through an inclusive end date, in Dubai time. Cancelling retains the event. |
-| Fixture import | CSV is read in the browser, previewed and corrected before the coach confirms; repeat imports must not duplicate events. PDF handling is open: browser parsing of typed PDFs or operator conversion. AI parsing remains out. File handling/retention depends on that choice. |
+| Events and weekly series | Squad/academy, type, date/time, duration, meet time, venue and saved venues; match opponent, home/away and kit; status, optional cancellation reason, series ID and change sequence. Weekly repeats create dated event rows through an inclusive end date, in Dubai time. Saving keeps a draft only the coach sees; Publish sends it to families, and edits to a published event go live on save (decided 9 October). Cancelling retains the event; only a never-published draft can be deleted. |
+| Fixture import | CSV only (decided 8 October). The file is read in the coach's browser, previewed and corrected before the coach confirms; repeat imports must not duplicate events. PDF import is out of the pilot: a league that publishes only a PDF is entered through the CSV template or by hand. AI parsing remains out. |
 | Calendar feeds | A personal link per player/parent, with a hashed token, label, creation/revocation and last-fetch metadata. Token possession authorizes the feed without an app login. A parent feed covers children with active consent; a player feed covers their squad. Entries have stable IDs and change sequences, retain cancellations, and contain no child names or coach notes. |
 | Shared family links | A guardian can create extra named links for relatives or a driver, selecting matches/all events and one/all children. Each is independently revocable and tied to the guardian's continuing access. The recipient need not have an account. |
 | Changes and reminders | Per-user new/changed/cancelled seen state in the app; guardian email delivery for today/tomorrow changes, with a 60-second same-day target; two-day reminder emails grouped per guardian/day across their children. Notification preference, recipient, deduplication/retry and delivery records need lifecycle coverage. Reminder opt-out is in Settings; email links must not change state. |
@@ -164,12 +172,14 @@ remains to be established if the proposed link fails. Direct Google/Microsoft
 account connections are outside J8. Same-day emails supplement calendar
 refreshes; do not promise instant calendar updates.
 
-**Open implementation choices recorded in the issues:** the event email sender,
-region and from address (Kostas, TRAK-126); browser PDF parsing versus operator
-conversion (Imad, TRAK-129); feed endpoint location (TRAK-132); verified mobile
-subscription behaviour/fallback (TRAK-133); and whether players with email also
-receive change emails (Imad, TRAK-135, guardians only by default). The current
-Auth email path is not the proposed general event-email sender.
+**Decided since 8 October:** event emails are sent through Resend from
+`noreply@trakfootball.com`, with sending in Ireland (eu-west-1) (Kostas,
+TRAK-126); fixture import is CSV only (Imad, TRAK-129); and same-day change
+emails go to every affected guardian and to players who have their own email
+(Imad, TRAK-135).
+
+**Still open in the issues:** the feed endpoint location (TRAK-132) and the
+verified mobile subscription behaviour and fallback (TRAK-133).
 
 **For counsel and the academy:** review token/link disclosure, delegated family
 access, device/provider caches, email/share recipients, optional absence and
@@ -188,10 +198,10 @@ weight are excluded. Lineups and broader matchday planning remain parked.
 
 | Service or process | Source-backed role | Still to establish |
 | --- | --- | --- |
-| Supabase | Database, Auth, storage and Edge Functions; roster invitations use Auth email APIs. | Project region, actual email delivery provider, retention, backups, access and contractual terms. |
+| Supabase | Database, Auth, storage and Edge Functions; roster invitations use Auth email APIs. The project is hosted in eu-central-1 (Frankfurt), per its settings on 9 October. | Confirmation of the Auth email delivery path, retention, backups, access and contractual terms. |
 | Vercel | Web hosting and deployment. | Hosting/log regions, log retention and contractual terms. |
 | Sentry | Production error monitoring when a DSN is configured; browser tracing uses 10% sampling. No session-replay integration is configured. | Actual project configuration, region, event contents, retention and access. |
-| Event email sender | Planned change and grouped reminder emails, separately from Auth. | Provider, region, sending address, contracts, delivery records and retention. |
+| Event email sender | Resend, sending from `noreply@trakfootball.com` in Ireland (eu-west-1), wired on 8 October (TRAK-126) for planned change and grouped reminder emails. The account owner reports that Auth emails also go through Resend. | Contracts, delivery records, retention and any processing outside the sending region. |
 | Calendar providers | Planned subscriptions through personal and extra guardian-created links. | Endpoint hosting, mobile behaviour, caching, removal, retention and provider responsibilities; counsel review of the privacy design before real-family links. |
 | WhatsApp | Planned coach-initiated sharing of event text; no automatic posting. | Recipient/group handling, external copies, notice and retention responsibilities. |
 | Operator handling | Roster source files, support, corrections, legal requests and recovery evidence may exist outside application tables. | Approved storage, access, transfer and deletion procedures for those files and records. |
