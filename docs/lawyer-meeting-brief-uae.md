@@ -1,11 +1,11 @@
 # Trak — Legal Questions for a UAE Pilot
 
-*Updated 8 October 2026 for counsel review and the forthcoming academy meeting.*
+*Updated 9 October 2026 for counsel review and the forthcoming academy meeting.*
 
 | Document control | Value |
 | --- | --- |
 | Purpose | Describe the product and ask for decisions before the first real-child pilot. |
-| Source baseline | Repository commit `d0ed55ff618ee0a0b943399236527f9e3f7ebbb5`, reviewed 8 October 2026. Source inspection does not confirm deployed configuration or current production behaviour. |
+| Source baseline | Repository commit `386d255c9ba8dba553695492bc48ac34f4471543`, reviewed 9 October 2026. Source inspection does not confirm deployed configuration or current production behaviour; where this brief says something is live, it was checked on the deployed site or read-only on production that day. |
 | Product scope | [MVP Requirements](../MVP%20Requirements), including the agreed J8 events requirement. A requirement is not evidence of implementation. |
 | Related legal work | Makis's preliminary counsel paper in [PR #247](https://github.com/kostasanastasioubusiness-lang/trak-football-hub/pull/247). It remains his draft; its retention and updates are his decision. This brief supplies current product facts and open questions without changing that paper. |
 | Academy discussion | The academy has **not been briefed**. A meeting is planned in the coming weeks; acceptance of the arrangements below remains pending. |
@@ -64,7 +64,11 @@ Access varies by category. Roster contact/DOB tables deny direct app access and
 use scoped functions. Coach access follows roster ownership and organizational
 membership; admin access is scoped. Ordinary family table reads and the
 training-history function are consent-gated for under-18s, with an explicit
-exception for retained player-logged matches. Account export has a separate
+exception for retained player-logged matches. **Known gap (TRAK-147, fix
+pending):** a child whose consent was withdrawn can still read their own
+attendance rows directly from the attendance table, because that table's
+player read rule has no consent check. The training-history function does
+refuse after withdrawal, and no family can read another child's attendance. Account export has a separate
 access path described in section 6. The family training function returns date, focus
 and that child's attendance, excluding coach diary titles and notes. Avoid a
 blanket claim that every role can read “the child's record.”
@@ -99,35 +103,33 @@ authority and responsibilities for that initial transfer. Confirmed email and
 a declared relationship are the technical evidence; they are not a legal
 finding that the person holds parental responsibility.
 
-There is a source discrepancy to resolve:
+**Consent wording, resolved 9 October 2026 (TRAK-145, PR #251):** the screen
+used to offer an optional "I can see their progress" choice that did not
+control what parents could read. It has been removed. The required purpose
+now states that the linked parent sees the child's bands and their match and
+training history, and the notice version is `2026-10-09.1`. This was checked
+on the deployed site on 9 October: the new wording and version are served and
+the old choice is gone. Still open: a consent row saved with the new notice
+version has not yet been observed on production.
 
-- The routed consent screen renders `CONSENT_PURPOSES` from `src/lib/consent.ts`.
-  `coaching_records` is required; `recognition` and `parent_visibility` are
-  optional and initially off. The notice version is `2026-09-12.1`.
-- Database approval checks use active `coaching_records` consent. Setting
-  `parent_visibility` to false does not independently block the linked
-  parent's assessment/history reads. Recognition authoring is separately
-  parked; its optional flag is not the control enforcing that closure.
+- The optional `recognition` choice remains. Recognition is parked, so the
+  choice currently controls nothing; counsel may want it removed until the
+  feature exists.
 - The approval call records the purposes, notice version and
   `CONSENT_STATEMENT`; it does not store the complete rendered page as a
   snapshot. Describing it as a verbatim record of every displayed notice would
   overstate the evidence.
-
-The agreed pilot requirement covers coaching records and the specified family
-views. The screen, enforcement and final notice must agree before relying on
-that approval. This documentation update records the discrepancy; it does not
-resolve it or change consent code.
-
-**Proposed resolution (TRAK-145, PR #251, approved 9 October, not yet merged):**
-remove the optional "I can see their progress" box, state parent viewing of
-bands and history inside the required purpose, and move the notice version to
-`2026-10-09.1`. Until that change is merged and seen on the deployed consent
-screen, the discrepancy above stands.
+- **The wording will change once more before families receive events.** The
+  required purpose does not yet mention squad events or a personal calendar
+  link that carries the schedule outside the app. That needs another wording
+  change and notice-version bump before J8 reaches real families (noted on
+  TRAK-132); counsel should expect to review that wording too.
 
 Withdrawal blocks new covered development writes and hides covered records
 through the ordinary family read policies while consent is required. It does
 not erase the records or remove the coach's authorized history. Reapproval can
-make them visible again. Retained player-logged matches have an explicit
+make them visible again. The one known exception is the child's own
+attendance rows (TRAK-147, above). Retained player-logged matches have an explicit
 exception to the ordinary family-read gate. The account-export function does
 not apply the same consent predicate, so a blanket promise that withdrawal prevents all access
 would be inaccurate. Consent evidence intentionally survives account or roster
@@ -145,14 +147,14 @@ The confirmed J8 scope is TRAK-25 as updated on 8 October, split into 18
 slices (TRAK-124–141); delivery status lives in Linear. Since 8 October the
 per-academy switch (TRAK-124) turns events on for the synthetic rehearsal
 academy only. The older family-read policies on published events do not yet
-check consent; TRAK-125 replaces them with the consent-gated J8 rules before
-any real family receives events.
+check consent; TRAK-125 (PR #254, in review on 9 October) replaces them with
+the consent-gated J8 rules before any real family receives events.
 
 | Planned flow | Data and agreed boundaries |
 | --- | --- |
 | Events and weekly series | Squad/academy, type, date/time, duration, meet time, venue and saved venues; match opponent, home/away and kit; status, optional cancellation reason, series ID and change sequence. Weekly repeats create dated event rows through an inclusive end date, in Dubai time. Saving keeps a draft only the coach sees; Publish sends it to families, and edits to a published event go live on save (decided 9 October). Cancelling retains the event; only a never-published draft can be deleted. |
 | Fixture import | CSV only (decided 8 October). The file is read in the coach's browser, previewed and corrected before the coach confirms; repeat imports must not duplicate events. PDF import is out of the pilot: a league that publishes only a PDF is entered through the CSV template or by hand. AI parsing remains out. |
-| Calendar feeds | A personal link per player/parent, with a hashed token, label, creation/revocation and last-fetch metadata. Token possession authorizes the feed without an app login. A parent feed covers children with active consent; a player feed covers their squad. Entries have stable IDs and change sequences, retain cancellations, and contain no child names or coach notes. |
+| Calendar feeds | A personal link per player/parent, with a hashed token, label, creation/revocation and last-fetch metadata. Token possession authorizes the feed without an app login. A parent feed covers children with active consent; a player feed covers their squad's published events only while the player's own consent is active. Withdrawal, leaving the squad or revoking the link empties the feed on the next fetch. Entries have stable IDs and change sequences, retain cancellations, and contain no child names or coach notes. |
 | Shared family links | A guardian can create extra named links for relatives or a driver, selecting matches/all events and one/all children. Each is independently revocable and tied to the guardian's continuing access. The recipient need not have an account. |
 | Changes and reminders | Per-user new/changed/cancelled seen state in the app; guardian email delivery for today/tomorrow changes, with a 60-second same-day target; two-day reminder emails grouped per guardian/day across their children. Notification preference, recipient, deduplication/retry and delivery records need lifecycle coverage. Reminder opt-out is in Settings; email links must not change state. |
 | Parent absence reports | “Can't make it” records the event, child, reporting guardian, time and optional short reason, with undo until the event starts. Active consent and a guardian-child link are required. The coach sees their own squad; families cannot see another child's absence. Players do not respond in v1. |
@@ -215,6 +217,9 @@ establish processing location. Regions and transfer arrangements remain open.
 no point-in-time recovery (PITR), and an unrehearsed restore on 2 October 2026.
 The current pilot decision also excludes a staging environment. These are
 recorded arrangements, not dashboard verification or proof of recoverability.
+On 9 October Imad decided that a restore rehearsal on an isolated copy, with
+the recovery time measured, is required before real families (TRAK-150, part
+of the live tests).
 The [restore document](release/s5-restore-rehearsal.md) must identify backup
 coverage, recovery procedure, evidence and limitations; database backup alone
 must not be described as restoring every service or external copy.
