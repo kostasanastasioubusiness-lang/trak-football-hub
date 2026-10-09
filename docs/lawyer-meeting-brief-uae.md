@@ -146,9 +146,13 @@ each kind of evidence?
 The confirmed J8 scope is TRAK-25 as updated on 8 October, split into 18
 slices (TRAK-124–141); delivery status lives in Linear. Since 8 October the
 per-academy switch (TRAK-124) turns events on for the synthetic rehearsal
-academy only. The older family-read policies on published events do not yet
-check consent; TRAK-125 (PR #254, in review on 9 October) replaces them with
-the consent-gated J8 rules before any real family receives events.
+academy only. The older family-read policies on published events did not
+check consent. TRAK-125 (PR #254, live on 9 October) replaced them: a player or
+parent reads a published event only through a current squad row of that coach,
+in the event's academy, while the child's consent is active, and drafts are
+coach-only. A read-only check on production that day showed a consented
+synthetic family seeing the squad's events, and an unconsented family and
+another academy seeing none.
 
 | Planned flow | Data and agreed boundaries |
 | --- | --- |
@@ -156,7 +160,7 @@ the consent-gated J8 rules before any real family receives events.
 | Fixture import | CSV only (decided 8 October). The file is read in the coach's browser, previewed and corrected before the coach confirms; repeat imports must not duplicate events. PDF import is out of the pilot: a league that publishes only a PDF is entered through the CSV template or by hand. AI parsing remains out. |
 | Calendar feeds | A personal link per player/parent, with a hashed token, label, creation/revocation and last-fetch metadata. Token possession authorizes the feed without an app login. A parent feed covers children with active consent; a player feed covers their squad's published events only while the player's own consent is active. Withdrawal, leaving the squad or revoking the link empties the feed on the next fetch. Entries have stable IDs and change sequences, retain cancellations, and contain no child names or coach notes. |
 | Shared family links | A guardian can create extra named links for relatives or a driver, selecting matches/all events and one/all children. Each is independently revocable and tied to the guardian's continuing access. The recipient need not have an account. |
-| Changes and reminders | Per-user new/changed/cancelled seen state in the app; guardian email delivery for today/tomorrow changes, with a 60-second same-day target; two-day reminder emails grouped per guardian/day across their children. Notification preference, recipient, deduplication/retry and delivery records need lifecycle coverage. Reminder opt-out is in Settings; email links must not change state. |
+| Changes and reminders | Per-user new/changed/cancelled seen state in the app; guardian email delivery for every cancellation of a published event, whatever its date, and for today/tomorrow changes, with a 60-second target; two-day reminder emails grouped per guardian/day across their children. Notification preference, recipient, deduplication/retry and delivery records need lifecycle coverage. Reminder opt-out is in Settings; email links must not change state. |
 | Parent absence reports | “Can't make it” records the event, child, reporting guardian, time and optional short reason, with undo until the event starts. Active consent and a guardian-child link are required. The coach sees their own squad; families cannot see another child's absence. Players do not respond in v1. |
 | Completed attendance | Everyone is expected to attend unless reported absent. After the event, the coach reviews and saves the register through the consent-checked session/attendance path. Expected attendance is not evidence of attendance. Saving again must not duplicate the completed session. |
 | Manual WhatsApp share | A button prepares squad/type/date/time/venue/meet-time/kit and cancellation details; the coach selects the recipient and sends in WhatsApp. No child names or absence list. No automatic posting or account integration. Copies then exist outside Trak. |
@@ -176,9 +180,11 @@ refreshes; do not promise instant calendar updates.
 
 **Decided since 8 October:** event emails are sent through Resend from
 `noreply@trakfootball.com`, with sending in Ireland (eu-west-1) (Kostas,
-TRAK-126); fixture import is CSV only (Imad, TRAK-129); and same-day change
+TRAK-126); fixture import is CSV only (Imad, TRAK-129); same-day change
 emails go to every affected guardian and to players who have their own email
-(Imad, TRAK-135).
+(Imad, TRAK-135); and cancelling a published event emails them whatever its
+date, because a called-off fixture must never just disappear from a family's
+calendar (Imad, 9 October, TRAK-135).
 
 **Still open in the issues:** the feed endpoint location (TRAK-132) and the
 verified mobile subscription behaviour and fallback (TRAK-133).
