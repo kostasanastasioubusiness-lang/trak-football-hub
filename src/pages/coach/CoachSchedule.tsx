@@ -250,7 +250,10 @@ export default function CoachSchedule() {
     setSheet(s => {
       if (s.kind !== 'edit') return s
       // Until the coach turns repeat on, its weekday follows the first date.
-      const repeat = patch.date && !s.repeat.on ? blankRepeat(patch.date) : s.repeat
+      // A match never repeats: picking Match switches the repeat off, so a
+      // hidden repeat can't save a series of identical matches.
+      const repeat = patch.kind === 'match' ? { ...s.repeat, on: false }
+        : patch.date && !s.repeat.on ? blankRepeat(patch.date) : s.repeat
       return { ...s, form: { ...s.form, ...patch }, repeat, error: null }
     })
   const setRepeat = (patch: Partial<Repeat>) =>
@@ -295,7 +298,7 @@ export default function CoachSchedule() {
 
     setSaving(true)
     const fresh = { coach_user_id: user.id, published: false, source: 'manual' }
-    const series = !editing && repeat.on
+    const series = !editing && repeat.on && form.kind !== 'match'
     const rows = series
       ? seriesRows(form, repeat, crypto.randomUUID()).map(r => ({ ...r, ...fresh }))
       : [{ ...formToRow(form), ...fresh }]
@@ -332,20 +335,37 @@ export default function CoachSchedule() {
     if (sheet.kind !== 'cancel') return
     const { row, scope } = sheet
     setSaving(true)
+    const following = scope === 'following' && inSeries(row)
     const update = supabase.from('coach_calendar_events').update(cancelPatch(sheet.reason))
-    const { data, error } = scope === 'following' && inSeries(row)
-      ? await update.eq('series_id', row.series_id).gte('event_date', row.event_date).eq('status', 'scheduled').select('id')
+    // This and following: cancel only what families have seen. A draft week
+    // cancelled would be stuck on the schedule (only drafts can be deleted),
+    // so the drafts in the range are deleted instead.
+    const { data, error } = following
+      ? await update.eq('series_id', row.series_id).gte('event_date', row.event_date)
+          .eq('status', 'scheduled').eq('published', true).select('id')
       : await update.eq('id', row.id).select('id')
-    setSaving(false)
     if (failed(error, data)) {
+      setSaving(false)
       setSheet({ ...sheet, error: "Couldn't cancel the event. Check your connection and try again." })
       return
     }
-    setSheet({ kind: 'closed' })
+    // Zero drafts is normal here, so only an error counts as a failure.
+    const drafts = following
+      ? await supabase.from('coach_calendar_events').delete().eq('series_id', row.series_id)
+          .gte('event_date', row.event_date).eq('published', false).eq('status', 'scheduled').select('id')
+      : null
+    setSaving(false)
     loadData()
-    toast.success(data!.length > 1
+    if (drafts?.error) {
+      setSheet({ ...sheet, error: `Cancelled ${data!.length} published events, but couldn't remove the unpublished drafts after them. Delete them from the schedule.` })
+      return
+    }
+    setSheet({ kind: 'closed' })
+    const removed = drafts?.data?.length ?? 0
+    toast.success((data!.length > 1
       ? `${data!.length} events cancelled. They stay on the schedule as Cancelled.`
       : 'Event cancelled. It stays on the schedule as Cancelled.')
+      + (removed ? ` ${removed} unpublished draft${removed > 1 ? 's' : ''} removed.` : ''))
   }
 
   /** Publish or delete a week of a series: only this week, or this and following. */

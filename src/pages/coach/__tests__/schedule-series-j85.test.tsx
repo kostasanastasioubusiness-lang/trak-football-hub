@@ -99,6 +99,30 @@ describe('J8.5: a weekly training series', () => {
     expect(await screen.findByText(/Saved 16 events as drafts/)).toBeInTheDocument()
   })
 
+  // Imad's #263 review: the repeat controls hide for a match, but hiding them
+  // didn't switch the repeat off, so Save wrote a series of identical matches.
+  it('switching a repeating training to a match saves one match, never a series', async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    const sheet = screen.getByRole('dialog', { name: 'New event' })
+    const date = within(sheet).getByLabelText('Date')
+    await userEvent.clear(date)
+    await userEvent.type(date, '2030-01-07')
+    await userEvent.type(within(sheet).getByLabelText('Start'), '18:00')
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Repeats weekly' }))
+    await userEvent.type(within(sheet).getByLabelText('Ends on'), '2030-02-27')
+    await userEvent.click(within(within(sheet).getByRole('group', { name: 'Event type' })).getByRole('button', { name: 'Match' }))
+    await userEvent.type(within(sheet).getByLabelText('Opponent'), 'Synthetic Rovers')
+    expect(within(sheet).queryByRole('button', { name: /^Save \d+ drafts$/ })).toBeNull()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
+
+    await waitFor(() => expect(writes).toHaveLength(1))
+    const inserted = writes[0].body as Record<string, unknown>[]
+    expect(inserted).toHaveLength(1)
+    expect(inserted[0]).toMatchObject({ event_type: 'match', event_date: '2030-01-07', opponent: 'Synthetic Rovers' })
+    expect(inserted[0].series_id ?? null).toBeNull()
+  })
+
   it("won't save a series that ends before it starts, and says so", async () => {
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
@@ -144,11 +168,17 @@ describe('J8.5: a weekly training series', () => {
     sheet = screen.getByRole('dialog', { name: 'Cancel event' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'This and following weeks' }))
     await userEvent.click(within(sheet).getByRole('button', { name: 'Cancel event' }))
-    await waitFor(() => expect(writes).toHaveLength(2))
+    // Imad's #263 review: only published weeks are cancelled. Unpublished
+    // drafts in the range are deleted, never left cancelled and undeletable.
+    await waitFor(() => expect(writes).toHaveLength(3))
     expect(writes[1]).toMatchObject({
       method: 'patch',
-      query: `?series_id=eq.series-1&event_date=gte.${today}&status=eq.scheduled&select=id`,
+      query: `?series_id=eq.series-1&event_date=gte.${today}&status=eq.scheduled&published=eq.true&select=id`,
       body: { status: 'cancelled' },
+    })
+    expect(writes[2]).toMatchObject({
+      method: 'delete',
+      query: `?series_id=eq.series-1&event_date=gte.${today}&published=eq.false&status=eq.scheduled&select=id`,
     })
   })
 
