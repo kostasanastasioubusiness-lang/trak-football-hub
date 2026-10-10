@@ -5,7 +5,7 @@
 | Document control | Value |
 | --- | --- |
 | Purpose | Describe the product and ask for decisions before the first real-child pilot. |
-| Source baseline | Repository commit `386d255c9ba8dba553695492bc48ac34f4471543`, reviewed 9 October 2026. Source inspection does not confirm deployed configuration or current production behaviour; where this brief says something is live, it was checked on the deployed site or read-only on production that day. |
+| Source baseline | Repository commit `a3dca4b061c956e8ea73c5bd7d18b3b609109a74`, reviewed 10 October 2026. Source inspection does not confirm deployed configuration or current production behaviour; where this brief says something is live, it was checked on the deployed site or read-only on production that day. |
 | Product scope | [MVP Requirements](../MVP%20Requirements), including the agreed J8 events requirement. A requirement is not evidence of implementation. |
 | Related legal work | Makis's preliminary counsel paper in [PR #247](https://github.com/kostasanastasioubusiness-lang/trak-football-hub/pull/247). It remains his draft; its retention and updates are his decision. This brief supplies current product facts and open questions without changing that paper. |
 | Academy discussion | The academy has **not been briefed**. A meeting is planned in the coming weeks; acceptance of the arrangements below remains pending. |
@@ -64,11 +64,11 @@ Access varies by category. Roster contact/DOB tables deny direct app access and
 use scoped functions. Coach access follows roster ownership and organizational
 membership; admin access is scoped. Ordinary family table reads and the
 training-history function are consent-gated for under-18s, with an explicit
-exception for retained player-logged matches. **Known gap (TRAK-147, fix
-pending):** a child whose consent was withdrawn can still read their own
-attendance rows directly from the attendance table, because that table's
-player read rule has no consent check. The training-history function does
-refuse after withdrawal, and no family can read another child's attendance. Account export has a separate
+exception for retained player-logged matches. An audit on 9 October found
+that a child whose consent was not active could still read their own
+attendance rows directly; that was fixed the same day (TRAK-147, PR #255) and
+checked read-only on production on 10 October: such a child now reads none of
+their attendance rows, while a consented child still reads theirs. Account export has a separate
 access path described in section 6. The family training function returns date, focus
 and that child's attendance, excluding coach diary titles and notes. Avoid a
 blanket claim that every role can read “the child's record.”
@@ -128,8 +128,7 @@ version has not yet been observed on production.
 Withdrawal blocks new covered development writes and hides covered records
 through the ordinary family read policies while consent is required. It does
 not erase the records or remove the coach's authorized history. Reapproval can
-make them visible again. The one known exception is the child's own
-attendance rows (TRAK-147, above). Retained player-logged matches have an explicit
+make them visible again. Retained player-logged matches have an explicit
 exception to the ordinary family-read gate. The account-export function does
 not apply the same consent predicate, so a blanket promise that withdrawal prevents all access
 would be inaccurate. Consent evidence intentionally survives account or roster
