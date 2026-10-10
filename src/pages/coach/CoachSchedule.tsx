@@ -350,18 +350,18 @@ export default function CoachSchedule() {
       return
     }
     // Zero drafts is normal here, so only an error counts as a failure.
-    const drafts = following
+    const { data: removedDrafts, error: draftError } = following
       ? await supabase.from('coach_calendar_events').delete().eq('series_id', row.series_id)
           .gte('event_date', row.event_date).eq('published', false).eq('status', 'scheduled').select('id')
-      : null
+      : { data: null, error: null }
     setSaving(false)
     loadData()
-    if (drafts?.error) {
+    if (draftError) {
       setSheet({ ...sheet, error: `Cancelled ${data!.length} published events, but couldn't remove the unpublished drafts after them. Delete them from the schedule.` })
       return
     }
     setSheet({ kind: 'closed' })
-    const removed = drafts?.data?.length ?? 0
+    const removed = removedDrafts?.length ?? 0
     toast.success((data!.length > 1
       ? `${data!.length} events cancelled. They stay on the schedule as Cancelled.`
       : 'Event cancelled. It stays on the schedule as Cancelled.')
