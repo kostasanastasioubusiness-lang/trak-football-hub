@@ -40,6 +40,8 @@ function fixtures(rows: Record<string, unknown>[] = []) {
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach', invite_code: 'ABCD' }]),
     http.get(EVENTS, () => HttpResponse.json(rows)),
     table('coach_sessions', []),
+    // The schedule also reads the squad label for Share to WhatsApp (TRAK-139).
+    table('squad_players', []),
     rpc('feature_on', () => !parkedEvents),
     http.post(EVENTS, async ({ request }) => {
       const body = await request.json()
