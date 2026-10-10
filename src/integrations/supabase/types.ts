@@ -807,6 +807,18 @@ export type Database = {
           updated_at: string
         }[]
       }
+      coach_match_score_clash: {
+        Args: {
+          p_match_date: string
+          p_opponent: string
+          p_team_score: number
+          p_opponent_score: number
+        }
+        Returns: {
+          team_score: number
+          opponent_score: number
+        }[]
+      }
       create_parent_invite: {
         Args: { p_email: string }
         Returns: {

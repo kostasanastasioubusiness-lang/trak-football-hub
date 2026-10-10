@@ -249,6 +249,36 @@ SELECT pg_temp.ms_assert(
       AND lower(btrim(opponent)) = 'ms-one-nil'),
   'MS25: readback, the 1-0 holds two players and one goal; the refused rows were never stored');
 
+-- ── 4c. The app can ask first (TRAK-153) ────────────────────
+-- Coaches can't read public.matches, so before saving a session the app asks
+-- coach_match_score_clash() the question MS21's refusal answers: is this match
+-- already saved with another score? Same key: this coach, date, opponent (case
+-- and spaces ignored).
+CREATE FUNCTION pg_temp.ms_clash(opponent text, team_score integer, opponent_score integer)
+RETURNS text LANGUAGE sql STABLE AS $test$
+  SELECT coalesce(string_agg(c.team_score || '-' || c.opponent_score, ','), 'none')
+  FROM public.coach_match_score_clash(current_date - 7, opponent, team_score, opponent_score) c;
+$test$;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"role":"authenticated","sub":"96000000-0000-0000-0000-000000000001"}', true);
+SELECT pg_temp.ms_assert(pg_temp.ms_clash('  ms-one-nil ', 2, 0) = '1-0',
+  'MS26: a different score for a saved match answers the saved 1-0, whatever the case or spacing');
+SELECT pg_temp.ms_assert(pg_temp.ms_clash('MS-One-Nil', 1, 0) = 'none',
+  'MS27: the same score is no clash, so adding a player to a saved match still works');
+SELECT pg_temp.ms_assert(pg_temp.ms_clash('MS-NEVER-PLAYED', 3, 1) = 'none',
+  'MS28: a match never saved is no clash');
+-- Another signed-in person (here the player) sees no coach's matches through it.
+SELECT set_config('request.jwt.claims',
+  '{"role":"authenticated","sub":"96000000-0000-0000-0000-000000000002"}', true);
+SELECT pg_temp.ms_assert(pg_temp.ms_clash('MS-One-Nil', 2, 0) = 'none',
+  'MS29: only the coach who saved the match gets an answer');
+RESET ROLE;
+SELECT pg_temp.ms_assert(
+  NOT has_function_privilege('anon', 'public.coach_match_score_clash(date, text, integer, integer)', 'EXECUTE')
+  AND has_function_privilege('authenticated', 'public.coach_match_score_clash(date, text, integer, integer)', 'EXECUTE'),
+  'MS30: signed-out visitors cannot call it; signed-in users can');
+
 
 -- ── 5. What this migration must not have broken ──────────────
 SELECT pg_temp.ms_assert(
@@ -273,8 +303,8 @@ BEGIN
   IF failed > 0 THEN
     RAISE EXCEPTION 'Match stat rules: % failing assertions', failed USING DETAIL = details;
   END IF;
-  IF (SELECT count(*) FROM pg_temp.ms_results) <> 25 THEN
-    RAISE EXCEPTION 'Match stat rules: % assertions ran; expected exactly 25', (SELECT count(*) FROM pg_temp.ms_results);
+  IF (SELECT count(*) FROM pg_temp.ms_results) <> 30 THEN
+    RAISE EXCEPTION 'Match stat rules: % assertions ran; expected exactly 30', (SELECT count(*) FROM pg_temp.ms_results);
   END IF;
 END;
 $test$;

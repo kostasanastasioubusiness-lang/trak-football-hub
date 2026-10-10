@@ -298,6 +298,31 @@ export default function CoachAddSession() {
         ? trainingTitle(trainingFocus, title)
         : title.trim()
 
+    // TRAK-153: a match already saved with another score is refused by the
+    // database player by player (TRAK-149), but only after the session and
+    // attendance below are in, and a coach can't delete those. Ask first, and
+    // save nothing if the answer is a clash or no answer came.
+    if (isMatch) {
+      const { data: clash, error: clashErr } = await supabase.rpc('coach_match_score_clash', {
+        p_match_date: date,
+        p_opponent: opponent.trim(),
+        p_team_score: Number(scoreUs) || 0,
+        p_opponent_score: Number(scoreThem) || 0,
+      })
+      if (clashErr) {
+        console.error('Match score check failed:', clashErr)
+        toast.error("Couldn't check this match against the ones already saved. Nothing was saved; check your connection and save again.", { duration: 12000 })
+        setSaving(false)
+        return
+      }
+      const saved = clash?.[0]
+      if (saved) {
+        toast.error(`${sessionTitle} is already saved as ${saved.team_score}-${saved.opponent_score}; every player in it needs the same score. Nothing was saved.`, { duration: 12000 })
+        setSaving(false)
+        return
+      }
+    }
+
     // On a retry the session already exists; inserting again would give the
     // coach two identical sessions for one match.
     let sessionId = savedSessionId
