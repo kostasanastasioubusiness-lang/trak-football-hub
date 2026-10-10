@@ -213,6 +213,11 @@ export function validateFixture(values: FixtureValues, line: number, monthFirstF
   const homeAway = readHomeAway(v.homeAway)
   if ('problem' in homeAway) problems.push(homeAway.problem)
 
+  // The schedule refuses a meet time without a start (J8.4's formProblem), so
+  // catch it here rather than fail the whole import at save.
+  if ('value' in kickoff && 'value' in meet && meet.value && !kickoff.value) {
+    problems.push('Add the kick-off: a meet time needs one.')
+  }
   if ('value' in kickoff && 'value' in meet && kickoff.value && meet.value && meet.value > kickoff.value) {
     problems.push(`Meet time ${meet.value} is after the kick-off ${kickoff.value}.`)
   }

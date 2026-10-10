@@ -115,6 +115,12 @@ describe('readFixturesCsv: bad rows are caught in the preview, never saved', () 
     expect(rows[0].problems.join(' ')).toMatch(/meet time .*after/i)
   })
 
+  it('rejects a meet time with no kick-off, which the schedule cannot save', () => {
+    const { rows } = read('2026-11-09,,17:15,Rivals FC,,,')
+    expect(rows[0].fixture).toBeNull()
+    expect(rows[0].problems.join(' ')).toMatch(/kick-off.*meet time/i)
+  })
+
   it('rejects home or away values it cannot read', () => {
     const { rows } = read('2026-11-09,18:00,,Rivals FC,maybe,,')
     expect(rows[0].fixture).toBeNull()
