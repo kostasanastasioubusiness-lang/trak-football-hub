@@ -44,7 +44,7 @@ export const WAIT_BUDGET_MS = 45_000;
 
 const retryable = (result: SendResult) =>
   !result.sent && result.reason === 'delivery_failed' && (result.status === undefined || result.status === 429 || result.status >= 500);
-const reasonCode = (result: SendResult) =>
+export const reasonCode = (result: SendResult) =>
   result.sent ? null : result.status ? `${result.reason}:${result.status}` : result.reason;
 
 /**
@@ -57,8 +57,9 @@ export async function idempotencyKey(noticeIds: string[], userId: string): Promi
   return `trak-event-${Array.from(digest, b => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
-/** Sends one person's email, paced and retried. */
-async function sendPaced(message: PlainEmail, deps: EventEmailDependencies, pace: { last: number }): Promise<SendResult> {
+/** Sends one person's email, paced and retried (also J8.13's reminders). */
+export async function sendPaced(message: PlainEmail, deps: Pick<EventEmailDependencies, 'send' | 'sleep' | 'now'>,
+  pace: { last: number }): Promise<SendResult> {
   let result: SendResult = { sent: false, reason: 'delivery_failed' };
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
     if (attempt > 0) await deps.sleep(RETRY_DELAYS_MS[attempt - 1]);
