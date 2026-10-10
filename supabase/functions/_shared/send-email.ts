@@ -22,7 +22,8 @@ export type SendResult =
   | { sent: false; reason: 'invalid_email' | 'not_configured' | 'delivery_failed'; status?: number };
 
 const ADDRESS = /^[^\s@<>()",;:]+@[^\s@<>()",;:]+\.[^\s@<>()",;:]+$/;
-const LINK = /\bhttps?:\/\/[^\s<>"')\]]+|\bwww\.[^\s<>"')\]]+/gi;
+/** Every link the sender checks; event emails replace these in coach-typed text (TRAK-135). */
+export const LINK = /\bhttps?:\/\/[^\s<>"')\]]+|\bwww\.[^\s<>"')\]]+/gi;
 const TRAK_HOSTS = new Set(['trakfootball.com', 'www.trakfootball.com']);
 
 /** True when the address is the from address's domain: trakfootball.com, where SPF and DKIM are set. */
