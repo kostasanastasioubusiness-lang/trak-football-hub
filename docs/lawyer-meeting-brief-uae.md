@@ -1,317 +1,285 @@
 # Trak — Legal Questions for a UAE Pilot
 
-*Prepared for a meeting with UAE counsel. Written 18 September 2026.*
+*Updated 9 October 2026 for counsel review and the forthcoming academy meeting.*
 
 | Document control | Value |
 | --- | --- |
-| Companion to | `docs/lawyer-meeting-brief.md` (10 July 2026, written for a **Greek** lawyer) |
-| Relationship | That brief's questions still need asking. This one asks them for the UAE and **corrects the facts**, which have changed materially since July. |
-| Status | Questions, not answers. Nothing here is legal advice, and no statement about UAE law is made anywhere in this document. |
+| Purpose | Describe the product and ask for decisions before the first real-child pilot. |
+| Source baseline | Repository commit `a3dca4b061c956e8ea73c5bd7d18b3b609109a74`, reviewed 10 October 2026. Source inspection does not confirm deployed configuration or current production behaviour; where this brief says something is live, it was checked on the deployed site or read-only on production that day. |
+| Product scope | [MVP Requirements](../MVP%20Requirements), including the agreed J8 events requirement. A requirement is not evidence of implementation. |
+| Related legal work | Makis's preliminary counsel paper in [PR #247](https://github.com/kostasanastasioubusiness-lang/trak-football-hub/pull/247). It remains his draft; its retention and updates are his decision. This brief supplies current product facts and open questions without changing that paper. |
+| Academy discussion | The academy has **not been briefed**. A meeting is planned in the coming weeks; acceptance of the arrangements below remains pending. |
 
----
+## 1. Pilot scope and decisions still needed
 
-## 0. Read this first: what changed since the July brief
+The proposed first pilot is in the UAE. Coaches record training, matches,
+attendance and six-metric assessments. Children see their records and a
+manually written message published by their coach. Linked parents see their
+child's assessment bands and history, but not the coach's message or private
+working notes. Guardian approval is required below 18 in the current source.
+This is the implemented product threshold, not a conclusion about applicable law.
 
-The July brief is a good document and most of it still stands. Three of its
-factual premises no longer hold, and one of them sits underneath its most
-important question.
+**J8 events are required for the first real-child pilot.** Coaches must be able
+to schedule training, matches and other events with weekly repetition. Children
+and parents must see events in the app and their phone calendars; changes and
+cancellations must reach families. A past event becomes a completed session
+with attendance. Match events include kit; parents can report an absence.
+Launch requires the nine TRAK-25 acceptance checks, including one-tap calendar
+subscription and rehearsal on real phones, delivered through 18 slices. The existing parked calendar is not evidence that
+these requirements have been delivered. The pilot date depends on the launch
+gates; an earlier September or October target is not a current commitment.
 
-| July brief says | Actually true today |
+AI assistance, AI feedback, child photos, recognition authoring and the academy
+console are parked. Lineups and broader matchday planning are post-pilot.
+Coach-only birthday reminders and profile improvements are also post-pilot:
+preferred foot, coach-entered statistics and a possible UAE FA statistics sync.
+No height or weight is planned. UAE FA access, fields and permissions have not
+been settled.
+
+**Questions for counsel:** Which legal regime applies to the actual entities,
+location and activities, including any applicable free-zone rules? What
+conditions apply to processing children's data and verifying parental
+authority? Which documents, languages and approvals are required before roster
+admission, invitations and first use? Earlier EU proposals do not answer these
+questions for this pilot.
+
+## 2. Data and access in the current source
+
+The [data inventory](data-inventory.html) lists the 28 public tables implied by
+the migrations, together with Auth, storage, email and monitoring data outside
+those tables. It separates current source behaviour from planned features and
+retained data.
+
+| Category | What the source holds or does |
 | --- | --- |
-| *"players log matches and **daily wellness**"*, *"**daily mood entries**"*, *"soon behavioural self-reflections"* | **Wellness was deleted on 1 September** (`20260901000007_drop_wellness_logs.sql`). No mood, energy, sleep or free-text wellbeing data is collected anywhere in the product. The table was verified empty before it was dropped. `player_goals` was removed earlier for the same stated reason. |
-| *"A pilot is planned in **Greece**"* | The first pilot is in the **UAE**, the week of 25 September. |
-| *"a character-building feature for children is **in design**"* | Not in the build. What does exist is AI-written feedback a child reads, **and a live AI chat the child can hold with the model** — see section 4, and read it before relying on anything about AI in this brief. |
+| Academy-supplied roster | Child name, DOB, age group, assigned coach, optional child email and guardian email/relationship. Trak loads the roster through an operator path; coaches cannot create new squad rows. Operator identity, source-file reference, invitation timestamps and counts are recorded. |
+| Accounts | Name, role, football profile and account links. Existing profile fields include nationality, position, club and shirt number. DOB comes from the roster for admitted children. Auth stores account identities and sessions separately. |
+| Children without email | An approved, linked guardian can create a username/password login. The Auth identity uses an internal address under `child.trakfootball.com`; it is not a child's mailbox. Application tables store the username, guardian/roster link and Auth target, not the password. Guardian reset is authorized in SQL and attempts to end existing child sessions. |
+| Development records | Coach assessments and derived ratings; coach-recorded match facts; training dates, focus and attendance. Match fields still include legacy `body_condition` and `self_rating`, but the current routed coach flow sends null for them. |
+| Written material | Private coach working notes are separate from the published message. The child can read their published message while required consent is active; parents cannot. Admin notes remain stored and governed by author-ID policies despite the parked console. Free text requires its own handling and retention rules. |
+| Consent and corrections | Purposes, notice version, statement, declared relationship, verification method, ages, timestamps, withdrawal/supersession history and child/guardian identifiers. Email-correction audit keeps old/new email hashes, reason, operator and timestamp. |
+| Measurement | User ID, role, event type, metadata and time. J7 counts assessments saved through the app and distinct person/assessment appearances on the relevant home screen each week. An “open” is not proof of reading or understanding. |
 
-**Why the first row matters more than the others.** The July brief asks whether
-mood and behavioural entries are special-category data and whether a DPIA
-follows. A lawyer answering that question from the July brief would be
-answering about data this product does not hold. The special-category exposure
-that prompted the question was removed deliberately, and that is a materially
-different risk profile to present.
+Access varies by category. Roster contact/DOB tables deny direct app access and
+use scoped functions. Coach access follows roster ownership and organizational
+membership; admin access is scoped. Ordinary family table reads and the
+training-history function are consent-gated for under-18s, with an explicit
+exception for retained player-logged matches. An audit on 9 October found
+that a child whose consent was not active could still read their own
+attendance rows directly; that was fixed the same day (TRAK-147, PR #255) and
+checked read-only on production on 10 October: such a child now reads none of
+their attendance rows, while a consented child still reads theirs. Account export has a separate
+access path described in section 6. The family training function returns date, focus
+and that child's attendance, excluding coach diary titles and notes. Avoid a
+blanket claim that every role can read “the child's record.”
 
-**One question in the July brief was never answered, and the product shipped
-without the answer.** Section 4:
+`wellness_logs` and `player_goals` are dropped by migration. Historical awards,
+calendar events, AI records and avatar objects may remain; disabling a feature
+does not delete its data. The source blocks the old AI handlers and new avatar
+use. No current live-data inspection or deletion check is asserted here.
 
-> *"Coaches can add a child to a roster (name, age) before the child or parent
-> has an account — is that lawful, and if not how do we restructure it?"*
+**Questions for counsel:** How should assessments, free text, legacy fields
+and retained data be classified? Is an impact assessment required? What should
+staff be prohibited from recording? Removing the wellness feature does not
+settle these questions.
 
-That was asked on 10 July. On 12 September a parental-consent gate shipped that
-does not cover that case, and says so in its own header as a known limitation
-flagged for legal review. Section 3 below sets out exactly what it does and
-does not reach, with the evidence. **This is the question to settle first.**
+## 3. Admission and consent: current controls and an unresolved discrepancy
 
----
+The source now uses roster-led admission. A guardian's confirmed email must
+match the supplied roster relationship. Approval can be recorded before the
+child has an account. A child without email follows the guardian-created login
+path. Development writes require the relevant consent and ownership checks;
+unknown age does not grant an exception. The old coach-created, unlinked-child
+assessment bypass is not the current design.
 
-## 1. Context
+**Product decision, 8 October:** the coach may view the academy-supplied
+player profile before guardian approval. Assessments must remain blocked
+until approval. The roster is treated as academy data in this flow; viewing
+permission does not settle the legal basis or notice for its transfer to Trak.
 
-- **Trak** is a mobile-first web app for developing young footballers. Coaches
-  log sessions and assess players on six metrics; players log matches; parents
-  get read-only visibility. There is no video, no GPS hardware, no public
-  ranking, no scouting marketplace and no advertising.
-- **The pilot is in the UAE**, with a football academy, starting the week of
-  25 September 2026.
-- Hosting and processing are outside the UAE: **Supabase** (database and auth),
-  **Vercel** (web hosting), and an **AI gateway operated by Lovable** which
-  routes prompts to **Google Gemini**.
-- Existing legal work is **EU-shaped**: `Legal/PROPOSED-SOLUTION-EU-MINORS-ONBOARDING.md`
-  (7 September) proposes academy-as-controller / Trak-as-processor and is
-  explicitly marked *"approve as a design direction, not as legal clearance."*
-  Nobody has approved it. It is scoped *"EU academy-based onboarding."*
-- **The first question for this meeting is whether any of that transfers.**
+Roster details are still processed **before in-app guardian approval**. The
+academy supplies them to Trak, so counsel must establish the basis, notice,
+authority and responsibilities for that initial transfer. Confirmed email and
+a declared relationship are the technical evidence; they are not a legal
+finding that the person holds parental responsibility.
 
-> **Discuss:** Which instrument governs this pilot? Our deck cites **UAE
-> Federal Decree-Law 26 of 2025** as the relevant children's-data regime. We
-> have not verified that this is the right instrument or that we have
-> characterised it correctly, and we are not in a position to. Please tell us
-> what actually applies, including any free-zone regime (DIFC, ADGM) if the
-> academy or our entity sits in one.
+**Consent wording, resolved 9 October 2026 (TRAK-145, PR #251):** the screen
+used to offer an optional "I can see their progress" choice that did not
+control what parents could read. It has been removed. The required purpose
+now states that the linked parent sees the child's bands and their match and
+training history, and the notice version is `2026-10-09.1`. This was checked
+on the deployed site on 9 October: the new wording and version are served and
+the old choice is gone. Still open: a consent row saved with the new notice
+version has not yet been observed on production.
 
-> **Discuss:** Is there a **digital-consent age** in UAE law equivalent to the
-> GDPR Article 8 threshold? Our code currently hard-codes **15**, reasoned
-> entirely from Greek law, with a source comment saying so. It is wrong for
-> this market by construction, and we need the right number — or to be told the
-> concept does not apply and something else does.
+- The optional `recognition` choice remains. Recognition is parked, so the
+  choice currently controls nothing; counsel may want it removed until the
+  feature exists.
+- The approval call records the purposes, notice version and
+  `CONSENT_STATEMENT`; it does not store the complete rendered page as a
+  snapshot. Describing it as a verbatim record of every displayed notice would
+  overstate the evidence.
+- **The wording will change once more before families receive events.** The
+  required purpose does not yet mention squad events or a personal calendar
+  link that carries the schedule outside the app. That needs another wording
+  change and notice-version bump before J8 reaches real families (noted on
+  TRAK-132); counsel should expect to review that wording too.
 
----
+Withdrawal blocks new covered development writes and hides covered records
+through the ordinary family read policies while consent is required. It does
+not erase the records or remove the coach's authorized history. Reapproval can
+make them visible again. Retained player-logged matches have an explicit
+exception to the ordinary family-read gate. The account-export function does
+not apply the same consent predicate, so a blanket promise that withdrawal prevents all access
+would be inaccurate. Consent evidence intentionally survives account or roster
+deletion.
 
-## 2. What the system actually holds about a child
+**Questions for counsel and product owners:** What is the approved scope of
+approval and what, if anything, is separately optional? What verifies parental
+authority? How should withdrawal, multiple guardians, reapproval and preserved
+consent evidence be explained and handled? What retention period applies to
+each kind of evidence?
 
-Supplied as fact, verified against the code rather than described from memory,
-because counsel cannot advise on a system they have to take on trust.
+## 4. Planned J8 data and later profile features
 
-**Collected about a child with an account** (`player_details`, `profiles`):
-full name, date of birth, nationality, position, shirt number, age group,
-current club, email address.
+The confirmed J8 scope is TRAK-25 as updated on 8 October, split into 18
+slices (TRAK-124–141); delivery status lives in Linear. Since 8 October the
+per-academy switch (TRAK-124) turns events on for the synthetic rehearsal
+academy only. The older family-read policies on published events did not
+check consent. TRAK-125 (PR #254, live on 9 October) replaced them: a player or
+parent reads a published event only through a current squad row of that coach,
+in the event's academy, while the child's consent is active, and drafts are
+coach-only. A read-only check on production that day showed a consented
+synthetic family seeing the squad's events, and an unconsented family and
+another academy seeing none.
 
-**Created about a child by adults** — this is the substance of the product:
-
-| Data | Table | Written by |
-| --- | --- | --- |
-| Six-metric assessments (work rate, technical, physical, tactical, attitude, coachability) plus an overall rating | `coach_assessments` | Coach |
-| Free-text coach notes about the child | `coach_assessment_notes` | Coach |
-| AI-written development feedback the child reads | returned live by an edge function; **not stored, and not approved by anyone** — see section 4 | AI |
-| Recognition awards | `recognition_awards` | Coach |
-| Match records and session attendance | `matches`, `session_attendance` | Coach or player |
-| Guardian consent records | `parental_consents` | Parent |
-
-**Photographs are collected.** A child can upload a profile picture from the
-settings screen (`avatars` bucket, 5 MB, images only, one file per user). The
-bucket was created public in April and set to private on 26 May; a user may
-only write to their own path. We flag it explicitly because it is the only
-image of a child in the system and it is easy to overlook.
-
-**Not collected:** health data, mood, sleep, injury, biometrics, location,
-video, messaging between users, and any public profile or ranking.
-
-**Who can read a child's record today:** their own coach; the academy
-administrator; a linked parent; and the child. Cross-academy isolation is
-enforced — verified on reads between two real academies in the live database,
-and on writes against a replayed one.
-
-> **One fact counsel should have, because it is about honesty rather than
-> architecture.** `coach_assessment_notes` was created in April as a coach-only
-> table, and the coach-facing wording said the notes were private. In May a
-> policy was added letting a player read that table so the feedback feature
-> could use it. That did not only change future behaviour — it made notes
-> **already written under the privacy promise** readable by the player. Any
-> coach who has used the app since May has written notes they were told were
-> private and which their players can read. No child in the pilot is affected
-> yet; the existing notes belong to earlier users. We are deciding separately
-> what happens to them, and would welcome a view.
-
-> **Discuss:** Is the six-metric behavioural assessment of a child — attitude,
-> coachability — a sensitive category under the applicable UAE regime? Under
-> GDPR it is not health data, which is why the wellness deletion mattered. We
-> do not know how it is treated here.
-
----
-
-## 3. Guardian consent: what is built, and the precise gap
-
-**What is built, and it is the hard part:** consent records are append-only and
-versioned. Granting again supersedes rather than edits; withdrawal closes a
-record rather than deleting it. Each record stores what was agreed
-purpose-by-purpose, the exact wording shown, the notice version, the threshold
-applied and the child's age at the time. The history is reconstructable.
-
-**Where the gate applies, it works.** A coach cannot assess or give an award to
-an under-age child with no active consent, and can as soon as consent is
-recorded. Both directions are verified.
-
-**The gap.** The gate establishes a child's age by following the roster row to
-a signed-up account with a date of birth. A child a coach **typed in** has no
-account, so there is no date of birth, so the check passes and the assessment
-is written. The coach's add-player screen collects a name, a position, a shirt
-number and an age **band** (`U12`) — there is no date-of-birth field.
-
-Our engineering note argues this is acceptable because such a row is the
-academy's own record of its own squad. **The reason we are not relying on that
-argument** is that the row does not stay the academy's own: when the child
-later signs up — the ordinary flow, and what the pilot is for — their account
-adopts that same roster row, and every assessment written while nobody could
-check consent becomes part of their record and readable by them. Writes are
-blocked correctly from that moment on; what is already there is not.
-
-All of the above is demonstrated, not asserted, in
-`supabase/tests/consent_coverage.sql`.
-
-> **Discuss:** Is a coach creating and assessing a record about a named child,
-> before any parent is involved, lawful here? If the academy's own squad record
-> is treated differently, does that treatment survive the record transferring
-> into the child's personal account?
-
-> **Discuss:** **What establishes parental responsibility?** Today a parent
-> receives an email invitation and accepts it. Nothing verifies that the
-> recipient is a parent or guardian. Our own EU analysis says
-> *"authentication alone does not establish legal authority."* What is
-> sufficient here — and is academy-assisted verification, where the academy
-> already holds registration paperwork, an acceptable route?
-
----
-
-## 4. Suppliers and cross-border processing
-
-> **Discuss:** Does UAE law restrict where this data may be processed, and what
-> must be in place for each supplier? Concretely:
-
-| Supplier | Role | What it receives |
-| --- | --- | --- |
-| Supabase | Database, authentication, file storage | Everything in section 2, including profile photographs |
-| Vercel | Web hosting | Request traffic |
-| Lovable AI gateway → Google Gemini | Generates coach feedback and coach assistance | See below |
-| Sentry | Error monitoring, production only | Error traces |
-
-**Exactly what reaches the AI gateway**, because this is the sharpest question
-and a vague answer is worse than none: the child's **first name only**, their
-position, six metric scores, an overall rating, and **the coach's free-text
-note about them, verbatim**. Not their surname, date of birth, email or
-nationality.
-
-> **Discuss:** Is a coach's written observation about a named child, sent to a
-> third-party model outside the UAE, permissible — and does it need its own
-> consent purpose separate from coaching records? Our consent model already
-> supports separating them; we need to know whether it must.
-
-**Two things about the AI that we want stated plainly rather than discovered.**
-
-**No adult approves what the AI says to a child.** The feedback is generated
-and shown to the child directly. A coach does not see it first. We consider
-this the most serious item in this brief and it is being changed — the work is
-written and waiting to merge — but it is the state of the product as this
-document is written, and our sales deck already claims *"the coach reviews
-every word."* That claim is not true yet.
-
-**A child can hold a live conversation with the model.** The feedback screen
-sends the child's chat messages to Gemini with their assessment as context. An
-open-ended exchange between a child and a model cannot be pre-approved by a
-coach, which is why our own release gate and the pending change both switch it
-off. It is on today.
-
-> **Discuss:** Given the above, is there anything that must be in place before
-> a child uses this at all — as opposed to before the pilot scales?
-
-> **Discuss:** Must a child be **told** the feedback they are reading was
-> written by AI? EU AI Act Article 50 requires disclosure; we do not know the
-> UAE position, and we have not confirmed the product says so clearly today.
-
----
-
-## 5. The pilot agreement
-
-> **Discuss:** **Who is controller and who is processor** between Trak and a
-> UAE academy? Our EU analysis proposes academy-as-controller, Trak-as-processor
-> for coaching records, with Trak separately controller for billing and account
-> security — and warns that contract labels cannot override actual conduct.
-> Does that split hold here?
-
-> **Discuss:** What must the **academy agreement** contain as a minimum? We
-> have a specification for one — instructions, confidentiality, authorised
-> staff, subprocessors, transfers, rights assistance, breach escalation,
-> retention, audit, termination, and who verifies parental authority — but
-> **no draft exists.** An academy cannot sign a specification.
-
-> **Discuss:** **Who collects the parental consents** — the academy, as part of
-> registration it already does, or Trak in-app? This changes the product.
-
----
-
-## 6. Operating legally
-
-> **Discuss:** Do we need a **UAE legal entity** to run a paid pilot with a UAE
-> academy, or can a foreign entity contract in? What about a free-zone entity,
-> and does the choice change the data-protection analysis?
-
-> **Discuss:** **Terms and privacy policy.** None exist. What is the minimum
-> set before real children use this, in which language, and must they be
-> UAE-specific or can one set serve both markets?
-
-> **Discuss:** **Retention.** No retention period is set for anything —
-> accounts, assessments, invitations, consent records, audit evidence or
-> backups. What must we commit to, and to whom?
-
-> **Discuss:** **Rights requests and breach.** There is no named person, no
-> published contact for a parent with a problem, and no 72-hour-equivalent
-> procedure. What is required here, and what is the notification deadline?
-
-### 6a. The one question where the answer changes a line of code
-
-Erasure has existed and been tested for some time. **Data export did not exist
-at all until 19 September**, when it was built — and building it surfaced a
-question we had been talking past.
-
-Under GDPR the two rights are different. **Article 15 (access)** covers
-everything held *about* a person. **Article 20 (portability)** covers data the
-person *"provided"*. The product holds both kinds about a child:
-
-| The child provided it | An adult observed it |
+| Planned flow | Data and agreed boundaries |
 | --- | --- |
-| date of birth, name, position, club, shirt number | six-metric coach assessments and the overall rating |
-| matches they logged themselves | recognition awards |
-| | AI-written feedback about them |
+| Events and weekly series | Squad/academy, type, date/time, duration, meet time, venue and saved venues; match opponent, home/away and kit; status, optional cancellation reason, series ID and change sequence. Weekly repeats create dated event rows through an inclusive end date, in Dubai time. Saving keeps a draft only the coach sees; Publish sends it to families, and edits to a published event go live on save (decided 9 October). Cancelling retains the event; only a never-published draft can be deleted. |
+| Fixture import | CSV only (decided 8 October). The file is read in the coach's browser, previewed and corrected before the coach confirms; repeat imports must not duplicate events. PDF import is out of the pilot: a league that publishes only a PDF is entered through the CSV template or by hand. AI parsing remains out. |
+| Calendar feeds | A personal link per player/parent, with a hashed token, label, creation/revocation and last-fetch metadata. Token possession authorizes the feed without an app login. A parent feed covers children with active consent; a player feed covers their squad's published events only while the player's own consent is active. Withdrawal, leaving the squad or revoking the link empties the feed on the next fetch. Entries have stable IDs and change sequences, retain cancellations, and contain no child names or coach notes. |
+| Shared family links | A guardian can create extra named links for relatives or a driver, selecting matches/all events and one/all children. Each is independently revocable and tied to the guardian's continuing access. The recipient need not have an account. |
+| Changes and reminders | Per-user new/changed/cancelled seen state in the app; guardian email delivery for every cancellation of a published event, whatever its date, and for today/tomorrow changes, with a 60-second target; two-day reminder emails grouped per guardian/day across their children. Notification preference, recipient, deduplication/retry and delivery records need lifecycle coverage. Reminder opt-out is in Settings; email links must not change state. |
+| Parent absence reports | “Can't make it” records the event, child, reporting guardian, time and optional short reason, with undo until the event starts. Active consent and a guardian-child link are required. The coach sees their own squad; families cannot see another child's absence. Players do not respond in v1. |
+| Completed attendance | Everyone is expected to attend unless reported absent. After the event, the coach reviews and saves the register through the consent-checked session/attendance path. Expected attendance is not evidence of attendance. Saving again must not duplicate the completed session. |
+| Manual WhatsApp share | A button prepares squad/type/date/time/venue/meet-time/kit and cancellation details; the coach selects the recipient and sends in WhatsApp. No child names or absence list. No automatic posting or account integration. Copies then exist outside Trak. |
 
-**A coach's assessment of a child is an observation the coach made, not data the
-child provided.** So it is arguably Article 15 and not Article 20 — and we have
-been saying "export" as though the two were one thing.
+Calendar withdrawal, departure or revocation must stop disclosure on the next
+feed request, including extra links tied to that access. This cannot promise
+immediate removal of copies already cached by a phone or calendar provider.
+A last-fetch timestamp records a request, not who read it. Counsel must see
+the feed privacy design before any real family receives a link.
 
-> **Discuss:** Does the applicable UAE regime draw the access/portability
-> distinction at all, and if so, do a coach's assessments of a child fall inside
-> a portability request or only an access request?
+One-tap subscription is required at the end of parent/player setup and in
+Settings, with an easy skip and link regeneration that revokes the old link.
+It must be proved on iPhone, Android/Google and Outlook; Android's fallback
+remains to be established if the proposed link fails. Direct Google/Microsoft
+account connections are outside J8. Same-day emails supplement calendar
+refreshes; do not promise instant calendar updates.
 
-The engineering does not need the answer to proceed, and is built so the answer
-costs one line: the split is declared once in
-`export_scope_includes_observations()` and every section of the export consults
-it. **It currently defaults to including observations**, on the reasoning that an
-export which silently omits a child's assessments is a rights failure, whereas
-including them is a scope debate. If that default is wrong, one boolean changes.
+**Decided since 8 October:** event emails are sent through Resend from
+`noreply@trakfootball.com`, with sending in Ireland (eu-west-1) (Kostas,
+TRAK-126); fixture import is CSV only (Imad, TRAK-129); same-day change
+emails go to every affected guardian and to players who have their own email
+(Imad, TRAK-135); and cancelling a published event emails them whatever its
+date, because a called-off fixture must never just disappear from a family's
+calendar (Imad, 9 October, TRAK-135).
 
-One thing is excluded regardless of the answer, and asserted rather than assumed:
-**`coach_assessment_notes` never appears in a child's export.** Those are the
-coach's private notes; a portability right does not reopen a confidentiality
-decision.
+**Still open in the issues:** the feed endpoint location (TRAK-132) and the
+verified mobile subscription behaviour and fallback (TRAK-133).
 
----
+**For counsel and the academy:** review token/link disclosure, delegated family
+access, device/provider caches, email/share recipients, optional absence and
+cancellation free text, retention and rights handling across these flows.
+Reflect the agreed design in the notice and contracts. Personal and extra
+links, active-consent scope, revocation and no-child-name rules are already
+product requirements; their implementation and real-phone proof remain pending.
 
-## 7. What we are asking for
+After the pilot, a reminder goes only to the coach on the child's birthday,
+using the roster DOB. Preferred foot and additional profile statistics are
+also later work. A UAE FA sync is only a possibility and needs a defined source,
+permission, matching process, correction process and data scope. Height and
+weight are excluded. Lineups and broader matchday planning remain parked.
 
-1. **Which law applies**, and whether the existing EU analysis transfers or
-   must be redone.
-2. **The consent question from section 3** — the one asked in July and not
-   answered. It blocks the pilot and it is the only item on this list that
-   changes the database schema depending on the answer.
-3. **Whether the AI behaviour in section 4 is acceptable for a child at all**,
-   given that nothing an adult has read reaches them first and a live chat is
-   open. We believe we know the answer and are already fixing it; we want to
-   know whether it is a blocker or a defect.
-4. **The right age threshold**, or confirmation that the concept does not apply.
-5. **Whether coach observations belong in a portability request** (section 6a) —
-   the only open question whose answer changes code rather than paperwork, and
-   it is already reduced to one boolean.
-6. **A pilot agreement we can put in front of an academy**, from the
-   specification we have.
-7. **The minimum document set** — terms, privacy policy, retention, breach
-   contact — with a do-now versus do-later split and rough cost.
+## 5. Suppliers, recovery and the academy discussion
 
-We would rather be told the pilot cannot start on the current timeline than
-start it on an assumption. If something here must be fixed before a child signs
-up, the engineering side of it can move quickly; what we cannot do is decide
-which things those are.
+| Service or process | Source-backed role | Still to establish |
+| --- | --- | --- |
+| Supabase | Database, Auth, storage and Edge Functions; roster invitations use Auth email APIs. The project is hosted in eu-central-1 (Frankfurt), per its settings on 9 October. | Confirmation of the Auth email delivery path, retention, backups, access and contractual terms. |
+| Vercel | Web hosting and deployment. | Hosting/log regions, log retention and contractual terms. |
+| Sentry | Production error monitoring when a DSN is configured; browser tracing uses 10% sampling. No session-replay integration is configured. | Actual project configuration, region, event contents, retention and access. |
+| Event email sender | Resend, sending from `noreply@trakfootball.com` in Ireland (eu-west-1), wired on 8 October (TRAK-126) for planned change and grouped reminder emails. The account owner reports that Auth emails also go through Resend. | Contracts, delivery records, retention and any processing outside the sending region. |
+| Calendar providers | Planned subscriptions through personal and extra guardian-created links. | Endpoint hosting, mobile behaviour, caching, removal, retention and provider responsibilities; counsel review of the privacy design before real-family links. |
+| WhatsApp | Planned coach-initiated sharing of event text; no automatic posting. | Recipient/group handling, external copies, notice and retention responsibilities. |
+| Operator handling | Roster source files, support, corrections, legal requests and recovery evidence may exist outside application tables. | Approved storage, access, transfer and deletion procedures for those files and records. |
+
+The previous AI gateway is disabled in the current handlers; it must not be
+listed as active pilot processing. Historical data and supplier-side retention
+still need review. Supplier headquarters, hostname hints or old comments do not
+establish processing location. Regions and transfer arrangements remain open.
+
+**Operating record:** TRAK-23 records daily backups retained for seven days,
+no point-in-time recovery (PITR), and an unrehearsed restore on 2 October 2026.
+The current pilot decision also excludes a staging environment. These are
+recorded arrangements, not dashboard verification or proof of recoverability.
+On 9 October Imad decided that a restore rehearsal on an isolated copy, with
+the recovery time measured, is required before real families (TRAK-150, part
+of the live tests).
+The [restore document](release/s5-restore-rehearsal.md) must identify backup
+coverage, recovery procedure, evidence and limitations; database backup alone
+must not be described as restoring every service or external copy.
+
+The academy has not been briefed on these arrangements. The forthcoming meeting
+must cover scope, roles, consent, calendar exposure, suppliers, retention,
+recovery limitations, support and incident handling. Record what is accepted
+and what remains open after that meeting.
+
+## 6. Retention, rights and documents to agree
+
+`delete_my_account()` and `export_my_account()` exist. Their presence is not a
+claim that every legal request is satisfied automatically:
+
+- Account deletion removes many linked records, but coach-history retention
+  and consent evidence have explicit exceptions. Withdrawal is a different
+  operation. Backups, supplier logs, email and calendar copies need separate
+  treatment.
+- Export is scoped to the authenticated caller and their role. The source
+  currently includes coach observations for a player through
+  `export_scope_includes_observations()`. The parent's export covers their own
+  links and consents, not a full export of the child's records.
+- The export function executes with elevated database privileges. Its player
+  branch reads the caller's matches, assessments and awards without the family
+  consent predicate, including after withdrawal in the source logic. Whether
+  that retained access is intended, and how it should be explained alongside
+  withdrawal and rights requests, needs an engineering/counsel decision. This
+  audit did not test the path against production.
+- The latest export definition predates roster and child-login additions and
+  omits those categories, shared coach messages and training attendance.
+  Private coach notes are excluded from the child's application export. This
+  is a software boundary, not a conclusion about what counsel may require in
+  a reviewed access request.
+- Invitation expiry and the stale-consent report do not constitute a complete
+  retention or automatic deletion policy. Category-specific periods remain
+  open, including consent evidence, telemetry, notes, unclaimed rosters,
+  correction audit, backups and external files.
+
+**Questions for counsel:** What access, correction, portability, erasure and
+objection rights apply, who may exercise them for a child, and what records
+must each response cover? Does the applicable regime distinguish supplied data
+from observations? How should private notes and third-party information be
+reviewed? What must be retained after withdrawal, departure or deletion?
+
+Agree the contracting entity, controller/processor responsibilities,
+academy agreement and data-processing terms; final parent notice and terms;
+subprocessor/transfer arrangements; retention schedule; named rights and
+incident contacts; and incident escalation/notification requirements. Any
+entity, IP or liability questions still open belong in counsel's action list.
+Do not treat PR #247 or the older EU papers as legal clearance. Makis decides
+how his paper and the older legal documents are retained or updated.
+
+## Source references
+
+- [Roster admission](../supabase/migrations/20260925150000_roster_admission.sql), [roster-only squads](../supabase/migrations/20260926170000_roster_only_squad_admission.sql), [approval before account creation](../supabase/migrations/20260927090000_roster_consent_before_account.sql), [optional child email](../supabase/migrations/20260928120000_roster_child_without_email.sql), [child credentials](../supabase/migrations/20260930090127_guardian_child_logins.sql), [email corrections](../supabase/migrations/20261001120000_roster_email_correction.sql).
+- [Consent UI definitions](../src/lib/consent.ts), [routed consent page](../src/pages/parent/ParentConsent.tsx), [approval client](../src/lib/parent-consent.ts), [coaching-purpose gate](../supabase/migrations/20260919120002_consent_requires_coaching_records_purpose.sql), [development-write gates](../supabase/migrations/20260926140000_consent_on_every_development_write.sql), [family-read gates](../supabase/migrations/20260927130000_family_reads_follow_consent.sql).
+- [Private/shared notes](../supabase/migrations/20260918135500_private_notes_and_shared_feedback.sql), [parent message exclusion](../supabase/migrations/20260926120000_parents_do_not_read_coach_messages.sql), [family training history](../supabase/migrations/20260926150000_family_training_history.sql), [media/AI closure](../supabase/migrations/20260923110906_pilot_g7_disable_media_and_ai.sql), [legacy calendar/awards closure](../supabase/migrations/20260924000002_parked_feature_writes.sql).
+- [Account export](../supabase/migrations/20260922091647_restrict_departed_coach_exports.sql), [account deletion](../supabase/migrations/20260901000008_drop_player_goals_and_fix_deletion.sql), [J7 measurement](../supabase/migrations/20260926130000_pilot_j7_measure.sql), [monitoring setup](../src/main.tsx), [roster email handler](../supabase/functions/send-roster-invites/handler.ts).
