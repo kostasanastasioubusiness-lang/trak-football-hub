@@ -68,6 +68,7 @@ $$;
 -- of both; child 21 with a username login, parent 31; child 22 whose consent
 -- is withdrawn, parent 32; child 24 (own email) whose parent 34 has a .test
 -- address; adult 25 on a coach_departed row. Child 23 on B's squad, parent 33.
+-- Academy Y (101): where coach A moves at the end (section 5).
 INSERT INTO auth.users(id,email,email_confirmed_at)
  SELECT pg_temp.e135id(n),
   CASE n WHEN 21 THEN 'kid21@child.trakfootball.com' WHEN 34 THEN 'parent34@family.test'
@@ -79,7 +80,8 @@ INSERT INTO public.profiles(user_id,role,full_name)
   'Synthetic '||n
  FROM unnest(ARRAY[1,10,11,20,21,22,23,24,25,26,30,31,32,33,34]) n;
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
- (pg_temp.e135id(100),pg_temp.e135id(1),'Emails Academy X','E135X1');
+ (pg_temp.e135id(100),pg_temp.e135id(1),'Emails Academy X','E135X1'),
+ (pg_temp.e135id(101),pg_temp.e135id(1),'Emails Academy Y','E135Y1');
 INSERT INTO public.coach_details(user_id,organization_id,team) VALUES
  (pg_temp.e135id(10),pg_temp.e135id(100),'U15'),(pg_temp.e135id(11),pg_temp.e135id(100),'U17');
 INSERT INTO public.player_details(user_id,date_of_birth)
@@ -144,8 +146,8 @@ SELECT pg_temp.e135check(pg_temp.e135notices(603)='none','1 cancelling a draft q
 SELECT pg_temp.e135check(pg_temp.e135notices(604)='none','1 a title change queues nothing',pg_temp.e135notices(604));
 SELECT pg_temp.e135check(pg_temp.e135notices(605)='changed/pending','1 moving onto tomorrow queues a notice',pg_temp.e135notices(605));
 SELECT pg_temp.e135check(pg_temp.e135notices(606)='none','1 publishing queues nothing',pg_temp.e135notices(606));
-SELECT pg_temp.e135check((SELECT NOT (before ? 'cancel_reason') AND NOT (before ? 'notes')
-  FROM public.event_change_notices WHERE event_id=pg_temp.e135id(600)),'1 a notice carries no cancel reason or notes');
+SELECT pg_temp.e135check((SELECT before ? 'cancel_reason' AND NOT (before ? 'notes')
+  FROM public.event_change_notices WHERE event_id=pg_temp.e135id(600)),'1 a notice carries the cancel reason (scrubbed in the email), never notes');
 
 -- ── 2. Who is emailed ─────────────────────────────────────────────────────
 -- 20 and 26 (own emails), their parent 30 once, parent 31 (not their child's
@@ -189,6 +191,13 @@ SELECT pg_temp.e135check((SELECT x->'event'->>'start_time' = '18:30:00' AND x->'
 SELECT pg_temp.e135check((SELECT jsonb_array_length(x->'recipients') = 5
   FROM e135_claim, jsonb_array_elements(claimed) x WHERE n = 1 AND x->'event'->>'title' = 'Training 0'),
  '4 the cancellation comes with its five recipients');
+SELECT pg_temp.e135check((SELECT x->'event'->>'cancel_reason' = 'Pitch closed'
+  FROM e135_claim, jsonb_array_elements(claimed) x WHERE n = 1 AND x->'event'->>'title' = 'Training 0'),
+ '4 a claimed cancellation carries the reason for the email to scrub');
+SELECT pg_temp.e135check((SELECT NOT (x->'child_names' ? 'Synthetic 23')
+   AND x->'child_names' @> '["Synthetic 20","Synthetic 21","Synthetic 22","Synthetic 24","Synthetic 25","Synthetic 26"]'::jsonb
+  FROM e135_claim, jsonb_array_elements(claimed) x WHERE n = 1 AND x->'event'->>'title' = 'Training 0'),
+ '4 a claimed notice lists every child on the coach''s squad rows (any academy, departed too), not other coaches''');
 INSERT INTO e135_claim SELECT 2, public.claim_event_change_notices();
 SELECT pg_temp.e135check((SELECT jsonb_array_length(claimed) = 0 FROM e135_claim WHERE n = 2),'4 a claimed notice is not claimed twice');
 -- 600 reached child 20, then failed for the rest.
@@ -215,11 +224,21 @@ SELECT pg_temp.e135allowed(format('UPDATE public.coach_calendar_events SET start
 RESET ROLE;
 SELECT pg_temp.e135check(pg_temp.e135notices(602)='changed/pending,changed/sending','4 the new edit gets its own notice',pg_temp.e135notices(602));
 
+-- ── 5. The academy half of the rule (Tarek, #264) ─────────────────────────
+-- Coach A moves to academy Y; their squad rows stay in X. An event A
+-- publishes in Y and then cancels emails nobody: no X family reads it.
+UPDATE public.coach_details SET organization_id=pg_temp.e135id(101) WHERE user_id=pg_temp.e135id(10);
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published,organization_id)
+ VALUES (pg_temp.e135id(620),pg_temp.e135id(10),'Y training','training',pg_temp.e135at(0,'17:00'),pg_temp.e135day(0),'17:00',true,pg_temp.e135id(101));
+SELECT pg_temp.e135check((SELECT organization_id = pg_temp.e135id(101) FROM public.coach_calendar_events WHERE id = pg_temp.e135id(620))
+  AND pg_temp.e135to(620) = 'none' AND pg_temp.e135to(600) = '020,024,026,030,031',
+ '5 coach A''s event in academy Y emails none of their academy X families',pg_temp.e135to(620));
+
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.e135_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.e135_results;
- IF n <> 38 THEN
-  RAISE EXCEPTION 'Event emails: % checks ran; expected exactly 38', n;
+ IF n <> 41 THEN
+  RAISE EXCEPTION 'Event emails: % checks ran; expected exactly 41', n;
  END IF;
  IF failures IS NOT NULL THEN
   RAISE EXCEPTION USING MESSAGE='Event emails failed',DETAIL=failures;

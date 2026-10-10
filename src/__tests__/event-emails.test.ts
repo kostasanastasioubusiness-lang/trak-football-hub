@@ -27,13 +27,13 @@ import {
 const event = (over: Partial<EventFields> = {}): EventFields => ({
   title: 'U15 training', event_type: 'training', opponent: null, home_away: null, status: 'scheduled',
   starts_at: '2026-10-14T13:00:00Z', event_date: '2026-10-14', start_time: '17:00:00', end_time: '18:30:00',
-  meet_time: null, venue: 'Academy Pitch 2', ...over,
+  meet_time: null, venue: 'Academy Pitch 2', cancel_reason: null, ...over,
 });
 const notice = (id: string, before: Partial<EventFields>, now: Partial<EventFields>, recipients = [
   { user_id: 'guardian-1', email: 'guardian@example.org' },
 ]): ClaimedNotice => ({
   notice_id: id, kind: now.status === 'cancelled' ? 'cancelled' : 'changed',
-  before: event(before), event: event(now), squad: 'U15', academy: 'Synthetic FC', recipients,
+  before: event(before), event: event(now), squad: 'U15', academy: 'Synthetic FC', child_names: [], recipients,
 });
 const cancelled = (id = 'n-1', over: Partial<EventFields> = {}, recipients?: ClaimedNotice['recipients']) =>
   notice(id, over, { ...over, status: 'cancelled' }, recipients);
@@ -41,7 +41,7 @@ const cancelled = (id = 'n-1', over: Partial<EventFields> = {}, recipients?: Cla
 describe('the email a family reads', () => {
   it('a cancellation: what, when, where and the squad, with no coach message', () => {
     const email = composeEventEmail('guardian@example.org', [cancelled()])!;
-    expect(email.subject).toBe('Cancelled: U15 training, Wed 14 Oct');
+    expect(email.subject).toBe('Training cancelled: Wed 14 Oct');
     expect(email.text).toContain('CANCELLED: U15 training\nWas: Wednesday 14 October, 17:00–18:30 at Academy Pitch 2\nSquad: U15, Synthetic FC');
     expect(email.text).toContain('https://trakfootball.com');
     expect(emailProblem(email)).toBeNull();
@@ -50,7 +50,7 @@ describe('the email a family reads', () => {
   it('a change: each changed field old → new, then the event now', () => {
     const email = composeEventEmail('guardian@example.org', [notice('n-1', {},
       { start_time: '18:30:00', end_time: '20:00:00', venue: 'Pitch 4', meet_time: '18:00:00' })])!;
-    expect(email.subject).toBe('Changed: U15 training, Wed 14 Oct');
+    expect(email.subject).toBe('Training changed: Wed 14 Oct');
     expect(email.text).toContain([
       'CHANGED: U15 training',
       'Time: 17:00–18:30 → 18:30–20:00',
@@ -70,10 +70,10 @@ describe('the email a family reads', () => {
     expect(composeEventEmail('guardian@example.org', [notice('n-1', {}, {})])).toBeNull();
   });
 
-  it('prints only the event fields, never a cancel reason, notes or a name', () => {
-    // SQL never sends these; even if a row carried them, the email wouldn't print them.
+  it('prints only the event fields, never notes or a name, nor a cancel reason naming a squad child', () => {
+    // SQL never sends notes or names; even if a row carried them, the email wouldn't print them.
     const leaky = cancelled('n-1', { cancel_reason: 'Sam is injured', notes: 'Private', player_name: 'Sam' } as Partial<EventFields>);
-    const email = composeEventEmail('guardian@example.org', [leaky])!;
+    const email = composeEventEmail('guardian@example.org', [{ ...leaky, child_names: ['Sam Synthetic'] }])!;
     expect(`${email.subject}\n${email.text}`).not.toMatch(/Sam|injured|Private/);
   });
 
@@ -94,7 +94,8 @@ describe('the email a family reads', () => {
       title: 'Training www.club.example/info', venue: `Al Barsha Pitch 2 ${maps}`,
     })])!;
     expect(email.text).toContain(`Al Barsha Pitch 2 ${LINK_PLACEHOLDER}`);
-    expect(email.subject).toBe(`Cancelled: Training ${LINK_PLACEHOLDER}, Wed 14 Oct`);
+    expect(email.subject).toBe('Training cancelled: Wed 14 Oct');
+    expect(email.text).toContain(`CANCELLED: Training ${LINK_PLACEHOLDER}\n`);
     expect(email.text).not.toContain('goo.gl');
     expect(emailProblem(email)).toBeNull();
     expect(withoutLinks('Meet at\nhttps://wa.me/123  gate')).toBe(`Meet at ${LINK_PLACEHOLDER} gate`);
@@ -106,8 +107,65 @@ describe('the email a family reads', () => {
       starts_at: '2026-10-14T14:30:00Z',
     })])!;
     // Only starts_at: its Dubai date and time (UTC+4).
-    expect(email.subject).toBe('Cancelled: Match vs Synthetic Rovers, Wed 14 Oct');
+    expect(email.subject).toBe('Match cancelled: Wed 14 Oct');
+    expect(email.text).toContain('CANCELLED: Match vs Synthetic Rovers\n');
     expect(email.text).toContain('Was: Wednesday 14 October, 18:30 at Academy Pitch 2');
+  });
+});
+
+// Imad's #264 review (10 Oct): the subject is generic, never coach-typed text;
+// coach-typed text reaches the body only if it names no child in the squad;
+// the cancel reason is shown unless it names a child or carries a link.
+describe('no child name, no coach-typed subject (J8 check 6)', () => {
+  const squad = (n: ClaimedNotice): ClaimedNotice => ({ ...n, child_names: ['Lucas Hernandez', 'Theo Al Amiri'] });
+
+  it('the subject says only the kind of event and the day', () => {
+    const email = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', { title: 'Lucas birthday kickabout' }))])!;
+    expect(email.subject).toBe('Training cancelled: Wed 14 Oct');
+    const match = composeEventEmail('guardian@example.org', [squad(notice('n-1',
+      { event_type: 'match', title: '', opponent: 'Synthetic Rovers' }, { event_type: 'match', title: '', opponent: 'Synthetic Rovers', start_time: '18:00:00' }))])!;
+    expect(match.subject).toBe('Match changed: Wed 14 Oct');
+    expect(composeEventEmail('guardian@example.org', [squad(cancelled('n-1', { event_type: 'tournament' }))])!.subject)
+      .toBe('Tournament cancelled: Wed 14 Oct');
+  });
+
+  it('a title, opponent or venue naming a squad child is left out of the body', () => {
+    const email = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', {
+      title: 'Extra session for Lucas', venue: "Theo's garden",
+    }))])!;
+    expect(`${email.subject}\n${email.text}`).not.toMatch(/Lucas|Theo/i);
+    expect(email.text).toContain('CANCELLED: Training\nWas: Wednesday 14 October, 17:00–18:30\n');
+    const match = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', {
+      title: '', event_type: 'match', opponent: 'Hernandez Academy',
+    }))])!;
+    expect(match.text).toContain('CANCELLED: Match\n');
+    // "Al" alone is not a name: an ordinary venue stays.
+    const venue = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', { venue: 'Al Barsha Pitch 2' }))])!;
+    expect(venue.text).toContain('at Al Barsha Pitch 2');
+  });
+
+  it('the cancel reason is shown when it names no child and has no link', () => {
+    const email = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', { cancel_reason: 'Pitch closed for\nmaintenance' }))])!;
+    expect(email.text).toContain('CANCELLED: U15 training\nWas: Wednesday 14 October, 17:00–18:30 at Academy Pitch 2\nReason: Pitch closed for maintenance\n');
+    for (const reason of ['Lucas is ill', 'theo away', 'New date: maps.app.goo.gl/x', 'See https://club.example']) {
+      const leaky = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', { cancel_reason: reason }))])!;
+      expect(leaky.text, reason).not.toContain('Reason:');
+      expect(leaky.text, reason).not.toContain(reason);
+    }
+  });
+
+  it('a short link without https:// is replaced too (maps.app.goo.gl/x)', () => {
+    const email = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', { venue: 'Pitch 2 maps.app.goo.gl/x' }))])!;
+    expect(email.text).toContain(`Pitch 2 ${LINK_PLACEHOLDER}`);
+    expect(emailProblem(email)).toBeNull();
+  });
+
+  it('ends with who to ask: the coach about the event, Trak about the app', () => {
+    const email = composeEventEmail('guardian@example.org', [squad(cancelled())])!;
+    // Imad's wording (10 Oct). No Reply-To: event questions are the coach's.
+    expect(email.text.endsWith('Questions about this event? Ask your coach/academy. '
+      + 'Feedback or questions about the app? Send us an email at support@trakfootball.com')).toBe(true);
+    expect(emailProblem(email)).toBeNull();
   });
 });
 
@@ -190,6 +248,48 @@ describe('sending', () => {
     await deliver([notice('n-1', {}, { title: 'Renamed' })], d, report());
     expect(calls.sent).toEqual([]);
     expect(calls.finished).toEqual([['n-1', 'nothing_to_send', 0, null]]);
+  });
+
+  // Imad's #264 review: Resend may accept an email whose answer never arrives
+  // (a network error), and the retry sends it again. The idempotency key makes
+  // Resend treat every try of one person's email as the same email.
+  it('every try of one person\'s email carries the same idempotency key; another person\'s differs', async () => {
+    const results: SendResult[] = [{ sent: false, reason: 'delivery_failed' }, { sent: true, id: 'email-ok' }, { sent: true, id: 'email-2' }];
+    const { d, calls } = deps({ send: vi.fn(async (m: PlainEmail) => { calls.sent.push(m); return results.shift()!; }) });
+    await deliver([cancelled('n-1', {}, [
+      { user_id: 'guardian-1', email: 'guardian@example.org' }, { user_id: 'player-1', email: 'player@example.org' },
+    ])], d, report());
+    const keys = calls.sent.map(m => m.idempotencyKey);
+    expect(keys).toHaveLength(3);
+    expect(keys[0]).toMatch(/^trak-event-[0-9a-f]{64}$/);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
+    // The same person and notices give the same key on a later sweep, in any order.
+    const again = deps();
+    await deliver([cancelled('n-2', { event_date: '2026-10-21' }), cancelled('n-1')], again.d, report());
+    const other = deps();
+    await deliver([cancelled('n-1'), cancelled('n-2', { event_date: '2026-10-21' })], other.d, report());
+    expect(again.calls.sent[0].idempotencyKey).toBe(other.calls.sent[0].idempotencyKey);
+  });
+
+  it('a delivery that can\'t be recorded doesn\'t stop the others, and the notice is still finished as sent', async () => {
+    // Before: the throw ended the sweep, the notice sat in "sending", and the
+    // 10-minute reclaim mailed this person again.
+    const { d, calls } = deps({
+      recordDelivery: vi.fn(async (_ids: string[], userId: string) => {
+        if (userId === 'guardian-1') throw new Error('database call failed');
+        calls.delivered.push([_ids, userId]);
+      }),
+    });
+    const r = report();
+    await expect(deliver([cancelled('n-1', {}, [
+      { user_id: 'guardian-1', email: 'guardian@example.org' }, { user_id: 'player-1', email: 'player@example.org' },
+    ])], d, r)).resolves.toBeUndefined();
+    expect(calls.sent.map(m => m.to)).toEqual(['guardian@example.org', 'player@example.org']);
+    expect(calls.delivered).toEqual([[['n-1'], 'player-1']]);
+    // Sent, so never reclaimed; the reason code tells the operator one wasn't recorded.
+    expect(calls.finished).toEqual([['n-1', 'sent', 0, 'delivery_not_recorded']]);
+    expect(r).toEqual({ notices: 1, emails: 2, failed: 0 });
   });
 
   it('no recipients (a squad with no consented family) is finished as sent to nobody', async () => {

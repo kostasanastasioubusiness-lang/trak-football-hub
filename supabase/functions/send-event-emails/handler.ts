@@ -7,9 +7,13 @@
 // It waits until the last queued edit is 15 s old (quick edits arrive as one
 // email), claims what is due, groups it per person (a series cancelled at
 // once is one email), and sends within Resend's 10 requests/second, retrying
-// 429s and outages. Each delivery is recorded before the next send, so a
-// retry never mails anyone twice; what still fails stays on the notice as
-// "failed" with counts and a reason code. Responses and logs carry no addresses.
+// 429s and outages. Never twice: each email carries an idempotency key made
+// from the person and the notices, so Resend counts every try (a retry after a
+// lost answer, a later sweep) as one send; and each delivery is recorded
+// before the next send, so a later sweep skips that person. A delivery that
+// can't be recorded doesn't stop the sweep. What still fails stays on the
+// notice as "failed" with counts and a reason code. Responses and logs carry
+// no addresses.
 import { composeEventEmail, eventChange, type ClaimedNotice } from '../_shared/event-email.ts';
 import type { PlainEmail, SendResult } from '../_shared/send-email.ts';
 import { corsHeaders, json, sameSecret } from '../send-roster-invites/handler.ts';
@@ -43,6 +47,16 @@ const retryable = (result: SendResult) =>
 const reasonCode = (result: SendResult) =>
   result.sent ? null : result.status ? `${result.reason}:${result.status}` : result.reason;
 
+/**
+ * Resend's idempotency key for one person's email about these notices (kept
+ * 24 h): the same person and notices give the same key, in any order.
+ */
+export async function idempotencyKey(noticeIds: string[], userId: string): Promise<string> {
+  const data = new TextEncoder().encode(`${[...noticeIds].sort().join(',')}:${userId}`);
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+  return `trak-event-${Array.from(digest, b => b.toString(16).padStart(2, '0')).join('')}`;
+}
+
 /** Sends one person's email, paced and retried. */
 async function sendPaced(message: PlainEmail, deps: EventEmailDependencies, pace: { last: number }): Promise<SendResult> {
   let result: SendResult = { sent: false, reason: 'delivery_failed' };
@@ -60,6 +74,7 @@ async function sendPaced(message: PlainEmail, deps: EventEmailDependencies, pace
 /** Sends the claimed notices: one email per person, then each notice's outcome. */
 export async function deliver(notices: ClaimedNotice[], deps: EventEmailDependencies, report: SweepReport): Promise<void> {
   const failures = new Map<string, { count: number; reason: string | null }>(notices.map(n => [n.notice_id, { count: 0, reason: null }]));
+  const unrecorded = new Set<string>();
   const people = new Map<string, { email: string; notices: ClaimedNotice[] }>();
   for (const notice of notices) {
     for (const r of notice.recipients) {
@@ -71,12 +86,20 @@ export async function deliver(notices: ClaimedNotice[], deps: EventEmailDependen
 
   const pace = { last: -Infinity };
   for (const [userId, person] of people) {
-    const message = composeEventEmail(person.email, person.notices);
-    if (!message) continue;
+    const composed = composeEventEmail(person.email, person.notices);
+    if (!composed) continue;
+    const noticeIds = person.notices.map(n => n.notice_id);
+    const message = { ...composed, idempotencyKey: await idempotencyKey(noticeIds, userId) };
     const result = await sendPaced(message, deps, pace);
     if (result.sent) {
       report.emails++;
-      await deps.recordDelivery(person.notices.map(n => n.notice_id), userId, result.id);
+      try {
+        await deps.recordDelivery(noticeIds, userId, result.id);
+      } catch {
+        // The email went. Throwing here would leave every notice "sending",
+        // and the 10-minute reclaim would mail this person again.
+        for (const id of noticeIds) unrecorded.add(id);
+      }
     } else {
       report.failed++;
       for (const n of person.notices) {
@@ -92,7 +115,9 @@ export async function deliver(notices: ClaimedNotice[], deps: EventEmailDependen
     // Edits that cancelled out: nothing to tell. No recipients at all is still
     // "sent" (sent_count 0): there was no one to tell.
     const outcome: NoticeOutcome = f.count ? 'failed' : eventChange(notice) === null ? 'nothing_to_send' : 'sent';
-    await deps.finish(notice.notice_id, outcome, f.count, f.reason);
+    // Sent but not recorded: finished as sent (never reclaimed), with a code for the operator.
+    const reason = f.reason ?? (unrecorded.has(notice.notice_id) ? 'delivery_not_recorded' : null);
+    await deps.finish(notice.notice_id, outcome, f.count, reason);
     report.notices++;
   }
 }

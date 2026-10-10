@@ -10,10 +10,11 @@
 -- out the recipients at send time (so a withdrawal before sending counts),
 -- sends, and records each delivery, so a retry never mails anyone twice.
 --
--- No pg_cron or pg_net (both off on prod, Kostas 9 Oct): the coach's app asks
--- the function to send after each save. A notice whose call never came stays
--- pending and goes on the next call; a pg_cron sweep can close that later
--- (TRAK-136). App roles can neither read nor write these tables.
+-- The coach's app asks the function to send after each save. A notice whose
+-- call never came stays pending and goes on the next call. App roles can
+-- neither read nor write these tables.
+--
+-- Version 20261010140000: #258's calendar_links took 20261010090000 first.
 
 CREATE TABLE public.event_change_notices (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -53,8 +54,9 @@ CREATE TABLE public.event_change_deliveries (
 ALTER TABLE public.event_change_deliveries ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.event_change_deliveries FROM PUBLIC, anon, authenticated;
 
--- The fields an email talks about. Not notes or the cancel reason: the email
--- carries no coach message (TRAK-135).
+-- The fields an email talks about. Never notes. The cancel reason goes in, and
+-- the email shows it only if it names no squad child and has no link (Imad,
+-- 10 Oct); the same check drops a title, opponent or venue naming a child.
 CREATE FUNCTION trak_private.event_email_fields(e public.coach_calendar_events)
 RETURNS jsonb
 LANGUAGE sql IMMUTABLE
@@ -64,7 +66,7 @@ AS $fn$
     'title', e.title, 'event_type', e.event_type, 'opponent', e.opponent,
     'home_away', e.home_away, 'status', e.status, 'starts_at', e.starts_at,
     'event_date', e.event_date, 'start_time', e.start_time, 'end_time', e.end_time,
-    'meet_time', e.meet_time, 'venue', e.venue);
+    'meet_time', e.meet_time, 'venue', e.venue, 'cancel_reason', e.cancel_reason);
 $fn$;
 REVOKE ALL ON FUNCTION trak_private.event_email_fields(public.coach_calendar_events) FROM PUBLIC, anon, authenticated;
 
@@ -121,37 +123,39 @@ CREATE TRIGGER trg_queue_event_change_notice
   AFTER UPDATE ON public.coach_calendar_events
   FOR EACH ROW EXECUTE FUNCTION trak_private.queue_event_change_notice();
 
--- Who is emailed about an event: the same people who may read it in the app
--- (trak_private.family_reads_event, TRAK-125). A consented child on a squad
--- row of that coach in the event's academy that isn't coach_departed, and
--- that child's linked guardians. One row per address. A no-email child's
--- username login (@child.trakfootball.com) and .test addresses are never
--- mailed: nobody reads them.
+-- Who is emailed about an event: exactly the people who may read it in the
+-- app. J8.2's rule itself, trak_private.family_reads_event_for (#258), which
+-- the RLS policy and the calendar feed share, not a copy that could drift
+-- (Tarek, #264): a consented child on a squad row of that coach in the
+-- event's academy that isn't coach_departed, and that child's guardians. The
+-- candidates are the children and guardians on the coach's squad rows; the
+-- rule decides. One row per address. A no-email child's username login
+-- (@child.trakfootball.com) and .test addresses are never mailed: nobody
+-- reads them.
 CREATE FUNCTION trak_private.event_change_recipients(p_event_id uuid)
 RETURNS TABLE (user_id uuid, email text)
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = ''
 AS $fn$
-  WITH children AS (
-    SELECT DISTINCT sp.linked_player_id AS child_id
+  WITH ev AS (
+    SELECT e.coach_user_id, e.organization_id
     FROM public.coach_calendar_events e
-    JOIN public.squad_players sp
-      ON sp.coach_user_id = e.coach_user_id AND sp.organization_id = e.organization_id
-    WHERE e.id = p_event_id
-      AND e.published
-      AND sp.status <> 'coach_departed'
-      AND sp.linked_player_id IS NOT NULL
-      AND NOT public.player_consent_required(sp.linked_player_id)
-  ), people AS (
-    SELECT child_id AS person_id FROM children
+    WHERE e.id = p_event_id AND e.published
+  ), candidates AS (
+    SELECT sp.linked_player_id AS person_id
+    FROM ev JOIN public.squad_players sp ON sp.coach_user_id = ev.coach_user_id
+    WHERE sp.linked_player_id IS NOT NULL
     UNION
-    SELECT ppl.parent_user_id FROM children c
-    JOIN public.player_parent_links ppl ON ppl.player_user_id = c.child_id
+    SELECT ppl.parent_user_id
+    FROM ev JOIN public.squad_players sp ON sp.coach_user_id = ev.coach_user_id
+    JOIN public.player_parent_links ppl ON ppl.player_user_id = sp.linked_player_id
   )
   SELECT DISTINCT ON (lower(btrim(u.email))) u.id, btrim(u.email)
-  FROM people p
-  JOIN auth.users u ON u.id = p.person_id
-  WHERE NULLIF(btrim(u.email), '') IS NOT NULL
+  FROM candidates c
+  CROSS JOIN ev
+  JOIN auth.users u ON u.id = c.person_id
+  WHERE trak_private.family_reads_event_for(c.person_id, ev.coach_user_id, ev.organization_id)
+    AND NULLIF(btrim(u.email), '') IS NOT NULL
     AND lower(btrim(u.email)) NOT LIKE '%@child.trakfootball.com'
     AND lower(btrim(u.email)) NOT LIKE '%.test'
   ORDER BY lower(btrim(u.email)), u.id;
@@ -161,8 +165,10 @@ REVOKE ALL ON FUNCTION trak_private.event_change_recipients(uuid) FROM PUBLIC, a
 -- Claim every notice that is due, for send-event-emails (service role only).
 -- Also takes back a failed notice for another try (3 in all, a minute apart)
 -- and a "sending" one whose function died (10 min, longer than any function
--- runs). Each comes with the event now, the squad, and the recipients who
--- haven't had it yet.
+-- runs). Each comes with the event now, the squad, the recipients who
+-- haven't had it yet, and child_names: every child on the coach's squad rows
+-- (any academy, departed too), so the email can drop coach-typed text that
+-- names one, as #258's calendar feed does.
 CREATE FUNCTION public.claim_event_change_notices()
 RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER
@@ -195,6 +201,11 @@ BEGIN
       'event', trak_private.event_email_fields(e),
       'squad', NULLIF(btrim(cd.team), ''),
       'academy', o.name,
+      'child_names', COALESCE((
+        SELECT jsonb_agg(DISTINCT sp.player_name)
+        FROM public.squad_players sp
+        WHERE sp.coach_user_id = e.coach_user_id AND NULLIF(btrim(sp.player_name), '') IS NOT NULL
+      ), '[]'::jsonb),
       'recipients', COALESCE((
         SELECT jsonb_agg(jsonb_build_object('user_id', r.user_id, 'email', r.email) ORDER BY r.email)
         FROM trak_private.event_change_recipients(e.id) r

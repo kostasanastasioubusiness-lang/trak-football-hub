@@ -60,7 +60,7 @@ serve(async (req) => {
       // Counts only: no addresses, subjects or provider messages.
       const logged = work
         .then(report => console.info('send-event-emails: outcome', report))
-        .catch(() => console.error('send-event-emails: sweep failed; notices stay queued for the next call'));
+        .catch(() => console.error('send-event-emails: sweep failed; pending notices go on the next call, claimed ones are retaken after 10 minutes'));
       if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(logged);
       else await logged;
     }
