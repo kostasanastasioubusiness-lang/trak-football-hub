@@ -1,4 +1,5 @@
-import { localTodayISO } from './event-time'
+import { displayEventTime, localTodayISO } from './event-time'
+import type { EventRow } from './coach-events'
 
 /**
  * "Share to WhatsApp" (J8.16, TRAK-139): the event's details, pre-written for
@@ -80,4 +81,36 @@ export function whatsAppShareText(event: ShareableEvent, options: ShareOptions =
 /** WhatsApp's standard share link: no phone number, so WhatsApp asks which chat. */
 export function whatsAppShareUrl(event: ShareableEvent, options: ShareOptions = {}): string {
   return `https://wa.me/?text=${encodeURIComponent(whatsAppShareText(event, options))}`
+}
+
+/** A saved event on the coach's schedule (J8.4's row) as a shareable message. */
+export function shareableFromRow(row: EventRow, squadLabel: string): ShareableEvent {
+  const shown = displayEventTime(row)
+  const kind = (['training', 'match', 'tournament', 'other'] as const).find(k => k === row.event_type) ?? 'other'
+  return {
+    kind,
+    squadLabel,
+    date: shown.date,
+    startTime: shown.time,
+    meetTime: row.meet_time ? row.meet_time.slice(0, 5) : null,
+    opponent: row.opponent ?? null,
+    homeAway: row.home_away === 'home' || row.home_away === 'away' ? row.home_away : null,
+    venue: row.venue ?? null,
+    kit: row.kit ?? null,
+    status: row.status === 'cancelled' ? 'cancelled' : 'scheduled',
+    cancelReason: row.cancel_reason ?? null,
+  }
+}
+
+/** The coach's squad for the message title: the age group most of the squad is in. */
+export function squadLabelFrom(ageGroups: (string | null)[]): string {
+  const counts = new Map<string, number>()
+  for (const g of ageGroups) {
+    const label = (g ?? '').trim()
+    if (label) counts.set(label, (counts.get(label) ?? 0) + 1)
+  }
+  let best = 'Squad'
+  let top = 0
+  for (const [label, n] of counts) if (n > top) { best = label; top = n }
+  return best
 }

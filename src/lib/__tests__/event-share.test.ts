@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { whatsAppShareText, whatsAppShareUrl, type ShareableEvent } from '../event-share'
+import { shareableFromRow, squadLabelFrom, whatsAppShareText, whatsAppShareUrl, type ShareableEvent } from '../event-share'
 
 // TRAK-139 (J8.16): "Share to WhatsApp" pre-writes the event for the coach's
 // group. The coach picks the chat and taps send; nothing is sent by Trak.
@@ -96,5 +96,40 @@ describe('whatsAppShareUrl', () => {
     expect(url).not.toContain('&')
     expect(url).not.toContain(' ')
     expect(url).not.toContain('\n')
+  })
+})
+
+describe('shareableFromRow: a saved event on the coach schedule', () => {
+  const row = {
+    id: 'ev-1', title: 'League', event_type: 'match', starts_at: '2026-10-13T14:00:00Z',
+    event_date: '2026-10-13', start_time: '18:00:00', venue: 'Rivals Park', opponent: 'Rivals FC',
+    published: true, meet_time: '17:15:00', kit: 'White', home_away: 'away', status: 'scheduled', cancel_reason: null,
+  }
+
+  it('reads the wall clock the coach typed and every match detail', () => {
+    expect(shareableFromRow(row, 'U15')).toEqual({
+      kind: 'match', squadLabel: 'U15', date: '2026-10-13', startTime: '18:00', meetTime: '17:15',
+      opponent: 'Rivals FC', homeAway: 'away', venue: 'Rivals Park', kit: 'White', status: 'scheduled', cancelReason: null,
+    })
+  })
+
+  it('carries a cancellation and its reason', () => {
+    expect(shareableFromRow({ ...row, status: 'cancelled', cancel_reason: 'Pitch closed' }, 'U15'))
+      .toMatchObject({ status: 'cancelled', cancelReason: 'Pitch closed' })
+  })
+
+  it('reads an unknown type as other, and an untimed event as time to be confirmed', () => {
+    expect(shareableFromRow({ ...row, event_type: 'gala', start_time: null }, 'U15'))
+      .toMatchObject({ kind: 'other', startTime: null })
+  })
+})
+
+describe('squadLabelFrom: the coach\'s squad, for the message title', () => {
+  it('is the age group most of the squad is in', () => {
+    expect(squadLabelFrom(['U15', 'U15', 'U14', null])).toBe('U15')
+  })
+  it('falls back to "Squad" when no age group is known', () => {
+    expect(squadLabelFrom([])).toBe('Squad')
+    expect(squadLabelFrom([null, '  '])).toBe('Squad')
   })
 })
