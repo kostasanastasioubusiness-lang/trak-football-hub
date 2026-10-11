@@ -1,11 +1,11 @@
 # Trak — Legal Questions for a UAE Pilot
 
-*Updated 9 October 2026 for counsel review and the forthcoming academy meeting.*
+*Updated 11 October 2026 for counsel review and the forthcoming academy meeting.*
 
 | Document control | Value |
 | --- | --- |
 | Purpose | Describe the product and ask for decisions before the first real-child pilot. |
-| Source baseline | Repository commit `a3dca4b061c956e8ea73c5bd7d18b3b609109a74`, reviewed 10 October 2026. Source inspection does not confirm deployed configuration or current production behaviour; where this brief says something is live, it was checked on the deployed site or read-only on production that day. |
+| Source baseline | Repository commit `6e390594fa8ce949187d4c63039985de7bb5b39b`, reviewed 11 October 2026. Work still in review is described as such, never as delivered. Source inspection does not confirm deployed configuration or current production behaviour; where this brief says something is live, it was checked on the deployed site or read-only on production that day. |
 | Product scope | [MVP Requirements](../MVP%20Requirements), including the agreed J8 events requirement. A requirement is not evidence of implementation. |
 | Related legal work | Makis's preliminary counsel paper in [PR #247](https://github.com/kostasanastasioubusiness-lang/trak-football-hub/pull/247). It remains his draft; its retention and updates are his decision. This brief supplies current product facts and open questions without changing that paper. |
 | Academy discussion | The academy has **not been briefed**. A meeting is planned in the coming weeks; acceptance of the arrangements below remains pending. |
@@ -153,16 +153,29 @@ coach-only. A read-only check on production that day showed a consented
 synthetic family seeing the squad's events, and an unconsented family and
 another academy seeing none.
 
+**Status on 11 October.** In the source baseline and live: the coach creates,
+edits, publishes and cancels events (TRAK-127); players and parents see their
+squad's events in the app, a parent per child under that child's consent
+(TRAK-130, TRAK-131); the parent's alerts list new, changed and cancelled
+events (TRAK-134); and the calendar feed endpoint answers personal links
+(TRAK-132). A read-only check of production on 11 October found events
+switched on for the synthetic rehearsal academy only, and no calendar link
+created by anyone. In review, not merged: weekly series, change emails,
+reminder emails and their scheduler, fixture import, WhatsApp share and the
+completed-session register. Not started: the one-tap subscription screen
+(TRAK-133) and extra family links (TRAK-140). The "can't make it" report
+exists only as a database change in review; there is no screen for it yet.
+
 | Planned flow | Data and agreed boundaries |
 | --- | --- |
 | Events and weekly series | Squad/academy, type, date/time, duration, meet time, venue and saved venues; match opponent, home/away and kit; status, optional cancellation reason, series ID and change sequence. Weekly repeats create dated event rows through an inclusive end date, in Dubai time. Saving keeps a draft only the coach sees; Publish sends it to families, and edits to a published event go live on save (decided 9 October). Cancelling retains the event; only a never-published draft can be deleted. |
 | Fixture import | CSV only (decided 8 October). The file is read in the coach's browser, previewed and corrected before the coach confirms; repeat imports must not duplicate events. PDF import is out of the pilot: a league that publishes only a PDF is entered through the CSV template or by hand. AI parsing remains out. |
-| Calendar feeds | A personal link per player/parent, with a hashed token, label, creation/revocation and last-fetch metadata. Token possession authorizes the feed without an app login. A parent feed covers children with active consent; a player feed covers their squad's published events only while the player's own consent is active. Withdrawal, leaving the squad or revoking the link empties the feed on the next fetch. Entries have stable IDs and change sequences, retain cancellations, and contain no child names or coach notes. |
+| Calendar feeds | A personal link per player/parent, with a hashed token, label, creation/revocation and last-fetch metadata. Token possession authorizes the feed without an app login. A parent feed covers children with active consent; a player feed covers their squad's published events only while the player's own consent is active. Withdrawal, leaving the squad or revoking the link empties the feed on the next fetch. Entries have stable IDs and change sequences, retain cancellations, and contain no child names or coach notes. Live since 10 October (TRAK-132, PR #258) as a Supabase Edge Function of the production project; an unknown link returns 404 (checked 11 October). Only the personal link exists so far, and no screen yet lets a family create one (TRAK-133). |
 | Shared family links | A guardian can create extra named links for relatives or a driver, selecting matches/all events and one/all children. Each is independently revocable and tied to the guardian's continuing access. The recipient need not have an account. |
-| Changes and reminders | Per-user new/changed/cancelled seen state in the app; guardian email delivery for every cancellation of a published event, whatever its date, and for today/tomorrow changes, with a 60-second target; two-day reminder emails grouped per guardian/day across their children. Notification preference, recipient, deduplication/retry and delivery records need lifecycle coverage. Reminder opt-out is in Settings; email links must not change state. |
+| Changes and reminders | Per-user new/changed/cancelled seen state in the app; guardian email delivery for every cancellation of a published event, whatever its date, and for today/tomorrow changes, with a 60-second target; two-day reminder emails grouped per guardian/day across their children. Notification preference, recipient, deduplication/retry and delivery records need lifecycle coverage. Reminder opt-out is in Settings; email links must not change state. Decided 10 October: a cancellation email includes the coach's reason unless it names a child on the squad or contains a link; subjects are generic, never coach-typed; there is no Reply-To, and each email directs event questions to the coach or academy and app questions to `support@trakfootball.com`; guardians of children not yet signed up get no event emails, as in the app. Change emails (TRAK-135, PR #264) and reminders (TRAK-136, PR #271) are in review, not merged. |
 | Parent absence reports | “Can't make it” records the event, child, reporting guardian, time and optional short reason, with undo until the event starts. Active consent and a guardian-child link are required. The coach sees their own squad; families cannot see another child's absence. Players do not respond in v1. |
 | Completed attendance | Everyone is expected to attend unless reported absent. After the event, the coach reviews and saves the register through the consent-checked session/attendance path. Expected attendance is not evidence of attendance. Saving again must not duplicate the completed session. |
-| Manual WhatsApp share | A button prepares squad/type/date/time/venue/meet-time/kit and cancellation details; the coach selects the recipient and sends in WhatsApp. No child names or absence list. No automatic posting or account integration. Copies then exist outside Trak. |
+| Manual WhatsApp share | A button prepares squad/type/date/time/venue/meet-time/kit and cancellation details; the coach selects the recipient and sends in WhatsApp. No absence list. Coach-typed venue, kit, opponent and cancellation reason are left out when they name a child on the squad, and a reason is also left out when it contains a link, the same rule as the feed and the emails (TRAK-139, PR #266, in review, not merged). No automatic posting or account integration. Copies then exist outside Trak. |
 
 Calendar withdrawal, departure or revocation must stop disclosure on the next
 feed request, including extra links tied to that access. This cannot promise
@@ -185,15 +198,32 @@ emails go to every affected guardian and to players who have their own email
 date, because a called-off fixture must never just disappear from a family's
 calendar (Imad, 9 October, TRAK-135).
 
-**Still open in the issues:** the feed endpoint location (TRAK-132) and the
-verified mobile subscription behaviour and fallback (TRAK-133).
+On 10 October Imad decided four more points (TRAK-25, TRAK-136 and the PRs):
+event times are stored as Dubai time whatever the coach's device says; a
+cancellation email includes the coach's reason unless it names a child on the
+squad or contains a link, the same rule as the calendar feed; guardians of
+children not yet signed up get no event emails in the pilot, the same rule as
+the app, so children are signed up before events are switched on for an
+academy; and `pg_cron`, Supabase's in-database scheduler, is approved for the
+reminders and for a sweep that sends any change email left unsent. The same
+day he set the email footer: no Reply-To to Trak, event questions go to the
+coach or academy, and app questions go to `support@trakfootball.com`.
+
+**Still open in the issues:** the verified mobile subscription behaviour and
+fallback (TRAK-133, not started); extra family links (TRAK-140); and whether
+to enable `pg_net`, which lets the scheduler call the email functions (Imad's
+decision, TRAK-136). With `pg_net`, the scheduler's key is readable inside the
+database while a request waits, by roles that can log in to the database
+directly; on production on 11 October those were Supabase's platform roles
+only, and the public API does not expose that schema.
 
 **For counsel and the academy:** review token/link disclosure, delegated family
 access, device/provider caches, email/share recipients, optional absence and
 cancellation free text, retention and rights handling across these flows.
-Reflect the agreed design in the notice and contracts. Personal and extra
-links, active-consent scope, revocation and no-child-name rules are already
-product requirements; their implementation and real-phone proof remain pending.
+Reflect the agreed design in the notice and contracts. For the personal link,
+the active-consent scope, revocation and no-child-name rules are implemented
+and live on the feed endpoint. Extra links, the subscription screen and
+real-phone proof remain pending.
 
 After the pilot, a reminder goes only to the coach on the child's birthday,
 using the roster DOB. Preferred foot and additional profile statistics are
@@ -209,7 +239,7 @@ weight are excluded. Lineups and broader matchday planning remain parked.
 | Vercel | Web hosting and deployment. | Hosting/log regions, log retention and contractual terms. |
 | Sentry | Production error monitoring when a DSN is configured; browser tracing uses 10% sampling. No session-replay integration is configured. | Actual project configuration, region, event contents, retention and access. |
 | Event email sender | Resend, sending from `noreply@trakfootball.com` in Ireland (eu-west-1), wired on 8 October (TRAK-126) for planned change and grouped reminder emails. The account owner reports that Auth emails also go through Resend. | Contracts, delivery records, retention and any processing outside the sending region. |
-| Calendar providers | Planned subscriptions through personal and extra guardian-created links. | Endpoint hosting, mobile behaviour, caching, removal, retention and provider responsibilities; counsel review of the privacy design before real-family links. |
+| Calendar providers | Subscriptions through personal links (feed live; no family can create a link yet) and, later, extra guardian-created links. The feed is served by a Supabase Edge Function. | Where the feed function executes, mobile behaviour, caching, removal, retention and provider responsibilities; counsel review of the privacy design before real-family links. |
 | WhatsApp | Planned coach-initiated sharing of event text; no automatic posting. | Recipient/group handling, external copies, notice and retention responsibilities. |
 | Operator handling | Roster source files, support, corrections, legal requests and recovery evidence may exist outside application tables. | Approved storage, access, transfer and deletion procedures for those files and records. |
 
