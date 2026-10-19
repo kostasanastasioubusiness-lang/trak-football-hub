@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { inferTimeKnown, fillTimeKnown } from '../../supabase/functions/parse-schedule/time-known'
 
+type ScheduleEvent = { title: string; starts_at: string; time_known?: boolean }
+
 /**
  * Guards the unknown-time contract on parse-schedule's output.
  *
@@ -67,13 +69,13 @@ describe('fillTimeKnown — every event carries a boolean', () => {
   })
 
   it('fills the field when the model omitted it', () => {
-    const parsed = fillTimeKnown({
+    const parsed = fillTimeKnown<{ events: ScheduleEvent[] }>({
       events: [
         { title: 'Timed', starts_at: '2026-03-01T18:00:00' },
         { title: 'Day only', starts_at: '2026-03-02' },
       ],
     })
-    expect(parsed.events.map((e: any) => e.time_known)).toEqual([true, false])
+    expect(parsed.events.map(e => e.time_known)).toEqual([true, false])
   })
 
   it('leaves a payload with no events array alone rather than throwing', () => {
@@ -84,7 +86,7 @@ describe('fillTimeKnown — every event carries a boolean', () => {
 
   it('survives a malformed event entry', () => {
     const parsed = fillTimeKnown({
-      events: [null, 'nonsense', { title: 'ok', starts_at: '2026-03-01T18:00:00' }] as any[],
+      events: [null, 'nonsense', { title: 'ok', starts_at: '2026-03-01T18:00:00' }] as unknown as ScheduleEvent[],
     })
     expect(parsed.events[2].time_known).toBe(true)
   })

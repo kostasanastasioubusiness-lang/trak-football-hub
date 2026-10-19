@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send, Sparkles, ClipboardList } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import { toast } from 'sonner'
 import { supabase, SUPABASE_FUNCTIONS_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -217,7 +217,7 @@ export default function CoachAssistant() {
           }
         }
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error(e)
       toast.error('Assistant error')
     } finally {
@@ -276,16 +276,16 @@ export default function CoachAssistant() {
               ? [{ type: 'text', content: m.content }]
               : (m.role === 'assistant' ? buildSegments(m.content) : [{ type: 'text', content: m.content }])
 
-            const mdComponents = {
-              h1: ({ node, ...props }: any) => <h3 style={{ fontSize: 15, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgba(255,255,255,0.95)' }} {...props} />,
-              h2: ({ node, ...props }: any) => <h3 style={{ fontSize: 14, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgba(255,255,255,0.95)' }} {...props} />,
-              h3: ({ node, ...props }: any) => <h4 style={{ fontSize: 13, fontWeight: 600, marginTop: 10, marginBottom: 4, color: 'rgba(255,255,255,0.92)' }} {...props} />,
-              p: ({ node, ...props }: any) => <p style={{ margin: '6px 0' }} {...props} />,
-              ul: ({ node, ...props }: any) => <ul style={{ margin: '6px 0', paddingLeft: 18 }} {...props} />,
-              ol: ({ node, ...props }: any) => <ol style={{ margin: '6px 0', paddingLeft: 18 }} {...props} />,
-              li: ({ node, ...props }: any) => <li style={{ margin: '2px 0' }} {...props} />,
-              strong: ({ node, ...props }: any) => <strong style={{ color: 'rgba(255,255,255,0.95)' }} {...props} />,
-              code: ({ node, ...props }: any) => <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 4, fontSize: 12 }} {...props} />,
+            const mdComponents: Components = {
+              h1: ({ node, ...props }) => <h3 style={{ fontSize: 15, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgba(255,255,255,0.95)' }} {...props} />,
+              h2: ({ node, ...props }) => <h3 style={{ fontSize: 14, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgba(255,255,255,0.95)' }} {...props} />,
+              h3: ({ node, ...props }) => <h4 style={{ fontSize: 13, fontWeight: 600, marginTop: 10, marginBottom: 4, color: 'rgba(255,255,255,0.92)' }} {...props} />,
+              p: ({ node, ...props }) => <p style={{ margin: '6px 0' }} {...props} />,
+              ul: ({ node, ...props }) => <ul style={{ margin: '6px 0', paddingLeft: 18 }} {...props} />,
+              ol: ({ node, ...props }) => <ol style={{ margin: '6px 0', paddingLeft: 18 }} {...props} />,
+              li: ({ node, ...props }) => <li style={{ margin: '2px 0' }} {...props} />,
+              strong: ({ node, ...props }) => <strong style={{ color: 'rgba(255,255,255,0.95)' }} {...props} />,
+              code: ({ node, ...props }) => <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 4, fontSize: 12 }} {...props} />,
             }
 
             return (

@@ -17,14 +17,25 @@ export default tseslint.config({ ignores: ["dist"] }, {
   },
   rules: {
     ...reactHooks.configs.recommended.rules,
-    "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+    // Move helpers out of component files. The named exceptions keep a
+    // context's hook beside its Provider (useAuth has 80+ importers) and
+    // shadcn's generated ui/ helpers as shadcn ships them.
+    "react-refresh/only-export-components": ["error", {
+      allowConstantExport: true,
+      allowExportNames: [
+        "useAuth", "useParentChildren",
+        "badgeVariants", "buttonVariants", "toggleVariants", "navigationMenuTriggerStyle",
+        "useFormField", "useSidebar", "toast",
+      ],
+    }],
     "@typescript-eslint/no-unused-vars": "off",
-    // Downgraded to warn — will be resolved in future TypeScript strictness pass
+    // Still warnings: the database-row `any`s wait on regenerated Supabase
+    // types, and the hook dependencies are behaviour changes. `npm run lint`
+    // caps warnings at today's count (--max-warnings), so they can only fall.
+    // Lower that number when you fix some; never raise it.
     "@typescript-eslint/no-explicit-any": "warn",
-    // Empty interfaces are common with Supabase generated types
-    "@typescript-eslint/no-empty-object-type": "warn",
-    // tailwind.config.ts uses require() for plugins — acceptable
-    "@typescript-eslint/no-require-imports": "warn",
+    "@typescript-eslint/no-empty-object-type": "error",
+    "@typescript-eslint/no-require-imports": "error",
   },
 }, {
   // The use-case harness binds each test suite to a registry entry with

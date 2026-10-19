@@ -78,9 +78,9 @@ export function ArcProvider({ link, image, children }: ArcProviderProps) {
 }
 
 /** The link component from the nearest ArcProvider, or a plain anchor. */
-export const useArcLink = () => useContext(ArcContext).link;
+const useArcLink = () => useContext(ArcContext).link;
 /** The image component from the nearest ArcProvider, or a plain img. */
-export const useArcImage = () => useContext(ArcContext).image;
+const useArcImage = () => useContext(ArcContext).image;
 
 /** What Arc components render for a link: the provider's link component, or a plain anchor. */
 export function ArcLink(props: ArcLinkProps) {

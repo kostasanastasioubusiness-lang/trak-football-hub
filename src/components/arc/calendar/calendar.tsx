@@ -49,8 +49,6 @@ const makeWeeks = (month: Date) => {
 const subscribeNothing = () => () => {};
 const clientSnapshot = () => true;
 const serverSnapshot = () => false;
-/** The viewer's local date (lib/use-today.ts, shared with date-range-picker). Re-exported so existing imports from calendar keep working. */
-export { useToday } from "../lib/use-today";
 
 const { spring, duration, ease } = motionTokens;
 /** Months sit side by side on one strip. Rapid clicks retarget the same spring, so the strip never queues or stacks panes. */
@@ -349,5 +347,3 @@ export function Calendar({
       </div>
     </section>;
 }
-
-export { addDays, addMonths, sameDay, startOfDay };

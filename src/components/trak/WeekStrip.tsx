@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react'
-import { addDays, format, parseISO, startOfWeek } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { ChevronRight } from 'lucide-react'
 import { LoadError } from '@/components/trak/LoadError'
 import { eventHeading, toPlayerEvent, type PlayerEvent } from '@/lib/player-events'
+import { weekDays } from '@/lib/week-days'
 // The coach calendar's colours (TRAK-159, founders 12 Oct): one constant everywhere.
 import { CANCELLED_COLOR, EVENT_COLOR } from '@/lib/coach-events'
 
@@ -12,12 +13,6 @@ export interface StripEvent extends PlayerEvent {
   draft?: boolean
   /** A completed coach session, rather than a planned calendar entry. */
   sessionId?: string
-}
-
-/** Monday to Sunday of the week `today` is in, as YYYY-MM-DD (Imad, 12 Oct). */
-export function weekDays(today: Date): string[] {
-  const monday = startOfWeek(today, { weekStartsOn: 1 })
-  return Array.from({ length: 7 }, (_, i) => format(addDays(monday, i), 'yyyy-MM-dd'))
 }
 
 /** How a role opens an event: a sheet around the row's trigger (TRAK-182), given a refresh for after a change. */

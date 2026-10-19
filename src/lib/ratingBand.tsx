@@ -3,7 +3,7 @@ export interface RatingBand {
   color: string;
 }
 
-export function getRatingBand(rating: number): RatingBand {
+function getRatingBand(rating: number): RatingBand {
   if (rating >= 9.2) return { label: 'Exceptional', color: '#C8F25A' };
   if (rating >= 8.2) return { label: 'Standout', color: '#86efac' };
   if (rating >= 7.2) return { label: 'Good', color: '#4ade80' };
