@@ -1,3 +1,202 @@
-# Welcome to your Lovable project
+# Trak Football
 
-TODO: Document your project here
+Youth football coaching records for players, coaches and linked guardians.
+The first pilot's required journeys, including events, are defined in
+[MVP Requirements](MVP%20Requirements); recorded evidence is in
+[PILOT-INDEX](docs/use-cases/PILOT-INDEX.md). A feature's presence in the source
+does not establish that it is admitted to the pilot.
+
+## Prerequisites
+
+- Node.js 22.15 or later 22.x (matching CI; `.nvmrc` selects the latest 22.x). On 22.14 `npm test` fails with unhandled `BroadcastChannel` errors.
+- npm 11.6.0 (the version declared by `packageManager`)
+- A [Supabase](https://supabase.com) project (free tier works)
+
+## Local Setup
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/kostasanastasioubusiness-lang/trak-football-hub.git
+cd trak-football-hub
+
+# 2. Select Node 22 and install locked dependencies
+# If you use nvm:
+nvm install
+nvm use
+npm ci --legacy-peer-deps
+
+# 3. Configure environment
+cp .env.example .env
+# Edit .env and fill in your Supabase URL and publishable key (sb_publishable_…)
+
+# 4. Use a disposable development database
+# Replay migrations in filename order; see AGENTS.md.
+# Never run development SQL against the shared production project.
+
+# 5. Start the dev server
+npm run dev
+```
+
+The app runs at http://localhost:8080.
+
+Without nvm, install Node 22 some other way. npm refuses a different Node major (`devEngines` in `package.json`). Don't bypass it: on Node 24 the enforced assessment test (UC-C04) fails because jsdom's AbortSignal is rejected by Node's native `Request`.
+
+## Running Tests
+
+These are optional local development commands. The required suite runs once
+when a completed draft PR is marked ready to merge; individual branch commits
+need no test run or teammate approval. See [the process](docs/release/merge-gate.md).
+
+```bash
+npm test            # source tests, once (used in CI)
+npm run test:watch  # watch mode
+npm run test:harness
+npm run uc:check    # enforced use cases block; pending failures are reported
+```
+
+## Linting & Build
+
+```bash
+npm run lint      # ESLint — warnings are fine, errors block CI
+npm run build     # Vite production build → dist/
+```
+
+## Deployment
+
+Production is **trakfootball.com**, hosted on Vercel. Vercel's own Git integration is
+disabled (`git.deploymentEnabled: false` in `vercel.json`), so `.github/workflows/ci.yml`
+is the deployment route. The complete automated suite runs on the final
+non-draft PR to main. After merge, `Reuse tested merge` checks that successful
+PR evidence matches main's exact file contents; it does not rerun the suite.
+Missing or different evidence blocks backend and frontend deployment.
+Supabase's automatic Git deployment remains disabled (TRAK-148).
+
+The Supabase half of the app ships separately from the frontend, and
+forgetting this is the usual reason a merged change appears to do nothing:
+
+| What changed | How it ships |
+|---|---|
+| `src/**` | `deploy` job, on merge to `main` |
+| `supabase/migrations/*.sql` | `supabase` job (`db push`), after final-PR evidence matches main |
+| `supabase/functions/**` | `supabase` job (`functions deploy`), after final-PR evidence matches main |
+| `email-templates/*.html` | Supabase dashboard → Authentication → Emails → Templates, **by hand**. The files equal the live templates as of 8 Oct 2026; see below. |
+
+Merging to `main` ships the frontend *and* the backend. The `supabase` job runs
+before `deploy`, so a build that calls a new RPC can't reach production ahead of
+the migration that creates it, and a failed migration stops the frontend from
+shipping. It cannot undo a migration that already applied.
+
+The `supabase` job deliberately does not run `supabase link`: linking fetches the
+project's API keys, which would mean giving the CI token read access to the
+service-role key. It passes `--db-url` and `--project-ref` explicitly instead, so
+the token needs only Edge Functions and Migrations. Required secrets:
+`SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_URL`.
+
+### Email templates
+
+The four files in `email-templates/` equal the live Supabase templates as
+exported by Kostas on 8 October 2026 (after his 17:19 UTC dashboard fixes;
+TRAK-142). The dashboard is where they run: CI does not deploy them. Change a
+template in the dashboard and in its file together, in one PR.
+
+| File | Dashboard template | Subject |
+|---|---|---|
+| `invite-parent.html` | Invite user | `You're invited to Trak` |
+| `magic-link.html` | Magic link / OTP | `{{ if .Data.child_first_name }}{{ .Data.academy_name }} has added {{ .Data.child_first_name }} to Trak{{ else }}Your Trak sign-in code{{ end }}` |
+| `reset-password.html` | Reset password | `Reset your Password` |
+| `confirm-signup.html` | Confirm signup | `Confirm your Trak Account` |
+
+- **Invite, Magic Link and Reset Password** show `{{ .Token }}` and link only
+  to `/auth/code`, where the person types the code. A one-click
+  `{{ .ConfirmationURL }}` is what Microsoft's scanner used up before families
+  could sign in (TRAK-107).
+- **Confirm signup** keeps its separate `/auth/confirm?token_hash=` flow
+  (TRAK-117).
+- Go evaluates `{{ ... }}` actions even inside HTML comments, so never write
+  one in a comment.
+
+`src/__tests__/email-templates.test.ts` fails if any file regains a
+`{{ .ConfirmationURL }}` or an `/auth/continue` link, if a code email links
+anywhere but `/auth/code`, or if a file contains non-ASCII characters (which
+turn into mojibake when Gmail strips the charset).
+
+`supabase/config.toml` is the source of truth for each function's `verify_jwt`;
+a value changed in the dashboard is overwritten on the next deploy.
+
+For local work the CLIs need no global install (`npm i -g` fails against a
+root-owned prefix on a stock macOS Node):
+
+```bash
+npx --yes supabase@latest login
+npx --yes supabase@latest migration list
+```
+
+`vercel.json` holds the SPA rewrite, asset caching, and the security headers. Its
+CSP pins the Supabase and Sentry hosts, so any new external origin must be added
+to `connect-src` or it is blocked in production.
+
+## Environment Variables
+
+| Variable | Description |
+|---|---|
+| `VITE_SUPABASE_URL` | Your Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key, `sb_publishable_…` (public; the legacy anon JWT stops working at the end of 2026, TRAK-96) |
+| `VITE_SENTRY_DSN` | (Optional) Sentry DSN — only active in `PROD` |
+
+See `.env.example` for the template.
+
+## Project Structure
+
+```
+src/
+  components/
+    trak/           Shared design-system components (MobileShell, NavBar, BandPill, …)
+    player/         Player-specific components (RatingTrendChart, CardRevealModal)
+    club/           Club-specific components (ClubNavBar)
+    icons/          TrakIcons SVG components
+  contexts/
+    AuthContext.tsx Auth state, sign-up / sign-in, profile creation
+  lib/
+    rating-engine.ts  computeMatchScore() — core rating algorithm
+    types.ts          BANDS, BandType, UserRole
+    telemetry.ts      trackEvent() helper
+    squad-analytics.ts calculateSquadAnalytics()
+  pages/
+    player/         PlayerHome, PlayerMatches, PlayerEvolutionCard, PlayerPassport, …
+    coach/          CoachHomePage, CoachSquadPage, CoachAssessPage, CoachAssistant, …
+    parent/         ParentHome, ParentMatches, ParentAlerts
+    club/           ClubHome, ClubSquads, ClubCoaches, ClubRadar
+  integrations/
+    supabase/       Generated Supabase client + types
+supabase/
+  migrations/       SQL migration files (apply in order)
+  functions/        Edge Functions (coach-assistant, parse-schedule,
+                    player-feedback, send-parent-invite)
+```
+
+## User Roles
+
+| Role | Sign-up path | Key features |
+|---|---|---|
+| **Player** | Academy roster, guardian consent, then email invitation or guardian-created username/password | Bands, coach message, coach-recorded history |
+| **Coach** | Coordinated academy setup | Squad, completed sessions, attendance and assessments |
+| **Parent** | Academy-supplied guardian address and invitation | Consent, selected child's bands/history, child activation and recovery |
+| **Club admin** | Coordinated academy setup | Academy console remains coming soon |
+
+J8 events and family calendars are required for launch and still await their
+implementation and deployed rehearsal. AI, recognition, passport/sharing and
+child photos remain outside the pilot.
+
+## Contributing
+
+Read [AGENTS.md](AGENTS.md), the current issue description and the relevant
+requirements. Work and commit freely on your branch. Local tests are optional;
+draft PRs do not run the required suite. Submit the final PR to the
+[automated merge gate](docs/release/merge-gate.md); no teammate or non-author
+approval is required. The pre-push credential guard and GitHub push protection
+keep credentials out of the public repository.
+
+Mark the issue **Done when implementation is complete**, with a short result
+and PR/commit link, even if merge/deployment is still pending. Live-test after
+deployment. Any failure becomes a **new linked bug issue**; completed feature
+issues stay Done. Read comments only when a specific question needs them.
