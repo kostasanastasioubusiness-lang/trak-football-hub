@@ -1,3 +1,5 @@
+**Delivery policy:** before working on this branch, read the [current canonical delivery policy](https://github.com/kostasanastasioubusiness-lang/trak-football-hub/blob/main/docs/release/merge-gate.md). It governs implementation completion, checks, merging and deployment; historical records cannot add retired delivery gates. Use issue descriptions for product scope and explicit holds.
+
 # AGENTS.md — Trak Football
 
 ## Before changing the product
