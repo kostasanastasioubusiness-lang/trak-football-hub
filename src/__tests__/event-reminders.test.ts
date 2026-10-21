@@ -174,11 +174,11 @@ describe('sending reminders', () => {
 
   it('one of two emails failing finishes the day as failed, so it is retried; the sent one\'s key stops a second copy', async () => {
     const send = vi.fn(async (m: PlainEmail): Promise<SendResult> =>
-      m.subject.startsWith('Match') ? { sent: false, reason: 'provider_error' } : { sent: true, id: 'ok-1' });
+      m.subject.startsWith('Match') ? { sent: false, reason: 'delivery_failed', status: 502 } : { sent: true, id: 'ok-1' });
     const { d, calls } = deps({ send });
     const r = report();
     await deliverReminders([reminder([event(), event({ id: 'm', event_type: 'match', opponent: 'Rovers', start_time: '19:00:00' })])], d, r);
-    expect(calls.finished).toEqual([['guardian-1', '2026-10-14', 'failed', 1, 'ok-1', 'provider_error']]);
+    expect(calls.finished).toEqual([['guardian-1', '2026-10-14', 'failed', 1, 'ok-1', 'delivery_failed:502']]);
     expect(r).toEqual({ reminders: 1, emails: 1, failed: 1 });
   });
 
