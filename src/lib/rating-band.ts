@@ -12,5 +12,5 @@ export function getRatingBand(rating: number): RatingBand {
   if (rating >= 6.4) return { label: 'Steady', color: BAND_COLOR.Steady };
   if (rating >= 5.6) return { label: 'Mixed', color: BAND_COLOR.Mixed };
   if (rating >= 4.8) return { label: 'Developing', color: BAND_COLOR.Developing };
-  return { label: 'Difficult', color: 'rgb(var(--t-ink-3))' };
+  return { label: 'Difficult', color: BAND_COLOR.Difficult };
 }

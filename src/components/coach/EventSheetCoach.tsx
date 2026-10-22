@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, Check, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
+import { askToEmailFamilies } from '@/lib/event-emails'
 import { Avatar } from '@/components/arc/avatar/avatar'
 import { AvatarGroup } from '@/components/arc/avatar-group/avatar-group'
 import { TakeRegister } from '@/components/coach/TakeRegister'
@@ -119,6 +120,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
       if (error || !data?.length) throw new Error(clashMessage(error) ?? "Couldn't publish. Try again.")
     },
     onSuccess: () => {
+      askToEmailFamilies() // TRAK-135: publishing emails families too
       toast.success('Published to the squad')
       void client.invalidateQueries({ queryKey: ['coach', 'event', event.id] })
       onChanged()
@@ -161,6 +163,12 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
             <ShareEventButton text={whatsAppShareText(shareableFromRow(row, squad.data.label), { childNames: squad.data.childNames })} className={quiet}>
               <ShareIcon size={18} />Share
             </ShareEventButton>
+          )}
+          {/* TRAK-185: a logged match is corrected from its event (score, goals, assists, cards). */}
+          {!cancelled && row?.event_type === 'match' && sessionId && (
+            <button type="button" onClick={() => navigate(`/coach/sessions/${sessionId}`)} className={quiet}>
+              <Pencil size={16} aria-hidden="true" />Edit match
+            </button>
           )}
           {/* TRAK-230 (Kostas, 21 Oct): once it has started, what families were told is fixed. */}
           {!cancelled && row && startedLocked(row) ? (
