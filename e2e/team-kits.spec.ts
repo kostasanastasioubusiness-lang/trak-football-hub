@@ -79,7 +79,9 @@ test('coach saves squad kits, publishes a kit event and reopens its announcement
   await expect(form.getByRole('heading', { name: 'Away kit' })).toBeVisible()
   await form.getByRole('button', { name: 'Publish', exact: true }).click()
   await expect(form).not.toBeVisible()
-  expect(event).toMatchObject({ published: true, kit_snapshot: { version: 1, slot: 'away', design: { shirt: '#F5F3EC' } } })
+  // The form closes on save; Publish's update follows it (CoachSchedule's
+  // publishSaved), so wait for it rather than reading the draft just saved.
+  await expect.poll(() => event).toMatchObject({ published: true, kit_snapshot: { version: 1, slot: 'away', design: { shirt: '#F5F3EC' } } })
   await page.goto('/coach/home')
   await page.getByRole('button', { name: /Synthetic United/ }).click()
   const sheet = page.getByRole('dialog', { name: 'vs Synthetic United' })
