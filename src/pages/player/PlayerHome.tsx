@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
+import type { Tables } from '@/integrations/supabase/types'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, BandPill, MetadataLabel, LoadError } from '@/components/trak'
 import { CardSkeleton, MatchCardSkeleton, Skeleton } from '@/components/trak'
@@ -70,7 +71,7 @@ export default function PlayerHome() {
   const [details, setDetails] = useState<any>(null)
   const [coachAssessment, setCoachAssessment] = useState<any>(null)
   // TRAK-172 (Imad, 19 Oct): the latest five, as the parent's swipe cards. Set and cleared with coachAssessment.
-  const [recentAssessments, setRecentAssessments] = useState<any[]>([])
+  const [recentAssessments, setRecentAssessments] = useState<Tables<'coach_assessments'>[]>([])
   const [coachName, setCoachName] = useState('')
   const [upcomingEvents, setUpcomingEvents] = useState<PlayerEvent[]>([])
   type ConsentStatus = { required: boolean; invited_parent: string | null; age?: number | null

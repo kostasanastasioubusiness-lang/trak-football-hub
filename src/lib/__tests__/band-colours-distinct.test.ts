@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { BANDS, BAND_COLOR } from '@/lib/types'
-import { getRatingBand } from '@/lib/ratingBand'
+import { getRatingBand } from '@/lib/rating-band'
 
 describe('band colours', () => {
   it('every band has its own colour', () => {

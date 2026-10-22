@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
-import { addDays, format, parseISO, startOfWeek } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { ChevronRight } from 'lucide-react'
 import { LoadError } from '@/components/trak/LoadError'
 import { eventHeading, toPlayerEvent, type PlayerEvent } from '@/lib/player-events'
+import { weekDays } from '@/lib/week-days'
 // The coach calendar's colours (TRAK-159, founders 12 Oct): one constant everywhere.
 import { CANCELLED_COLOR, EVENT_COLOR } from '@/lib/coach-events'
 
@@ -23,12 +24,6 @@ export interface StripEvent extends PlayerEvent {
 function dotStyle(event: StripEvent): CSSProperties {
   if (event.status === 'cancelled') return { background: 'transparent', border: `1.5px solid ${CANCELLED_COLOR}` }
   return { background: EVENT_COLOR[event.kind], opacity: event.absent ? 0.35 : 1 }
-}
-
-/** Monday to Sunday of the week `today` is in, as YYYY-MM-DD (Imad, 12 Oct). */
-export function weekDays(today: Date): string[] {
-  const monday = startOfWeek(today, { weekStartsOn: 1 })
-  return Array.from({ length: 7 }, (_, i) => format(addDays(monday, i), 'yyyy-MM-dd'))
 }
 
 /** How a role opens an event: a sheet around the row's trigger (TRAK-182), given a refresh for after a change. */

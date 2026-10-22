@@ -38,7 +38,7 @@ export default function CoachAwardPlayer() {
   const location = useLocation()
 
   const [players, setPlayers] = useState<any[]>([])
-  const [playerId, setPlayerId] = useState((location.state as any)?.preselectedPlayerId || '')
+  const [playerId, setPlayerId] = useState((location.state as { preselectedPlayerId?: string } | null)?.preselectedPlayerId || '')
   const [awardType, setAwardType] = useState('')
   const [awardedFor, setAwardedFor] = useState('')
   const [note, setNote] = useState('')

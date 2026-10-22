@@ -72,7 +72,7 @@ function CoachAssessmentForm() {
   const [choicesLoading, setChoicesLoading] = useState(true)
   const [choicesError, setChoicesError] = useState(false)
   const rosterAccount = useRef(userId)
-  const [playerId, setPlayerId] = useState((location.state as any)?.preselectedPlayerId || '')
+  const [playerId, setPlayerId] = useState((location.state as { preselectedPlayerId?: string } | null)?.preselectedPlayerId || '')
   const [sessionId, setSessionId] = useState('')
   /* TRAK-69: /coach/assess?assessment=<id> opens that exact saved row. It is
      resolved to its player and session, and loaded by id while that pair stays
@@ -571,7 +571,7 @@ function CoachAssessmentForm() {
             // player, their history, Home). Opened directly, with nothing
             // before it in Trak, fall back to the player or Home.
             if (location.key !== 'default') { navigate(-1); return }
-            const fromPlayer = (location.state as any)?.preselectedPlayerId
+            const fromPlayer = (location.state as { preselectedPlayerId?: string } | null)?.preselectedPlayerId
             navigate(fromPlayer ? `/coach/player/${fromPlayer}` : '/coach/home')
           }}
           aria-label="Back"

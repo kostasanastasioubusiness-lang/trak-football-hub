@@ -6,14 +6,14 @@ interface IconProps {
   className?: string
 }
 
-const defaultColor = 'rgb(var(--t-ink-3))'
-const activeColor = 'rgb(var(--t-brand))'
+export const DEFAULT_COLOR = 'rgb(var(--t-ink-3))'
+export const ACTIVE_COLOR = 'rgb(var(--t-brand))'
 
 type SvgRender = (p: { size: number; color: string; className?: string }) => React.ReactElement
 
 function makeIcon(defaults: { size?: number; color?: string }, render: SvgRender) {
   const Inner = forwardRef<SVGSVGElement, IconProps>(function Icon(
-    { size = defaults.size ?? 22, color = defaults.color ?? defaultColor, className },
+    { size = defaults.size ?? 22, color = defaults.color ?? DEFAULT_COLOR, className },
     _ref,
   ) {
     return render({ size, color, className })
@@ -229,6 +229,3 @@ export const IconTips = makeIcon({}, ({ size, color, className }) => (
     <path d="M5 3L18 6.5L5 11" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 ))
-
-export const ACTIVE_COLOR = activeColor
-export const DEFAULT_COLOR = defaultColor

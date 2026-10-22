@@ -11,6 +11,9 @@ import { openable } from '@/lib/openable'
 import { ChevronLeft } from 'lucide-react'
 import { CoachAssessmentCard } from '@/components/coach/CoachAssessmentCard'
 
+// coach_shared_feedback is missing from the generated Supabase types.
+type SharedFeedbackRow = { assessment_id: string; body: string; published_at: string | null }
+
 function avgScore(a: any) {
   return (a.work_rate + a.tactical + a.attitude + a.technical + a.physical + a.coachability) / 6
 }
@@ -70,13 +73,14 @@ export function CoachPlayerOverview({ id, embedded = false }: { id: string | und
         supabase.from('coach_assessment_notes').select('assessment_id, note').in('assessment_id', ids),
         supabase.from('coach_shared_feedback' as any).select('assessment_id, body, published_at').in('assessment_id', ids),
       ])
+      const sharedRows = (shared.data ?? []) as unknown as SharedFeedbackRow[]
       const map: Record<string, string> = {}
       notes?.forEach((n: any) => { map[n.assessment_id] = n.note })
       setNotesById(map)
-      if (!shared.error) setMessageById(Object.fromEntries(((shared.data ?? []) as any[]).map(f => [f.assessment_id, f.body])))
+      if (!shared.error) setMessageById(Object.fromEntries(sharedRows.map(f => [f.assessment_id, f.body])))
       if (shared.error) setMessageSentById(undefined)
       else setMessageSentById(Object.fromEntries(ids.map((assessmentId: string) =>
-        [assessmentId, ((shared.data ?? []) as any[]).some(f => f.assessment_id === assessmentId && f.published_at != null)])))
+        [assessmentId, sharedRows.some(f => f.assessment_id === assessmentId && f.published_at != null)])))
     }
   }, [id, user])
 

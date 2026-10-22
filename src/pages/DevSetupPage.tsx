@@ -256,8 +256,8 @@ export default function DevSetupPage() {
       await supabase.auth.signOut()
       setDone(true)
 
-    } catch (err: any) {
-      update('Unexpected error', 'error', err?.message ?? String(err))
+    } catch (err) {
+      update('Unexpected error', 'error', (err as { message?: string } | null)?.message ?? String(err))
     }
 
     setRunning(false)

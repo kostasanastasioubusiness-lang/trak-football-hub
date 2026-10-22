@@ -42,9 +42,10 @@ interface ChartDatum {
   band: string
 }
 
-function CustomTooltip({ active, payload }: any) {
+// Recharts clones these with its props, so every prop is optional here.
+function CustomTooltip({ active, payload }: { active?: boolean; payload?: { payload: ChartDatum }[] }) {
   if (!active || !payload?.[0]) return null
-  const d = payload[0].payload as ChartDatum
+  const d = payload[0].payload
   return (
     <div
       className="rounded-lg px-3 py-2 border border-line"
@@ -60,9 +61,9 @@ function CustomTooltip({ active, payload }: any) {
   )
 }
 
-function CustomDot(props: any) {
+function CustomDot(props: { cx?: number; cy?: number; payload?: ChartDatum }) {
   const { cx, cy, payload } = props
-  if (cx == null || cy == null) return null
+  if (cx == null || cy == null || !payload) return null
   return (
     <circle
       cx={cx}

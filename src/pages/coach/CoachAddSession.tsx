@@ -125,7 +125,7 @@ export default function CoachAddSession() {
 
   // Pre-fill from Coach Assistant "Log this session" button
   useEffect(() => {
-    const plan = (location.state as any)?.fromAssistant
+    const plan = (location.state as { fromAssistant?: { focus?: string[]; duration?: number; notes?: string } } | null)?.fromAssistant
     if (!plan) return
     setType('training')
     if (plan.focus?.length)  setTrainingFocus(new Set(plan.focus))

@@ -99,8 +99,8 @@ const PlayerProfile = () => {
 
       toast.success('Profile updated');
       setEditing(false);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to save');
+    } catch (err) {
+      toast.error((err as { message?: string } | null)?.message || 'Failed to save');
     } finally {
       setSaving(false);
     }
