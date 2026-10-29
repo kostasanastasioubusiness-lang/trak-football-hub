@@ -42,14 +42,15 @@ export function TodayPlan({ trainingOn, gamesOn, inView }: {
   const ahead = (item: Item) => (item.kind === 'training' ? trainingEnd(item.event) : fullTime(item.event)) > now
   const next = today.length ? null : items.find(ahead) ?? null
 
-  return <section className="arc rounded-2xl border border-line bg-surface p-5" aria-labelledby="today-plan-title">
+  // min-w-0 and minmax(0, 1fr) all the way down: a name cut with "…" must not widen the card, or the page, to its length.
+  return <section className="arc min-w-0 rounded-2xl border border-line bg-surface p-5" aria-labelledby="today-plan-title">
     <div className="grid gap-0.5">
       <h2 id="today-plan-title" className="text-lg font-medium text-ink">Today</h2>
       {!today.length && !pending && !failed && <p className="text-sm text-ink-3">Nothing today</p>}
     </div>
     {failed ? <div className="mt-4"><LoadError what="today’s plan" onRetry={() => { void trainings.refetch(); void games.refetch() }} /></div>
       : pending ? <div role="status" aria-label="Loading today’s plan" className="mt-4 h-[180px] rounded-xl bg-raised animate-pulse motion-reduce:animate-none" />
-      : today.length ? <ul className="mt-3 grid gap-3 divide-y divide-line">
+      : today.length ? <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 divide-y divide-line">
         {today.map(item => <li key={item.event.id} className="pt-3 first:pt-0">
           {item.kind === 'training' ? <TodayTraining training={item.event} named={today.length > 1} /> : <TodayMatch game={item.event} named={today.length > 1} />}
         </li>)}
@@ -60,7 +61,7 @@ export function TodayPlan({ trainingOn, gamesOn, inView }: {
           className="flex items-center gap-3 rounded-xl bg-raised px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <CalendarCheck aria-hidden size={20} className="flex-none text-brand" />
           <span className="min-w-0">
-            <span className="block text-[15px] font-medium text-ink break-words">{next.kind === 'training' ? next.event.title : gameTitle(next.event)}</span>
+            <span className="block truncate text-[15px] font-medium text-ink">{next.kind === 'training' ? next.event.title : gameTitle(next.event)}</span>
             <span className="block text-sm text-ink-3">{when(next.event)}</span>
           </span>
         </Link>
@@ -72,6 +73,18 @@ export function TodayPlan({ trainingOn, gamesOn, inView }: {
 const when = (event: { event_date: string | null; start_time: string | null; starts_at: string }) => {
   const { day, time } = gameWhen(event)
   return [day, time].filter(Boolean).join(' · ')
+}
+
+/** "Training plan · <name> · 40 min" on one line, as the week shows a name: a long name is cut with "…" and the rest
+ *  stays (Kostas, 29 Oct: a session plan pasted as a training's name, 1,000 characters, filled the card). */
+function PlanLabel({ kind, name, after }: { kind: string; name: string | null; after?: string | null }) {
+  // It takes what the link beside it leaves (from nothing up), so the link stays on its line and the name gives way.
+  return <p className="flex min-w-0 flex-1 basis-0 items-baseline overflow-hidden text-sm font-medium text-brand">
+    <span className="flex-none">{kind}</span>
+    {/* A no-break space: an ordinary one at the start of a box is dropped. */}
+    {name && <span className="min-w-0 truncate">{'\u00a0· '}{name}</span>}
+    {after && <span className="flex-none whitespace-nowrap">{'\u00a0· '}{after}</span>}
+  </p>
 }
 
 /** Today's training as a quick snapshot (Kostas, 28 Oct): each practice and how long it runs. The week above already
@@ -87,10 +100,9 @@ function TodayTraining({ training, named }: { training: Training; named: boolean
     started: Date.parse(training.starts_at) <= now, over: trainingEnd(training) <= now,
   })
   const page = `/coach/training/${training.id}`
-  const label = ['Training plan', named ? training.title : null, practices.length ? `${plannedMinutes(practices)} min` : null].filter(Boolean).join(' · ')
-  return <article aria-label={`Training, ${training.title}`} className="grid gap-2">
-    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-      <p className="min-w-0 text-sm font-medium text-brand break-words">{label}</p>
+  return <article aria-label={`Training, ${training.title}`} className="grid grid-cols-[minmax(0,1fr)] gap-2">
+    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <PlanLabel kind="Training plan" name={named ? training.title : null} after={practices.length ? `${plannedMinutes(practices)} min` : null} />
       {sessions.data && (!practices.length ? <Link to={page} className={linkClass}>Plan this session</Link>
         : loop.closed ? <span className="text-sm text-ink-2">Closed · <Link to={page} className={linkClass}>Open the plan</Link></span>
         : <Link to={`${page}/run`} className={linkClass}>Run it</Link>)}
@@ -111,9 +123,9 @@ function TodayTraining({ training, named }: { training: Training; named: boolean
 function TodayMatch({ game, named }: { game: Game; named: boolean }) {
   const plan = useGamePlan(game.id)
   const goals = Array.isArray(plan.data?.goals) ? (plan.data!.goals as { title?: string }[]).map(g => g.title?.trim()).filter(Boolean) : []
-  return <article aria-label={`Match, ${gameTitle(game)}`} className="grid gap-2">
-    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-      <p className="min-w-0 text-sm font-medium text-brand break-words">{['Game plan', named ? gameTitle(game) : null].filter(Boolean).join(' · ')}</p>
+  return <article aria-label={`Match, ${gameTitle(game)}`} className="grid grid-cols-[minmax(0,1fr)] gap-2">
+    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <PlanLabel kind="Game plan" name={named ? gameTitle(game) : null} />
       <Link to={`/coach/games/${game.id}?tab=plan`} className={linkClass}>{plan.data ? 'Open the game plan' : 'Write the game plan'}</Link>
     </div>
     {plan.data && (plan.data.formation || goals.length > 0) ? <dl className="grid gap-1 text-[15px]">

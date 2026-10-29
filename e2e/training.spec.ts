@@ -5,7 +5,8 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 // TRAK-295 (Training 2/5): planning a training: "How do you want to plan it?", Write my own, and the plan, at the
 // same two widths. TRAK-296 (Training 3/5): the Add/Swap sheet's My drills and Library views, and a Library preview.
 // TRAK-297 (Training 4/5): Copy a past session. TRAK-298 (Training 5/5): Run it, and a closed training's log.
-// TRAK-304: Home's Today card with a training planned today: the week first, then the day's practices.
+// TRAK-304: Home's Today card with a training planned today: the week first, then the day's practices; a long name stays
+// on one line.
 // TRAK-306: the side menu (a laptop's sidebar, a phone's sheet) cuts no letter: g, q and p keep their tails.
 // Production build, synthetic intercepted backend; test people are named after footballers.
 test.use({ timezoneId: 'Asia/Dubai' })
@@ -335,6 +336,41 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await expect(page.getByRole('dialog', { name: 'The log' }).getByRole('link', { name: 'Edit log' })).toBeVisible()
     await page.waitForTimeout(600)
     await page.screenshot({ path: testInfo.outputPath(`training-closed-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+}
+
+// Kostas, 29 Oct: a rehearsal coach's training had a whole session plan pasted as its name (1,000+ characters), and
+// Today showed all of it. The name stays on one line, cut with "…", as the week shows it; the minutes stay.
+const PASTED = `How To Win Games${' '.repeat(40)}OBJECTIVES ORGANISATION ${'Players will develop their understanding of how to organise their team effectively. '.repeat(12)}`
+for (const [width, height] of [[390, 844], [1440, 900]] as const) {
+  test(`Home at ${width} px: a long training name stays on one line in Today`, async ({ page, context }, testInfo) => {
+    const today = [...TRAININGS.map(t => t.id === 't-tue' ? training('t-tue', 'U16', 0, '18:00', 'Receiving under pressure') : t),
+      training('t-long', 'U16', 0, '19:45', PASTED)]
+    await page.route('**/rest/v1/coach_calendar_events*', route => {
+      const type = new URL(route.request().url()).searchParams.get('event_type')
+      const rows = type && type !== 'eq.training' ? [] : today
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify(rows), headers: { 'content-range': '0-0/1' } })
+    })
+    const { unexpected, errors } = await open(page, context, '/coach/home', width, height)
+    const card = page.getByRole('region', { name: 'Today' })
+    const planned = card.getByRole('article', { name: 'Training, Receiving under pressure' })
+    const long = card.getByRole('article', { name: /^Training, How To Win Games/ })
+    await expect(long.getByRole('link', { name: 'Plan this session' })).toBeVisible()
+    // Each label is one line: as tall as the words "Training plan" on their own.
+    for (const article of [planned, long]) {
+      await expect(article.getByText('Training plan', { exact: true })).toBeVisible()
+      const words = (await article.getByText('Training plan', { exact: true }).boundingBox())!
+      const label = (await article.getByText('Training plan', { exact: true }).locator('..').boundingBox())!
+      expect(Math.round(label.height)).toBe(Math.round(words.height))
+    }
+    await expect(planned.getByText('Training plan', { exact: true }).locator('..')).toHaveText('Training plan · Receiving under pressure · 40 min')
+    // The card stays a snapshot: the long one is no taller than the planned one with its two practices.
+    expect((await long.boundingBox())!.height).toBeLessThan((await planned.boundingBox())!.height)
+    await card.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath(`home-today-long-name-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
