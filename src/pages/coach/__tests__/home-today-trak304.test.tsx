@@ -122,6 +122,42 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     expect(within(card).queryByText(/Pressing zones|Finishing/)).toBeNull()
   })
 
+  it('with All picked, a coach of two age groups sees which one each plan is for (Kostas, 29 Oct)', async () => {
+    home({
+      events: [event('t1', 'training', '2026-11-04T10:00', { title: 'Pressing zones' }), event('t2', 'training', '2026-11-04T18:00', { title: 'Finishing', squad: 'U14' })],
+      practices: [practice('t1', 1, 'Rondos 4v1', 15)],
+    })
+    server.use(table('squad_players', [
+      { id: 'sp-1', coach_user_id: COACH.id, player_name: 'Mohamed Salah', age_group: 'U16', status: 'active', created_at: '2026-10-01T08:00:00Z' },
+      { id: 'sp-2', coach_user_id: COACH.id, player_name: 'Trent Alexander-Arnold', age_group: 'U14', status: 'active', created_at: '2026-10-01T08:00:00Z' },
+    ]))
+    renderApp('/coach/home')
+    const card = await today()
+    const u16 = await within(card).findByRole('article', { name: 'Training, Pressing zones' })
+    const u14 = within(card).getByRole('article', { name: 'Training, Finishing' })
+    await waitFor(() => expect(within(u16).getByText('Training plan · U16')).toBeInTheDocument())
+    expect(within(u14).getByText('Training plan · U14')).toBeInTheDocument()
+  })
+
+  it('with one age group picked, the plans need no age group: the switcher says it', async () => {
+    localStorage.setItem(`trak:coach-squad-all:${COACH.id}`, '0')
+    localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
+    home({
+      events: [event('t1', 'training', '2026-11-04T10:00', { title: 'Pressing zones' }), event('t2', 'training', '2026-11-04T18:00', { title: 'Finishing', squad: 'U14' })],
+      practices: [practice('t1', 1, 'Rondos 4v1', 15)],
+    })
+    server.use(table('squad_players', [
+      { id: 'sp-1', coach_user_id: COACH.id, player_name: 'Mohamed Salah', age_group: 'U16', status: 'active', created_at: '2026-10-01T08:00:00Z' },
+      { id: 'sp-2', coach_user_id: COACH.id, player_name: 'Trent Alexander-Arnold', age_group: 'U14', status: 'active', created_at: '2026-10-01T08:00:00Z' },
+    ]))
+    renderApp('/coach/home')
+    const card = await today()
+    const u16 = await within(card).findByRole('article', { name: 'Training, Pressing zones' })
+    await waitFor(() => expect(within(u16).getByText('Training plan')).toBeInTheDocument())
+    expect(within(card).queryByRole('article', { name: 'Training, Finishing' })).toBeNull()
+    expect(within(card).queryByText(/U16|U14/)).toBeNull()
+  })
+
   it('on a phone the week comes first, then today’s plan (Kostas, 28 Oct)', async () => {
     home({ events: [event('t1', 'training', '2026-11-04T16:00', { title: 'Pressing zones' })] })
     renderApp('/coach/home')

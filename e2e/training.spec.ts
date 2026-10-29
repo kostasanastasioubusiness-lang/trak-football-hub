@@ -349,7 +349,7 @@ const PASTED = `How To Win Games${' '.repeat(40)}OBJECTIVES ORGANISATION ${'Play
 for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   test(`Home at ${width} px: a training with a long name keeps Today a small snapshot`, async ({ page, context }, testInfo) => {
     const today = [...TRAININGS.map(t => t.id === 't-tue' ? training('t-tue', 'U16', 0, '18:00', 'Receiving under pressure') : t),
-      training('t-long', 'U16', 0, '19:45', PASTED)]
+      training('t-long', 'U14', 0, '19:45', PASTED)]
     await page.route('**/rest/v1/coach_calendar_events*', route => {
       const type = new URL(route.request().url()).searchParams.get('event_type')
       const rows = type && type !== 'eq.training' ? [] : today
@@ -360,16 +360,17 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const planned = card.getByRole('article', { name: 'Training, Receiving under pressure' })
     const long = card.getByRole('article', { name: /^Training, How To Win Games/ })
     await expect(long.getByRole('link', { name: 'Plan this session' })).toBeVisible()
-    // Each header is one line: as tall as the words "Training plan" on their own.
-    for (const article of [planned, long]) {
-      await expect(article.getByText('Training plan', { exact: true })).toBeVisible()
-      const words = (await article.getByText('Training plan', { exact: true }).boundingBox())!
-      const label = (await article.getByText('Training plan', { exact: true }).locator('..').boundingBox())!
+    // Each header is one line: as tall as its words on their own. This coach has U14 and U16, and Home starts on All, so
+    // each says its age group (Kostas, 29 Oct).
+    for (const [article, text] of [[planned, 'Training plan · U16'], [long, 'Training plan · U14']] as const) {
+      await expect(article.getByText(text, { exact: true })).toBeVisible()
+      const words = (await article.getByText(text, { exact: true }).boundingBox())!
+      const label = (await article.getByText(text, { exact: true }).locator('..').boundingBox())!
       expect(Math.round(label.height)).toBe(Math.round(words.height))
     }
     await expect(card.getByText(/How To Win Games|Receiving under pressure/)).toHaveCount(0)
     // The total time on the label's line, on the right.
-    const [total, words] = [(await planned.getByText('40 min', { exact: true }).boundingBox())!, (await planned.getByText('Training plan', { exact: true }).boundingBox())!]
+    const [total, words] = [(await planned.getByText('40 min', { exact: true }).boundingBox())!, (await planned.getByText('Training plan · U16', { exact: true }).boundingBox())!]
     expect(Math.abs(total.y - words.y)).toBeLessThanOrEqual(2)
     expect(total.x).toBeGreaterThan(words.x + words.width)
     // The card stays a snapshot: the long one is no taller than the planned one with its two practices.
@@ -396,7 +397,8 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const card = page.getByRole('region', { name: 'Today' })
     const list = card.getByRole('list', { name: 'Today’s practices' })
     await expect(list.getByRole('listitem')).toHaveText(['Warm-up: rondos 4v115 min', 'Pressing on the trigger25 min'])
-    await expect(card.getByText('Training plan', { exact: true })).toBeVisible()
+    // Kostas, 29 Oct: which age group the plan is for (this coach has U14 and U16; Home starts on All).
+    await expect(card.getByText('Training plan · U16', { exact: true })).toBeVisible()
     // Kostas, 29 Oct: no Run it; the total time is on the right.
     await expect(card.getByText('40 min', { exact: true })).toBeVisible()
     await expect(card.getByRole('link', { name: 'Run it' })).toHaveCount(0)
