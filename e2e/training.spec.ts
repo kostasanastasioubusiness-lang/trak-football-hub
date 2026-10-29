@@ -366,7 +366,11 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
       const label = (await article.getByText('Training plan', { exact: true }).locator('..').boundingBox())!
       expect(Math.round(label.height)).toBe(Math.round(words.height))
     }
-    await expect(planned.getByText('Training plan', { exact: true }).locator('..')).toHaveText('Training plan · Receiving under pressure · 40 min')
+    await expect(planned.getByText('Training plan', { exact: true }).locator('..')).toHaveText('Training plan · Receiving under pressure')
+    // The total time on the label's line, on the right.
+    const [total, words] = [(await planned.getByText('40 min', { exact: true }).boundingBox())!, (await planned.getByText('Training plan', { exact: true }).boundingBox())!]
+    expect(Math.abs(total.y - words.y)).toBeLessThanOrEqual(2)
+    expect(total.x).toBeGreaterThan(words.x + words.width)
     // The card stays a snapshot: the long one is no taller than the planned one with its two practices.
     expect((await long.boundingBox())!.height).toBeLessThan((await planned.boundingBox())!.height)
     await card.scrollIntoViewIfNeeded()
@@ -391,8 +395,10 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const card = page.getByRole('region', { name: 'Today' })
     const list = card.getByRole('list', { name: 'Today’s practices' })
     await expect(list.getByRole('listitem')).toHaveText(['Warm-up: rondos 4v115 min', 'Pressing on the trigger25 min'])
-    await expect(card.getByText('Training plan · 40 min')).toBeVisible()
-    await expect(card.getByRole('link', { name: 'Run it' })).toBeVisible()
+    await expect(card.getByText('Training plan', { exact: true })).toBeVisible()
+    // Kostas, 29 Oct: no Run it; the total time is on the right.
+    await expect(card.getByText('40 min', { exact: true })).toBeVisible()
+    await expect(card.getByRole('link', { name: 'Run it' })).toHaveCount(0)
     if (width < 1024) {
       // Kostas, 28 Oct: on a phone the week comes first.
       const week = await page.getByRole('heading', { name: 'This week' }).boundingBox()

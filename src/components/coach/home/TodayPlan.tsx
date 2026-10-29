@@ -75,20 +75,20 @@ const when = (event: { event_date: string | null; start_time: string | null; sta
   return [day, time].filter(Boolean).join(' · ')
 }
 
-/** "Training plan · <name> · 40 min" on one line, as the week shows a name: a long name is cut with "…" and the rest
- *  stays (Kostas, 29 Oct: a session plan pasted as a training's name, 1,000 characters, filled the card). */
-function PlanLabel({ kind, name, after }: { kind: string; name: string | null; after?: string | null }) {
-  // It takes what the link beside it leaves (from nothing up), so the link stays on its line and the name gives way.
+/** "Training plan · <name>" on one line, as the week shows a name: a long name is cut with "…" (Kostas, 29 Oct: a
+ *  session plan pasted as a training's name, 1,000 characters, filled the card). */
+function PlanLabel({ kind, name }: { kind: string; name: string | null }) {
+  // It takes what its right side leaves (from nothing up), so that stays on its line and the name gives way.
   return <p className="flex min-w-0 flex-1 basis-0 items-baseline overflow-hidden text-sm font-medium text-brand">
     <span className="flex-none">{kind}</span>
     {/* A no-break space: an ordinary one at the start of a box is dropped. */}
     {name && <span className="min-w-0 truncate">{'\u00a0· '}{name}</span>}
-    {after && <span className="flex-none whitespace-nowrap">{'\u00a0· '}{after}</span>}
   </p>
 }
 
 /** Today's training as a quick snapshot (Kostas, 28 Oct): each practice and how long it runs. The week above already
-    says the training's time and place, so the card doesn't. Its name only when today has more than one. */
+    says the training's time and place, so the card doesn't. Its name only when today has more than one. Kostas, 29 Oct:
+    no Run it; the training's total time sits on the right, over the practices' minutes. */
 function TodayTraining({ training, named }: { training: Training; named: boolean }) {
   const sessions = usePastSessions()
   const registers = useRegisters()
@@ -102,10 +102,9 @@ function TodayTraining({ training, named }: { training: Training; named: boolean
   const page = `/coach/training/${training.id}`
   return <article aria-label={`Training, ${training.title}`} className="grid grid-cols-[minmax(0,1fr)] gap-2">
     <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-      <PlanLabel kind="Training plan" name={named ? training.title : null} after={practices.length ? `${plannedMinutes(practices)} min` : null} />
+      <PlanLabel kind="Training plan" name={named ? training.title : null} />
       {sessions.data && (!practices.length ? <Link to={page} className={linkClass}>Plan this session</Link>
-        : loop.closed ? <span className="text-sm text-ink-2">Closed · <Link to={page} className={linkClass}>Open the plan</Link></span>
-        : <Link to={`${page}/run`} className={linkClass}>Run it</Link>)}
+        : <span className="flex-none whitespace-nowrap text-sm font-medium tabular-nums text-brand">{loop.closed && 'Closed · '}{plannedMinutes(practices)} min</span>)}
     </div>
     {sessions.isError ? <LoadError what="the plan" onRetry={() => void sessions.refetch()} />
       : !sessions.data ? null
