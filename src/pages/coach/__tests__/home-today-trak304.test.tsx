@@ -87,7 +87,7 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     const list = await within(training).findByRole('list', { name: 'Today’s practices' })
     const rows = within(list).getAllByRole('listitem')
     expect(rows.map(row => row.textContent)).toEqual(['Rondos 4v115 min', 'Pressing on the trigger25 min'])
-    expect(within(training).getByText('Training plan').parentElement).toHaveTextContent(/^Training plan$/)
+    expect(within(training).getByText('Training plan')).toBeInTheDocument()
     // Kostas, 29 Oct: no Run it; the training's total time sits where it was, on the right.
     expect(within(training).getByText('40 min')).toBeInTheDocument()
     expect(within(training).queryByRole('link')).toBeNull()
@@ -107,18 +107,19 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     expect(within(list).getAllByRole('listitem').map(row => row.textContent)).toEqual(names.map(name => `${name}10 min`))
   })
 
-  it('with two things today, each says which it is', async () => {
+  it('with two trainings today, each is just its plan, never its name: the week above has it (Kostas, 29 Oct)', async () => {
     home({
       events: [event('t1', 'training', '2026-11-04T10:00', { title: 'Pressing zones' }), event('t2', 'training', '2026-11-04T18:00', { title: 'Finishing' })],
       practices: [practice('t1', 1, 'Rondos 4v1', 15)],
     })
     renderApp('/coach/home')
     const card = await today()
-    const label = async (name: string) => within(await within(card).findByRole('article', { name })).getByText('Training plan').parentElement
-    await waitFor(async () => expect(await label('Training, Pressing zones')).toHaveTextContent(/^Training plan · Pressing zones$/))
+    const pressing = await within(card).findByRole('article', { name: 'Training, Pressing zones' })
+    const finishing = within(card).getByRole('article', { name: 'Training, Finishing' })
     // Its total, on the right, and its one practice's minutes.
-    expect(within(await within(card).findByRole('article', { name: 'Training, Pressing zones' })).getAllByText('15 min')).toHaveLength(2)
-    expect(await label('Training, Finishing')).toHaveTextContent(/^Training plan · Finishing$/)
+    await waitFor(() => expect(within(pressing).getAllByText('15 min')).toHaveLength(2))
+    for (const training of [pressing, finishing]) expect(within(training).getByText('Training plan')).toBeInTheDocument()
+    expect(within(card).queryByText(/Pressing zones|Finishing/)).toBeNull()
   })
 
   it('on a phone the week comes first, then today’s plan (Kostas, 28 Oct)', async () => {
