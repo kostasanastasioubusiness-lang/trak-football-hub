@@ -142,10 +142,17 @@ describe('orderGames (TRAK-283)', () => {
   const at = (id: string, day: number) => game({ id, starts_at: `2026-10-${String(day).padStart(2, '0')}T09:00:00+00:00`, ends_at: null })
   const now = Date.parse('2026-10-20T12:00:00Z')
 
-  it('lists upcoming matches soonest first, then past ones newest first; the next game is the soonest upcoming', () => {
-    const { next, games } = orderGames([at('past-old', 3), at('later', 30), at('past-new', 17), at('soon', 24)], now)
-    expect(games.map(g => g.id)).toEqual(['soon', 'later', 'past-new', 'past-old'])
+  it('lists matches played in the last two weeks first, then upcoming soonest first, then older ones; the next game is the soonest upcoming', () => {
+    const { next, games } = orderGames([at('past-old', 3), at('later', 30), at('past-new', 17), at('soon', 24), at('past-newer', 19)], now)
+    // TRAK-326: past-newer and past-new kicked off 1 and 3 days ago; past-old 17 days ago, outside the two weeks.
+    expect(games.map(g => g.id)).toEqual(['past-newer', 'past-new', 'soon', 'later', 'past-old'])
     expect(next?.id).toBe('soon')
+  })
+
+  it('a match in progress is first too (TRAK-326)', () => {
+    const { next, games } = orderGames([at('next-week', 27), at('today', 20)], Date.parse('2026-10-20T09:30:00Z'))
+    expect(games.map(g => g.id)).toEqual(['today', 'next-week'])
+    expect(next?.id).toBe('next-week')
   })
 
   it('a match that has kicked off is no longer the next game', () => {
