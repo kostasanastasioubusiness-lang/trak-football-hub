@@ -78,7 +78,7 @@ const cards = () => within(screen.getByRole('region', { name: 'Your matches' }))
   .map(card => card.getAttribute('href'))
 
 describe('TRAK-283: Games home', { timeout: 20_000 }, () => {
-  it("lists the coach's matches of the squad in view, soonest first, then past ones newest first; each opens its game page", async () => {
+  it("lists the coach's matches of the squad in view: played in the last two weeks, then soonest first, then older; each opens its game page", async () => {
     const user = userEvent.setup()
     const now = Date.now()
     const asked = eventsRead([
@@ -89,8 +89,9 @@ describe('TRAK-283: Games home', { timeout: 20_000 }, () => {
     ])
     renderApp('/coach/matches')
     await screen.findByRole('region', { name: 'Your matches' })
-    // All squads (TRAK-266): every match, soonest first, then past ones newest first.
-    expect(cards()).toEqual(['/coach/matches/soon', '/coach/matches/later', '/coach/matches/past-new', '/coach/matches/past-old'])
+    // All squads (TRAK-266): every match. TRAK-326: the one played 3 days ago first, as it waits for its evaluation;
+    // then soonest first; the one played 20 days ago, outside the two weeks, last.
+    expect(cards()).toEqual(['/coach/matches/past-new', '/coach/matches/soon', '/coach/matches/later', '/coach/matches/past-old'])
     const next = screen.getByRole('region', { name: 'Next match' })
     expect(within(next).getByText('vs Parkview Athletic')).toBeInTheDocument()
     expect(within(next).getByText('Plan not written')).toBeInTheDocument()
@@ -103,7 +104,7 @@ describe('TRAK-283: Games home', { timeout: 20_000 }, () => {
 
     // U14: its own match and the whole roster's; the next game follows.
     await pickSquad('U14')
-    await waitFor(() => expect(cards()).toEqual(['/coach/matches/later', '/coach/matches/past-new']))
+    await waitFor(() => expect(cards()).toEqual(['/coach/matches/past-new', '/coach/matches/later']))
     expect(within(screen.getByRole('region', { name: 'Next match' })).getByText('vs Opponent later')).toBeInTheDocument()
 
     await user.click(within(screen.getByRole('region', { name: 'Your matches' })).getByRole('link', { name: /vs Opponent past-new/ }))
@@ -174,7 +175,8 @@ describe('TRAK-320: Previous matches', { timeout: 20_000 }, () => {
     ]))
     renderApp('/coach/matches')
     const previous = await screen.findByRole('region', { name: 'Previous matches' })
-    expect(cards()).toEqual(['/coach/matches/soon', '/coach/matches/owed'])
+    // TRAK-326: the draft still owed, played 2 days ago, comes before the match to come.
+    expect(cards()).toEqual(['/coach/matches/owed', '/coach/matches/soon'])
     const links = within(previous).getAllByRole('link')
     expect(links.map(link => link.getAttribute('href'))).toEqual(['/coach/matches/lost?tab=evaluation', '/coach/matches/won?tab=evaluation'])
     expect(links[0]).toHaveTextContent('vs Dubai City FC')

@@ -77,11 +77,13 @@ export function needsAPlan<T extends GameEvent>(games: T[], now: number): T[] {
     .sort((a, b) => kickOff(a) - kickOff(b))
 }
 
-/** Upcoming matches soonest first, then past ones newest first, as the mockup orders them. The next game is the
- *  soonest that hasn't kicked off. */
+/** TRAK-326 (Imad, 31 Oct): matches that kicked off in the last two weeks first, newest first, as they wait for their
+ *  evaluation (Home's Needs you looks back as far); then upcoming soonest first; then older ones newest first. The
+ *  next game is the soonest that hasn't kicked off. */
 export function orderGames<T extends GameEvent>(games: T[], now: number): { next: T | null; games: T[] } {
   const kickOff = (game: T) => Date.parse(game.starts_at)
   const upcoming = games.filter(game => kickOff(game) > now).sort((a, b) => kickOff(a) - kickOff(b))
   const past = games.filter(game => kickOff(game) <= now).sort((a, b) => kickOff(b) - kickOff(a))
-  return { next: upcoming[0] ?? null, games: [...upcoming, ...past] }
+  const recent = past.filter(game => kickOff(game) > now - 2 * WEEK)
+  return { next: upcoming[0] ?? null, games: [...recent, ...upcoming, ...past.slice(recent.length)] }
 }
