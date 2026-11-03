@@ -3,7 +3,7 @@
 export type CoachScreen = 'home' | 'calendar' | 'squad' | 'games' | 'training' | 'library' | 'settings'
 
 export const COACH_SCREEN_PATH: Record<CoachScreen, string> = {
-  home: '/coach/home', calendar: '/coach/schedule', squad: '/coach/squad', games: '/coach/games', training: '/coach/training', library: '/coach/trainings', settings: '/settings',
+  home: '/coach/home', calendar: '/coach/schedule', squad: '/coach/squad', games: '/coach/matches', training: '/coach/training', library: '/coach/trainings', settings: '/settings',
 }
 
 /** Which nav row a path belongs to, and the name in the laptop's top bar. */
@@ -12,7 +12,7 @@ const PLACES: [prefix: string, screen: CoachScreen | null, title: string][] = [
   ['/coach/schedule', 'calendar', 'Schedule'], // TRAK-255
   ['/coach/squad', 'squad', 'Squad'],
   ['/coach/player', 'squad', 'Player'],
-  ['/coach/games', 'games', 'Games'], // TRAK-283: Games home and each game's page
+  ['/coach/matches', 'games', 'Matches'], // TRAK-283: Games home and each game's page
   ['/coach/training', 'training', 'Training'], // TRAK-294: Training home, its drills and plans
   ['/coach/trainings', 'library', 'Library'],
   ['/settings', 'settings', 'Settings'],
@@ -27,6 +27,13 @@ const PLACES: [prefix: string, screen: CoachScreen | null, title: string][] = [
 export function placeOf(path: string): { screen: CoachScreen | null; title: string } {
   const hit = PLACES.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`) || path.startsWith(`${prefix}?`))
   return hit ? { screen: hit[1], title: hit[2] } : { screen: null, title: 'Trak' }
+}
+
+/** TRAK-334: the nav row a page sits under, as the first crumb of its trail when nothing came before it (a link from
+ *  outside, a refresh). Assess and Feedback sit under none, so they go Home. */
+export function tabOf(path: string): { label: string; href: string } {
+  const href = COACH_SCREEN_PATH[placeOf(path).screen ?? 'home']
+  return { label: placeOf(href).title, href }
 }
 
 /** Pages with no bottom bar on a phone before (TRAK-254's `sideMenuOnly`) keep none: their own actions sit at the bottom,

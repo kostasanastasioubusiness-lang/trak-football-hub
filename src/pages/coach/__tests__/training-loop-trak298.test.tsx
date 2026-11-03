@@ -3,7 +3,8 @@
  * is there; on the day, Who's here opens the existing register; with the register taken, Close is next. View is the
  * plan at the pitch side (TRAK-309: it was Run it, a step of the loop, at /run). A training closes on its own once it
  * has ended with its register taken (Kostas, 28 Oct): every step done, Closed, View log; Last week says so. Nothing new
- * is stored. Test people are named after footballers.
+ * is stored. TRAK-339 (Training redo 1/5): the loop is Logistics → Plan → Who's here → Notes, and Last week gave way to
+ * Past trainings (training-home-trak339). Test people are named after footballers.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
@@ -81,6 +82,8 @@ beforeEach(() => {
     table('session_attendance', [{ squad_player_id: 'sp-1', status: 'present' }]),
     table('event_absences', []),
     table('coach_drills', []),
+    table('training_notes', []),
+    table('training_plan_drafts', []),
     rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
   )
@@ -98,27 +101,27 @@ describe('TRAK-298: the loop on a training’s page', { timeout: 30_000 }, () =>
     expect(screen.queryByRole('button', { name: 'Who’s here' })).toBeNull()
     expect(screen.getByRole('button', { name: 'View' })).toBeInTheDocument()
     expect(within(loop()).getAllByRole('listitem').map(step => step.textContent))
-      .toEqual(['1 · Plan(done)', '→2 · Who’s here(next)', '→3 · Close'])
+      .toEqual(['1 · Logistics(done)', '→2 · Plan(done)', '→3 · Who’s here(next)', '→4 · Notes'])
   })
 
-  it('on the day: Who’s here opens the existing register; once taken, Close is next', async () => {
+  it('on the day: Who’s here opens its page with the existing register; once taken, Notes are next, optional', async () => {
     const user = userEvent.setup()
     // Started 20 minutes ago, 90 minutes long.
     const taken = database([training('today', onTheMinute(Date.now() - 20 * MINUTE))], { today: [practice(1, 'Rondos 4v1')] })
     renderApp('/coach/training/today')
+    // TRAK-342: Who's here is its own page: the register, then Trak's suggestions.
     await user.click(await screen.findByRole('button', { name: 'Who’s here' }))
-    const sheet = await screen.findByRole('dialog', { name: 'Who’s here' })
-    expect(await within(sheet).findByRole('button', { name: 'Mohamed Salah: present' })).toBeInTheDocument()
-    await user.click(within(sheet).getByRole('button', { name: 'Virgil van Dijk: present' }))
-    await user.click(within(sheet).getByRole('button', { name: 'Save register' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/today/here'))
+    expect(await screen.findByRole('button', { name: 'Mohamed Salah: present' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Virgil van Dijk: present' }))
+    await user.click(screen.getByRole('button', { name: 'Done: 1 here' }))
     await waitFor(() => expect(taken).toEqual([{ p_event_id: 'today', p_present: ['sp-1'] }]))
+    expect(await screen.findByRole('button', { name: 'Change' })).toBeInTheDocument()
 
-    // The sheet closes on save; the page shows again once it has.
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Who’s here' })).toBeNull())
-    expect(loop()).toHaveTextContent(/2 · Who’s here\s*\(done\)/)
-    expect(loop()).toHaveTextContent(/3 · Close\s*\(next\)/)
-    expect(screen.getByRole('button', { name: 'Edit register' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/today'))
+    await waitFor(() => expect(loop()).toHaveTextContent(/3 · Who’s here\s*\(done\)/))
+    expect(loop()).toHaveTextContent(/4 · Notes\s*\(optional\)/)
     expect(screen.queryByText('Closed')).toBeNull()
   })
 
@@ -128,7 +131,7 @@ describe('TRAK-298: the loop on a training’s page', { timeout: 30_000 }, () =>
     renderApp('/coach/training/done')
     expect(await screen.findByText('Closed')).toBeInTheDocument()
     expect(within(loop()).getAllByText('(done)')).toHaveLength(3)
-    expect(screen.getByText('Closed. Who came is in the log.')).toBeInTheDocument()
+    expect(screen.getByText('Closed. It’s in Past trainings.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'View' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'View log' }))
     const sheet = await screen.findByRole('dialog', { name: 'The log' })
@@ -140,7 +143,7 @@ describe('TRAK-298: the loop on a training’s page', { timeout: 30_000 }, () =>
     renderApp('/coach/training/missed')
     expect(await screen.findByRole('button', { name: 'Who’s here' })).toBeInTheDocument()
     expect(screen.queryByText('Closed')).toBeNull()
-    expect(loop()).toHaveTextContent(/2 · Who’s here\s*\(now\)/)
+    expect(loop()).toHaveTextContent(/3 · Who’s here\s*\(now\)/)
   })
 
   it('a training not published says Who’s here needs it published', async () => {
@@ -160,7 +163,7 @@ describe('TRAK-298: View', { timeout: 30_000 }, () => {
     renderApp('/coach/training/soon')
     await user.click(await screen.findByRole('button', { name: 'View' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/training/soon/view'))
-    expect(screen.getByText('View')).toBeInTheDocument()
+    expect(screen.getByText('View', { selector: 'p' })).toBeInTheDocument()
     const list = await screen.findByRole('list', { name: 'Practices to run' })
     const rows = within(list).getAllByRole('listitem')
     expect(rows).toHaveLength(2)
@@ -169,7 +172,8 @@ describe('TRAK-298: View', { timeout: 30_000 }, () => {
     expect(rows[0]).toHaveTextContent('10 × 10 m')
     expect(rows[1]).toHaveTextContent('25min')
     expect(within(rows[1]).getByText('“Press when their 6 turns.”')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Back to the plan' })).toHaveAttribute('href', '/coach/training/soon')
+    // TRAK-334: the trail, in place of Back to the plan: Training, then the training's page.
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb trail' })).getAllByRole('link').map(link => link.getAttribute('href'))).toEqual(['/coach/training', '/coach/training/soon'])
   })
 
   it('the old Run it address opens View', async () => {
@@ -177,20 +181,5 @@ describe('TRAK-298: View', { timeout: 30_000 }, () => {
     renderApp('/coach/training/soon/run')
     expect(await screen.findByRole('list', { name: 'Practices to run' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/coach/training/soon/view')
-  })
-})
-
-describe('TRAK-298: Last week', { timeout: 30_000 }, () => {
-  it('says which trainings closed, and opens each one’s page', async () => {
-    const now = Date.now()
-    database([training('tue', onTheMinute(now - 5 * DAY), { title: 'Pressing zones' }), training('thu', onTheMinute(now - 2 * DAY), { title: 'Finishing' })],
-      {}, { tue: 'session-tue' })
-    renderApp('/coach/training')
-    const lastWeek = await screen.findByRole('region', { name: 'Last week' })
-    await waitFor(() => expect(within(lastWeek).getByText('Closed')).toBeInTheDocument())
-    const links = within(lastWeek).getAllByRole('link')
-    expect(links.map(link => link.getAttribute('href'))).toEqual(['/coach/training/thu', '/coach/training/tue'])
-    expect(links[0]).toHaveTextContent('No register')
-    expect(links[1]).toHaveTextContent('Closed')
   })
 })

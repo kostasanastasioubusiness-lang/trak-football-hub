@@ -13,9 +13,10 @@ import { CoachAlertsBell } from '@/components/coach/CoachAlertsBell'
 import { CoachCreate } from '@/components/coach/QuickAdd'
 import { CoachFrameContext, useCoachFrame, type CoachFrame as Frame } from '@/components/coach/coach-frame-context'
 import { useCoachSquad } from '@/lib/coach-squad'
-import { SquadPills } from '@/components/coach/home/SquadPills'
+import { SquadSwitcher } from '@/components/coach/SquadSwitcher'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { BARLESS, COACH_SCREEN_PATH, placeOf, type CoachScreen } from '@/lib/coach-places'
+import { CoachTrailProvider } from '@/components/coach/CoachTrail'
 
 /* TRAK-259 (Imad, 22 Oct): the coach's frame, around every coach page.
    Laptop: Arc's sidebar rail (the club, Home, Calendar, Squads, Library, then
@@ -87,24 +88,27 @@ function Framed({ userId, name }: { userId: string; name: string }) {
     { id: 'calendar', label: 'Schedule', icon: CalendarDays }, // TRAK-255: the coach's is called Schedule
     { id: 'squad', label: 'Squad', icon: Users },
     // TRAK-306 (Kostas, 28 Oct): Imad's pitch (TRAK-265) for Games; a cone for Training, and for Library in its place.
-    ...(games ? [{ id: 'games', label: 'Games', icon: PitchIcon }] : []),
+    ...(games ? [{ id: 'games', label: 'Matches', icon: PitchIcon }] : []),
     training ? { id: 'training', label: 'Training', icon: TrafficCone } : { id: 'library', label: 'Library', icon: TrafficCone },
   ]
   const select = (id: string) => { if (id in TO) navigate(TO[id as Screen]) }
+  // TRAK-334: a nav row starts a fresh trail; every other page's trail is where the coach came from.
+  const tabs = [...items.map(item => TO[item.id as Screen]), TO.settings]
   const club = identity?.club || 'Your academy'
   const barred = BARLESS.test(pathname)
-  const switcher = (compact: boolean) => coachSquad.view &&
-    <SquadPills squads={coachSquad.squads} value={coachSquad.view} onChange={coachSquad.pick} compact={compact} />
+  // TRAK-324: the squad switcher sits in the sidebar (a phone: at the top of the page), not in the top bar.
+  const switcher = <SquadSwitcher coachId={userId} />
 
-  return <CoachFrameContext.Provider value={frame}>
+  return <CoachFrameContext.Provider value={frame}><CoachTrailProvider tabs={tabs}>
     <SidebarRail label={club} title={title} narrow={!wide} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen} onWidthChange={setRail}
       brand={{ name: club, logo: <Avatar name={club} src={identity?.logo ?? undefined} size="sm" /> }}
       items={items} footerItem={{ id: 'settings', label: 'Settings', icon: Settings }}
       profile={{ name, detail: identity?.role ?? undefined, avatar: <Avatar name={name} size="sm" /> }}
       active={screen ?? ''} onSelect={select}
-      actions={<>{!barred && switcher(true)}<CoachAlertsBell coachId={userId} /><CoachCreate placement="top" onSaved={saved} /></>}>
+      afterBrand={!barred && switcher}
+      actions={<><CoachAlertsBell coachId={userId} /><CoachCreate placement="top" onSaved={saved} /></>}>
       {/* TRAK-307: the menu pages' margins, so the pills end where the page does. */}
-      {!wide && !barred && coachSquad.view && <div className="flex justify-end bg-ground px-5 pt-3 tablet:px-8">{switcher(false)}</div>}
+      {!wide && !barred && coachSquad.view && <div className="flex justify-end bg-ground px-5 pt-3 tablet:px-8">{switcher}</div>}
       <Outlet />
     </SidebarRail>
     {!wide && !barred && <div className="arc fixed inset-x-0 z-50 px-3 pointer-events-none" style={{ bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
@@ -113,12 +117,12 @@ function Framed({ userId, name }: { userId: string; name: string }) {
         items={[
           { value: 'home', label: 'Home', icon: <House /> },
           { value: 'squad', label: 'Squad', icon: <Users /> },
-          ...(games ? [{ value: 'games', label: 'Games', icon: <PitchIcon /> }] : []),
+          ...(games ? [{ value: 'games', label: 'Matches', icon: <PitchIcon /> }] : []),
           training ? { value: 'training', label: 'Training', icon: <TrafficCone /> } : { value: 'library', label: 'Library', icon: <TrafficCone /> },
         ]}
         actionNode={<CoachCreate placement="bar" onSaved={saved} />} />
     </div>}
-  </CoachFrameContext.Provider>
+  </CoachTrailProvider></CoachFrameContext.Provider>
 }
 
 /** The coach's avatar at the top left of a phone page: it opens the side menu. A laptop has the sidebar instead. */

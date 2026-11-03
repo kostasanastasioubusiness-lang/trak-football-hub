@@ -8,6 +8,8 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 // TRAK-304: Home's Today card with a training planned today: the week first, then the day's practices.
 // TRAK-306: the side menu (a laptop's sidebar, a phone's sheet) cuts no letter: g, q and p keep their tails.
 // TRAK-310: each training coming up has View plan and Edit plan, or Create plan, on its right.
+// TRAK-339 (Training redo 1/5): Training home like Matches: the Next training card, Upcoming trainings, Past trainings;
+// Plan session goes straight to the planner, Use a past plan copies one, and Notes close a training.
 // Production build, synthetic intercepted backend; test people are named after footballers.
 test.use({ timezoneId: 'Asia/Dubai' })
 
@@ -56,8 +58,9 @@ const players = [['Thierry Henry', 'U16'], ['Patrick Vieira', 'U16'], ['Robert P
   status: 'active', linked_player_id: null, created_at: '2026-10-01T08:00:00Z',
 }))
 
-async function backend(context: BrowserContext, unexpected: string[]) {
-  const plans = new Map(PLANNED)
+async function backend(context: BrowserContext, unexpected: string[], trainings = TRAININGS, extra: typeof PLANNED = [], sessions = SESSIONS,
+  attendance: { session_id: string; squad_player_id: string; status: string }[] = []) {
+  const plans = new Map([...PLANNED, ...extra])
   const user = { id: COACH, email: 'coach@training294.test', email_confirmed_at: '2026-10-01T00:00:00Z', created_at: '2026-10-01T00:00:00Z',
     aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
   const exp = Math.floor(Date.now() / 1000) + 3600
@@ -86,7 +89,7 @@ async function backend(context: BrowserContext, unexpected: string[]) {
       const wanted = value?.startsWith('in.(') ? value.slice(4, -1).split(',') : value ? [value.slice(3)] : null
       return (id: string) => !wanted || wanted.includes(id)
     }
-    if (path === '/rest/v1/coach_calendar_events') return json(TRAININGS.filter(t => matches('id')(t.id)))
+    if (path === '/rest/v1/coach_calendar_events') return json(trainings.filter(t => matches('id')(t.id)))
     if (path === '/rest/v1/training_plans') {
       return json([...plans.keys()].filter(matches('event_id')).map(event_id => ({ event_id, updated_at: '2026-10-28T10:00:00Z' })))
     }
@@ -95,8 +98,10 @@ async function backend(context: BrowserContext, unexpected: string[]) {
     }
     if (path === '/rest/v1/coach_sessions') {
       const id = url.searchParams.get('id')?.slice(3)
-      return json(id ? SESSIONS.filter(session => session.id === id) : SESSIONS.map(({ id: sid, event_id }) => ({ id: sid, event_id })))
+      return json(id ? sessions.filter(session => session.id === id) : sessions.map(({ id: sid, event_id }) => ({ id: sid, event_id })))
     }
+    if (path === '/rest/v1/session_attendance') return json(attendance)
+    if (path === '/rest/v1/rpc/coach_squad_player_consent_required') return json(false)
     if (path === '/rest/v1/rpc/save_training_plan') {
       const { p_event_id, p_practices } = req.postDataJSON() as { p_event_id: string; p_practices: Record<string, unknown>[] }
       // As the database does: a practice ticked "Save to My drills" becomes the coach's drill.
@@ -112,11 +117,12 @@ async function backend(context: BrowserContext, unexpected: string[]) {
   })
 }
 
-async function open(page: Page, context: BrowserContext, path: string, width: number, height: number) {
+async function open(page: Page, context: BrowserContext, path: string, width: number, height: number, trainings = TRAININGS,
+  ...more: Parameters<typeof backend> extends [unknown, unknown, unknown, ...infer R] ? R : never) {
   const unexpected: string[] = [], errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   await page.setViewportSize({ width, height })
-  await backend(context, unexpected)
+  await backend(context, unexpected, trainings, ...more)
   await page.goto(path)
   return { unexpected, errors }
 }
@@ -144,17 +150,18 @@ async function everyControlByKeyboard(page: Page, scope: string) {
 }
 
 for (const [width, height] of [[390, 844], [1440, 900]] as const) {
-  test(`Training home at ${width} px: Coming up and Last week`, async ({ page, context }, testInfo) => {
+  test(`Training home at ${width} px: the Next training card, Upcoming trainings, Past trainings`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
-    await expect(page.getByRole('heading', { level: 1, name: 'Training' })).toBeVisible()
-    const coming = page.getByRole('region', { name: 'Coming up' })
-    await expect(coming.getByRole('article')).toHaveCount(3)
-    await expect(coming.getByRole('article').first()).toContainText('Before AEK U16 on Saturday')
-    // TRAK-310: on each training's right, View plan and Edit plan, or Create plan; no New session at the top.
-    await expect(coming.getByRole('button', { name: 'Create plan' })).toHaveCount(2)
-    await expect(coming.getByRole('article', { name: /Receiving under pressure$/ }).getByRole('button')).toHaveText(['View plan', 'Edit plan'])
-    await expect(page.getByRole('button', { name: 'New session' })).toHaveCount(0)
-    await expect(page.getByRole('region', { name: 'Last week' }).getByRole('link')).toHaveCount(1)
+    await expect(page.getByRole('heading', { level: 1, name: 'Training' })).toHaveCount(1)
+    const next = page.getByRole('region', { name: 'Before AEK U16 on Saturday' })
+    await expect(next.getByText('Plan not written')).toBeVisible()
+    await expect(next.getByRole('button', { name: 'Plan session' })).toBeVisible()
+    await expect(next.getByRole('button', { name: 'Use a past plan' })).toBeVisible()
+    const upcoming = page.getByRole('region', { name: 'Upcoming trainings' }).first()
+    await expect(upcoming.getByRole('link')).toHaveCount(3)
+    await expect(upcoming.getByRole('link').first()).toContainText('Before AEK U16 on Saturday')
+    await expect(upcoming.getByRole('link', { name: /Receiving under pressure/ })).toContainText('Plan ready')
+    await expect(page.getByRole('button', { name: /^Past trainings/ })).toBeVisible()
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`training-sessions-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
@@ -165,22 +172,31 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(errors).toEqual([])
   })
 
-  // TRAK-305: one age-group switcher at the top (the top bar on a laptop, the page's top on a phone); the pick holds.
-  test(`Age groups at ${width} px: picked once at the top, kept after a reload`, async ({ page, context }, testInfo) => {
+  // TRAK-305, TRAK-324: one squad switcher (the sidebar on a laptop, the page's top on a phone); the pick holds.
+  test(`Age groups at ${width} px: picked once in the switcher, kept after a reload`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
-    const ages = page.getByRole('group', { name: 'Age group' })
-    await expect(ages.getByRole('button')).toHaveText(['All', 'U14', 'U16'])
-    await expect(ages.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
-    const coming = page.getByRole('region', { name: 'Coming up' })
-    await expect(coming.getByRole('article')).toHaveCount(3)
-    await ages.getByRole('button', { name: 'U14' }).click()
-    await expect(coming.getByRole('article')).toHaveCount(1)
-    await expect(coming.getByRole('article')).toContainText('U14 finishing')
-    await page.waitForTimeout(500)
-    await page.screenshot({ path: testInfo.outputPath(`age-groups-${width}.png`) })
+    const trigger = page.getByRole('button', { name: /^Squad: / })
+    await expect(trigger).toHaveAccessibleName(/^Squad: All squads\./)
+    const coming = page.getByRole('region', { name: 'Upcoming trainings' }).first()
+    await expect(coming.getByRole('link')).toHaveCount(3)
+    await trigger.click()
+    const options = page.getByRole('listbox').getByRole('option')
+    await expect(options).toHaveCount(3)
+    // Squads have no role, so the tick is pinned to the last column; otherwise "All squads" was cut to "All squ…".
+    expect(await options.evaluateAll(rows => rows.filter(row => {
+      const name = row.querySelector<HTMLElement>('[class*="rowName"]')!
+      return name.scrollWidth > name.clientWidth
+    }).length)).toBe(0)
+    await expect(page.getByText('Create workspace')).toHaveCount(0)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`squad-switcher-${width}.png`) })
+    await page.getByRole('option', { name: /^U14/ }).click()
+    await expect(trigger).toHaveAccessibleName(/^Squad: U14\./)
+    await expect(coming.getByRole('link')).toHaveCount(1)
+    await expect(coming.getByRole('link')).toContainText('U14 finishing')
     await page.reload()
-    await expect(page.getByRole('group', { name: 'Age group' }).getByRole('button', { name: 'U14' })).toHaveAttribute('aria-pressed', 'true')
-    await expect(page.getByRole('region', { name: 'Coming up' }).getByRole('article')).toHaveCount(1)
+    await expect(page.getByRole('button', { name: /^Squad: / })).toHaveAccessibleName(/^Squad: U14\./)
+    await expect(page.getByRole('region', { name: 'Upcoming trainings' }).first().getByRole('link')).toHaveCount(1)
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
@@ -212,107 +228,102 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     // TRAK-296: Add to <day> opens the planner with the drill, which survives the page being laid out again.
     await page.getByRole('region', { name: 'My drills' }).getByRole('button', { name: /^Add Pressing on the trigger to / }).click()
     await expect(page).toHaveURL(/\/coach\/training\/t-thu\/plan$/)
-    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(1)
+    // TRAK-340: it joins the plan as a part at the end, and the planner opens on Review.
+    await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(6)
     await page.setViewportSize({ width: width === 390 ? 1440 : 390, height })
-    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(1)
+    await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(6)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
 
-  test(`Planning at ${width} px: how to plan it, Write my own, and the plan`, async ({ page, context }, testInfo) => {
+  // TRAK-340: Plan session is parts, one step each, then Review.
+  test(`Planning at ${width} px: Trak's five parts, a drill each, Review, saved`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
-    const first = page.getByRole('region', { name: 'Coming up' }).getByRole('article').first()
-    await first.getByRole('button', { name: 'Create plan' }).click()
-    const sheet = page.getByRole('dialog', { name: 'How do you want to plan it?' })
-    await expect(sheet.getByRole('button', { name: /Write my own/ })).toBeVisible()
-    await page.waitForTimeout(600)
-    await page.screenshot({ path: testInfo.outputPath(`training-plan-how-${width}.png`) })
-    expect(await sideways(page)).toBeLessThanOrEqual(0)
-    await sheet.getByRole('button', { name: /Write my own/ }).click()
-
+    await page.getByRole('region', { name: 'Before AEK U16 on Saturday' }).getByRole('button', { name: 'Plan session' }).click()
     await expect(page).toHaveURL(/\/coach\/training\/t-thu\/plan$/)
-    const form = page.getByRole('form', { name: 'Practice 1' })
-    await form.getByLabel('Name').fill('Pressing on the trigger')
-    await form.getByRole('button', { name: '25' }).click()
-    await form.getByLabel(/What you’ll tell them/).fill('Press as soon as their 6 turns back.')
-    await form.getByRole('button', { name: 'Add practice' }).click()
-    await page.getByRole('button', { name: 'Write it' }).click()
-    await page.getByRole('form', { name: 'Practice 2' }).getByLabel('Name').fill('Finishing 3v2')
+    const warmup = page.getByRole('region', { name: 'Dry warm-up' })
+    await expect(warmup.getByRole('button', { name: /^Dynamic warm-up/, pressed: true })).toBeVisible()
+    await expect(page.getByRole('list', { name: 'Parts of the session' }).getByRole('listitem')).toHaveCount(5)
+    await warmup.getByRole('button', { name: /^Mirror drill/ }).click()
+    await expect(warmup.getByRole('button', { name: /^Mirror drill/, pressed: true })).toBeVisible()
+    await expect(warmup.getByRole('button', { name: /^Dynamic warm-up/, pressed: false })).toBeVisible()
     await page.waitForTimeout(400)
-    await page.screenshot({ path: testInfo.outputPath(`training-plan-write-${width}.png`), fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath(`training-plan-part-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
-    expect(keyboard.count).toBeGreaterThan(10)
+    const keyboard = await everyControlByKeyboard(page, '.trak-wide')
+    expect(keyboard.count).toBeGreaterThan(15)
     expect(keyboard.missed).toEqual([])
-    await page.getByRole('form', { name: 'Practice 2' }).getByRole('button', { name: 'Add practice' }).click()
+
+    for (let i = 0; i < 5; i++) await page.getByRole('button', { name: /^Next: / }).click()
+    await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible()
+    await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(5)
+    await page.getByLabel(/A note for you/).fill('Remind the back four to talk.')
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: testInfo.outputPath(`training-plan-review-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    const reviewKeys = await everyControlByKeyboard(page, '.trak-wide')
+    expect(reviewKeys.missed).toEqual([])
 
     await page.getByRole('button', { name: 'Save the plan' }).click()
-    await expect(page).toHaveURL(/\/coach\/training\/t-thu$/)
-    await expect(page.getByText('Ready')).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Practices' }).getByRole('listitem')).toHaveCount(2)
+    await expect(page).toHaveURL(/\/coach\/training$/)
+    await expect(page.getByText(/^Plan saved for Before AEK U16 on Saturday,/)).toBeVisible()
     await page.waitForTimeout(400)
-    await page.screenshot({ path: testInfo.outputPath(`training-plan-ready-${width}.png`), fullPage: true })
-    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    await page.screenshot({ path: testInfo.outputPath(`training-plan-saved-${width}.png`), fullPage: true })
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
 
-  test(`Add or swap at ${width} px: My drills, the Library and a preview`, async ({ page, context }, testInfo) => {
-    const { unexpected, errors } = await open(page, context, '/coach/training/t-tue/plan', width, height)
-    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(2)
-    await page.getByRole('button', { name: 'From My drills' }).click()
-    const sheet = page.getByRole('dialog', { name: 'Add a practice' })
-    await expect(sheet.getByRole('article', { name: 'Pressing on the trigger' })).toBeVisible()
+  test(`Planner pop-ups at ${width} px: Add a part, See more drills, Write your own`, async ({ page, context }, testInfo) => {
+    const { unexpected, errors } = await open(page, context, '/coach/training/t-thu/plan', width, height)
+    await expect(page.getByRole('region', { name: 'Dry warm-up' })).toBeVisible()
+    await page.getByRole('button', { name: 'Add a part' }).first().click()
+    const add = page.getByRole('dialog', { name: 'Add a part' })
+    await expect(add.getByRole('button', { name: /^Set pieces/ })).toBeVisible()
     await page.waitForTimeout(600)
-    await page.screenshot({ path: testInfo.outputPath(`training-add-drills-${width}.png`) })
+    await page.screenshot({ path: testInfo.outputPath(`training-plan-add-${width}.png`) })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-
-    await sheet.getByRole('button', { name: 'Library' }).click()
-    await sheet.getByRole('button', { name: 'Defending' }).click()
-    await sheet.getByRole('button', { name: 'Preview Pressing duels' }).click()
-    await expect(sheet.getByRole('heading', { name: 'Pressing duels' })).toBeVisible()
-    await expect(sheet.getByRole('link')).toHaveCount(0)
-    await page.waitForTimeout(400)
-    await page.screenshot({ path: testInfo.outputPath(`training-add-preview-${width}.png`) })
-    expect(await sideways(page)).toBeLessThanOrEqual(0)
-    await sheet.getByRole('button', { name: 'Use this' }).click()
-    await expect(sheet).toBeHidden()
-    await expect(page.getByText('Library · Defending')).toBeVisible()
-
-    await page.getByRole('button', { name: 'Swap Pressing duels' }).click()
-    const swap = page.getByRole('dialog', { name: 'Swap “Pressing duels”' })
-    await expect(swap).toBeVisible()
-    // Close, not Escape: a key pressed while the sheet is still sliding in can land before it takes focus.
-    await swap.getByRole('button', { name: 'Close' }).click()
+    await add.getByRole('button', { name: /^Cool-down/ }).click()
+    await add.getByRole('button', { name: 'Add part' }).click()
     await expect(page.getByRole('dialog')).toHaveCount(0)
-    await page.waitForTimeout(400)
-    await page.screenshot({ path: testInfo.outputPath(`training-add-plan-${width}.png`), fullPage: true })
-    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
-    expect(keyboard.missed).toEqual([])
+    await expect(page.getByRole('list', { name: 'Parts of the session' }).getByRole('listitem')).toHaveCount(6)
+
+    await page.getByRole('region', { name: 'Dry warm-up' }).getByRole('button', { name: /^See more drills/ }).click()
+    const more = page.getByRole('dialog', { name: 'More drills for Dry warm-up' })
+    await expect(more.getByRole('list', { name: 'Drills' }).getByRole('listitem')).toHaveCount(7)
+    await page.waitForTimeout(600)
+    await page.screenshot({ path: testInfo.outputPath(`training-plan-more-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    await more.getByRole('button', { name: 'Close' }).last().click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+
+    await page.getByRole('region', { name: 'Dry warm-up' }).getByRole('button', { name: 'Write your own' }).click()
+    const own = page.getByRole('dialog', { name: 'Write your own drill' })
+    await own.getByRole('button', { name: 'Save drill' }).click()
+    await expect(own.getByText('Give the drill a name.').first()).toBeVisible()
+    await page.waitForTimeout(600)
+    await page.screenshot({ path: testInfo.outputPath(`training-plan-own-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
 
-  test(`Copy a past session at ${width} px`, async ({ page, context }, testInfo) => {
+  test(`Use a past plan at ${width} px`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
-    const first = page.getByRole('region', { name: 'Coming up' }).getByRole('article').first()
-    await first.getByRole('button', { name: 'Create plan' }).click()
-    const how = page.getByRole('dialog', { name: 'How do you want to plan it?' })
-    await how.getByRole('button', { name: /Copy a past session/ }).click()
-    const copy = page.getByRole('dialog', { name: 'Copy a past session' })
-    await expect(copy.getByRole('list', { name: 'Past sessions' }).getByRole('listitem')).toHaveCount(2)
+    await page.getByRole('region', { name: 'Before AEK U16 on Saturday' }).getByRole('button', { name: 'Use a past plan' }).click()
+    const copy = page.getByRole('dialog', { name: 'Use a past plan' })
+    await expect(copy.getByRole('list', { name: 'Past plans' }).getByRole('listitem')).toHaveCount(2)
     await page.waitForTimeout(600)
     await page.screenshot({ path: testInfo.outputPath(`training-copy-${width}.png`) })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    await copy.getByRole('button', { name: /^Copy Receiving under pressure/ }).click()
+    await copy.getByRole('button', { name: /^Use this plan: Receiving under pressure/ }).click()
 
     await expect(page).toHaveURL(/\/coach\/training\/t-thu\/plan$/)
     await expect(page.getByText(/Copied from Receiving under pressure/)).toBeVisible()
     // A copy survives the page being laid out again (a phone turned, a window resized across the laptop width).
     await page.setViewportSize({ width: width === 390 ? 1440 : 390, height })
-    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(2)
+    await expect(page.getByRole('list', { name: 'Parts of the session' }).getByRole('listitem')).toHaveCount(2)
     await page.setViewportSize({ width, height })
-    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(2)
+    await expect(page.getByRole('list', { name: 'Parts of the session' }).getByRole('listitem')).toHaveCount(2)
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-copied-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
@@ -320,9 +331,62 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(errors).toEqual([])
   })
 
+  // TRAK-341: a saved plan's page is Review: Edit opens only that part, × removes one, Add a part.
+  test(`Review a saved plan at ${width} px`, async ({ page, context }, testInfo) => {
+    const { unexpected, errors } = await open(page, context, '/coach/training/t-tue', width, height)
+    await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible()
+    await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Change the plan' })).toHaveCount(0)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-review-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
+    expect(keyboard.missed).toEqual([])
+    await page.getByRole('button', { name: 'Edit Pressing on the trigger' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Edit: Pressing on the trigger' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Save and go back to Review' })).toBeVisible()
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-review-edit-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page).toHaveURL(/\/coach\/training\/t-tue$/)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+  // TRAK-342: Who's here, with the register saved: one of the two U16 players came; Trak checks each part.
+  test(`Who's here at ${width} px: the register, then Trak's suggestions`, async ({ page, context }, testInfo) => {
+    const started = Date.now() - 10 * MINUTE
+    const here = { ...training('t-here', 'U16', 0, '18:00', 'Pressing triggers'), starts_at: new Date(started).toISOString(),
+      ends_at: new Date(started + 90 * MINUTE).toISOString() }
+    const part = (position: number, trak_drill: string, name: string, part: string, part_type: string, minutes: number) => ({
+      position, name, minutes, how: '', tell: '', area: '', numbers: '', direction: '', targets: '', conditions: '', source: 'trak',
+      drill_id: null, library_session: null, trak_drill, part, part_type, players_kind: null, group_size: null })
+    const { unexpected, errors } = await open(page, context, '/coach/training/t-here/here', width, height, [here, ...TRAININGS],
+      [['t-here', [part(1, 'w1', 'Dynamic warm-up', 'Dry warm-up', 'warmup', 10), part(2, 'p4', 'Passing in pairs on the move', 'Passing & movement', 'passing', 15),
+        part(3, 'g1', 'Free play', 'Game', 'game', 25)]]],
+      [...SESSIONS, { id: 's-here', event_id: 't-here', session_type: 'training', title: 'Pressing triggers', session_date: null, training_type: null, notes: null }],
+      [{ session_id: 's-here', squad_player_id: 'sq-1', status: 'present' }])
+    await expect(page.getByRole('heading', { name: 'Today’s plan for 1 player' })).toBeVisible()
+    await expect(page.getByText('2 parts don’t work with 1 player. Change them yourself.')).toBeVisible()
+    await expect(page.getByRole('list', { name: 'Today’s plan' }).getByRole('article')).toHaveCount(3)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-here-plan-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    const keyboard = await everyControlByKeyboard(page, '.trak-wide')
+    expect(keyboard.missed).toEqual([])
+    await page.getByRole('button', { name: 'Change', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Done: 1 here' })).toBeVisible()
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-here-register-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
   test(`View and a closed training at ${width} px`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training/t-tue', width, height)
-    await expect(page.getByRole('list', { name: 'Training loop' }).getByRole('listitem')).toHaveCount(3)
+    await expect(page.getByRole('list', { name: 'Training loop' }).getByRole('listitem')).toHaveCount(4)
     await page.getByRole('button', { name: 'View', exact: true }).click()
     await expect(page).toHaveURL(/\/coach\/training\/t-tue\/view$/)
     await expect(page.getByRole('list', { name: 'Practices to run' }).getByRole('listitem')).toHaveCount(2)
@@ -332,9 +396,19 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
     expect(keyboard.missed).toEqual([])
 
+    // TRAK-339: past trainings have their own page, from the button at the bottom of Training.
     await page.goto('/coach/training')
-    await expect(page.getByRole('region', { name: 'Last week' }).getByText('Closed')).toBeVisible()
-    await page.getByRole('region', { name: 'Last week' }).getByRole('link').first().click()
+    await page.getByRole('button', { name: /^Past trainings/ }).click()
+    await expect(page).toHaveURL(/\/coach\/training\/past$/)
+    const past = page.getByRole('list', { name: 'Past trainings' }).getByRole('listitem')
+    await expect(past).toHaveCount(1)
+    await expect(past.first()).toContainText('1 practice · 30 min · Pressing zones')
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-past-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    const pastKeys = await everyControlByKeyboard(page, '.trak-wide')
+    expect(pastKeys.missed).toEqual([])
+    await past.first().getByRole('button', { name: /^View Pressing zones/ }).click()
     await expect(page).toHaveURL(/\/coach\/training\/t-last$/)
     await expect(page.getByRole('list', { name: 'Training loop' }).getByText('(done)')).toHaveCount(3)
     await page.getByRole('button', { name: 'View log' }).click()
@@ -342,6 +416,25 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.waitForTimeout(600)
     await page.screenshot({ path: testInfo.outputPath(`training-closed-${width}.png`) })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+  // TRAK-339: a training that ended three hours ago waits on the card for its Notes.
+  test(`Notes after a training at ${width} px`, async ({ page, context }, testInfo) => {
+    const ended = Date.now() - 3 * 60 * MINUTE
+    const done = { ...training('t-done', 'U16', 0, '18:00', 'Defending the box'),
+      starts_at: new Date(ended - 90 * MINUTE).toISOString(), ends_at: new Date(ended).toISOString() }
+    const { unexpected, errors } = await open(page, context, '/coach/training', width, height, [done, ...TRAININGS])
+    const card = page.getByRole('region', { name: 'Defending the box' })
+    await expect(card.getByText('Would you run this session again?')).toBeVisible()
+    await card.getByRole('button', { name: 'Yes, with changes' }).click()
+    await card.getByLabel('A note for next time').fill('Rondo grids too small.')
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-notes-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    const keyboard = await everyControlByKeyboard(page, '.trak-wide')
+    expect(keyboard.missed).toEqual([])
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })

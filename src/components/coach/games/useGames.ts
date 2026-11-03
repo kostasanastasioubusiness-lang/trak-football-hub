@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { scorers, type ScoredMatch } from '@/lib/games/scorers'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Tables } from '@/integrations/supabase/types'
 import type { EventRow } from '@/lib/coach-events'
@@ -13,7 +14,7 @@ import { absentKey, confirmedKey, loadConfirmed, loadReportedAbsent } from '@/co
 /* TRAK-283: the coach's own matches for Games, not cancelled (a published event is cancelled, never deleted).
    The squad pills filter them on screen, as Schedule's do. */
 export type Game = Pick<Tables<'coach_calendar_events'>, 'id' | 'squad' | 'title' | 'published' | 'status' | 'starts_at'
-  | 'ends_at' | 'event_date' | 'start_time' | 'opponent' | 'home_away' | 'venue'>
+  | 'ends_at' | 'event_date' | 'start_time' | 'opponent' | 'home_away' | 'venue' | 'competition'>
 
 /** `enabled`: Home asks only while the academy's games switch is on (TRAK-284). */
 export function useGames(enabled = true) {
@@ -23,7 +24,7 @@ export function useGames(enabled = true) {
     enabled: !!user && enabled,
     queryFn: async (): Promise<Game[]> => {
       const { data, error } = await supabase.from('coach_calendar_events')
-        .select('id, squad, title, published, status, starts_at, ends_at, event_date, start_time, opponent, home_away, venue')
+        .select('id, squad, title, published, status, starts_at, ends_at, event_date, start_time, opponent, home_away, venue, competition')
         .eq('coach_user_id', user!.id).eq('event_type', 'match').neq('status', 'cancelled').order('starts_at')
       if (error) throw error
       return data ?? []
@@ -127,10 +128,37 @@ export function useGameEvaluations(enabled = true) {
   return useQuery({
     queryKey: ['coach', user?.id, 'game-evaluations'],
     enabled: !!user && enabled,
-    queryFn: async (): Promise<Map<string, { savedAt: string; publishedAt: string | null }>> => {
-      const { data, error } = await supabase.from('game_evaluations').select('event_id, saved_at, published_at')
+    queryFn: async (): Promise<Map<string, { savedAt: string; publishedAt: string | null; ourScore: number | null; theirScore: number | null }>> => {
+      // TRAK-320: the score, for Previous matches.
+      const { data, error } = await supabase.from('game_evaluations').select('event_id, saved_at, published_at, our_score, their_score')
       if (error) throw error
-      return new Map((data ?? []).map(row => [row.event_id, { savedAt: row.saved_at, publishedAt: row.published_at }]))
+      return new Map((data ?? []).map(row => [row.event_id,
+        { savedAt: row.saved_at, publishedAt: row.published_at, ourScore: row.our_score, theirScore: row.their_score }]))
+    },
+  })
+}
+
+/** TRAK-321: the scorers and assists of these published matches, from the coach's own evaluations (only they read them)
+ *  and who played; named from the coach's roster. */
+export function useScorers(eventIds: string[]) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['coach', user?.id, 'scorers', eventIds],
+    enabled: !!user && eventIds.length > 0,
+    queryFn: async () => {
+      const [evaluations, played, roster] = await Promise.all([
+        supabase.from('game_evaluations').select('event_id, goals').in('event_id', eventIds),
+        supabase.from('game_evaluation_players').select('event_id, squad_player_id').in('event_id', eventIds).eq('played', true),
+        supabase.from('squad_players').select('id, player_name').eq('coach_user_id', user!.id),
+      ])
+      if (evaluations.error) throw evaluations.error
+      if (played.error) throw played.error
+      if (roster.error) throw roster.error
+      const names = new Map((roster.data ?? []).map(player => [player.id, player.player_name]))
+      return scorers((evaluations.data ?? []).filter(evaluation => eventIds.includes(evaluation.event_id)).map(evaluation => ({
+        goals: (Array.isArray(evaluation.goals) ? evaluation.goals : []) as ScoredMatch['goals'],
+        played: (played.data ?? []).filter(row => row.event_id === evaluation.event_id).map(row => row.squad_player_id),
+      })), names)
     },
   })
 }
@@ -144,7 +172,7 @@ export function useGameEvaluation(eventId: string | undefined) {
     enabled: !!user && !!eventId,
     queryFn: async () => {
       const [evaluation, players, notes] = await Promise.all([
-        supabase.from('game_evaluations').select('our_score, their_score, goals, how_they_scored, plan_worked, saved_at, published_at')
+        supabase.from('game_evaluations').select('our_score, their_score, goals, how_they_scored, plan_worked, saved_at, published_at, remind_at')
           .eq('event_id', eventId!).maybeSingle(),
         supabase.from('game_evaluation_players').select('squad_player_id, played, did_job, against_expectation').eq('event_id', eventId!),
         supabase.from('game_evaluation_notes').select('squad_player_id, note').eq('event_id', eventId!),

@@ -101,16 +101,23 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-haspopup', 'menu')
     expect(screen.queryByRole('tablist', { name: 'Coach' })).toBeNull()
 
-    // TRAK-305: the age groups sit in the top bar, not the sidebar; the pick holds from page to page.
-    expect(within(sidebar).queryByRole('button', { name: 'U16' })).toBeNull()
-    const ages = () => screen.getByRole('group', { name: 'Age group' })
-    await waitFor(() => expect(within(ages()).getAllByRole('button').map(b => b.textContent)).toEqual(['All', 'U14', 'U16']), { timeout: 5000 })
-    expect(within(ages()).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
-    await userEvent.click(within(ages()).getByRole('button', { name: 'U16' }))
+    // TRAK-324 (was TRAK-305's pills in the top bar): Arc's team switcher in the sidebar, each squad with its size; the
+    // pick holds from page to page.
+    expect(screen.queryByRole('group', { name: 'Age group' })).toBeNull()
+    const trigger = () => screen.getByRole('button', { name: /^Squad: / })
+    await waitFor(() => expect(trigger()).toHaveAccessibleName('Squad: All squads. 2 players'), { timeout: 5000 })
+    await userEvent.click(trigger())
+    const list = await screen.findByRole('listbox')
+    expect(within(list).getAllByRole('option').map(option => option.textContent)).toEqual([
+      expect.stringContaining('All squads2 players'), expect.stringContaining('U141 player'), expect.stringContaining('U161 player')])
+    expect(screen.queryByText('Create workspace')).toBeNull()
+    expect(screen.queryByText('Join with invite')).toBeNull()
+    await userEvent.click(within(list).getByRole('option', { name: /^U16/ }))
+    await waitFor(() => expect(trigger()).toHaveAccessibleName('Squad: U16. 1 player'), { timeout: 5000 })
     // The sidebar is looked up again: while a page's code loads, the frame can be rebuilt (CI, four times on #439).
     await userEvent.click(within(screen.getByRole('navigation', { name: 'Rehearsal FC' })).getByRole('button', { name: /^Squad/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
-    await waitFor(() => expect(within(ages()).getByRole('button', { name: 'U16' })).toHaveAttribute('aria-pressed', 'true'), { timeout: 5000 })
+    await waitFor(() => expect(trigger()).toHaveAccessibleName('Squad: U16. 1 player'), { timeout: 5000 })
   })
 
   it("Imad, 24 Oct: the academy's logo in the sidebar; the coach stays initials (G7)", async () => {
@@ -151,7 +158,7 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     renderApp('/coach/home')
     const offSidebar = await screen.findByRole('navigation', { name: 'Rehearsal FC' })
     expect(within(offSidebar).getByRole('button', { name: /^Library/ })).toBeInTheDocument()
-    expect(within(offSidebar).queryByRole('button', { name: /^Games/ })).toBeNull()
+    expect(within(offSidebar).queryByRole('button', { name: /^Matches/ })).toBeNull()
     cleanup()
     vi.restoreAllMocks()
 
@@ -163,23 +170,23 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     screenIs(false)
     renderApp('/coach/home')
     const tabs = await screen.findByRole('tablist', { name: 'Coach' })
-    await waitFor(() => expect(within(tabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Home', 'Squad', 'Games', 'Library']))
-    await userEvent.click(within(tabs).getByRole('tab', { name: 'Games' }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/games'))
-    await waitFor(() => expect(within(screen.getByRole('tablist', { name: 'Coach' })).getByRole('tab', { name: 'Games' })).toHaveAttribute('aria-selected', 'true'))
+    await waitFor(() => expect(within(tabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Home', 'Squad', 'Matches', 'Library']))
+    await userEvent.click(within(tabs).getByRole('tab', { name: 'Matches' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/matches'))
+    await waitFor(() => expect(within(screen.getByRole('tablist', { name: 'Coach' })).getByRole('tab', { name: 'Matches' })).toHaveAttribute('aria-selected', 'true'))
     cleanup()
 
     // The sidebar: Home · Schedule · Squad · Games · Library.
     screenIs(true)
     renderApp('/coach/home')
     const sidebar = await screen.findByRole('navigation', { name: 'Rehearsal FC' })
-    const games = await within(sidebar).findByRole('button', { name: /^Games/ })
+    const games = await within(sidebar).findByRole('button', { name: /^Matches/ })
     const order = within(sidebar).getAllByRole('button').map(button => button.textContent ?? '')
-    const rows = ['Home', 'Schedule', 'Squad', 'Games', 'Library'].map(row => order.findIndex(text => text.startsWith(row)))
+    const rows = ['Home', 'Schedule', 'Squad', 'Matches', 'Library'].map(row => order.findIndex(text => text.startsWith(row)))
     expect(rows.every(index => index >= 0)).toBe(true)
     expect(rows).toEqual([...rows].sort((a, b) => a - b))
     await userEvent.click(games)
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/games'))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/matches'))
   })
 
   it('TRAK-306 (Kostas, 28 Oct): a cone for Training, Imad’s pitch for Games, on a phone and a laptop', async () => {
@@ -193,16 +200,16 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     screenIs(false)
     renderApp('/coach/home')
     const tabs = await screen.findByRole('tablist', { name: 'Coach' })
-    await waitFor(() => expect(within(tabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Home', 'Squad', 'Games', 'Training']))
+    await waitFor(() => expect(within(tabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Home', 'Squad', 'Matches', 'Training']))
     expect(icon(within(tabs).getByRole('tab', { name: 'Training' }))).toBe('cone')
-    expect(icon(within(tabs).getByRole('tab', { name: 'Games' }))).toBe('pitch')
+    expect(icon(within(tabs).getByRole('tab', { name: 'Matches' }))).toBe('pitch')
     cleanup()
 
     screenIs(true)
     renderApp('/coach/home')
     const sidebar = await screen.findByRole('navigation', { name: 'Rehearsal FC' })
     expect(icon(await within(sidebar).findByRole('button', { name: /^Training/ }))).toBe('cone')
-    expect(icon(within(sidebar).getByRole('button', { name: /^Games/ }))).toBe('pitch')
+    expect(icon(within(sidebar).getByRole('button', { name: /^Matches/ }))).toBe('pitch')
   })
 
   it('TRAK-306: with Training off, Library takes its place with the cone, so the nav never shows the pitch twice', async () => {
@@ -211,14 +218,14 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     screenIs(false)
     renderApp('/coach/home')
     const tabs = await screen.findByRole('tablist', { name: 'Coach' })
-    await waitFor(() => expect(within(tabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Home', 'Squad', 'Games', 'Library']))
+    await waitFor(() => expect(within(tabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Home', 'Squad', 'Matches', 'Library']))
     expect(within(tabs).getByRole('tab', { name: 'Library' }).querySelector('svg')).toHaveClass('lucide-traffic-cone')
-    expect(within(tabs).getByRole('tab', { name: 'Games' }).querySelector('svg')).toHaveAttribute('viewBox', '0 0 128 128')
+    expect(within(tabs).getByRole('tab', { name: 'Matches' }).querySelector('svg')).toHaveAttribute('viewBox', '0 0 128 128')
   })
 
   it('knows which row a page belongs to', () => {
-    expect(placeOf('/coach/games')).toEqual({ screen: 'games', title: 'Games' }) // TRAK-283
-    expect(placeOf('/coach/games/ev-1')).toEqual({ screen: 'games', title: 'Games' })
+    expect(placeOf('/coach/matches')).toEqual({ screen: 'games', title: 'Matches' }) // TRAK-283
+    expect(placeOf('/coach/matches/ev-1')).toEqual({ screen: 'games', title: 'Matches' })
     expect(placeOf('/coach/training')).toEqual({ screen: 'training', title: 'Training' }) // TRAK-294
     expect(placeOf('/coach/training/drills')).toEqual({ screen: 'training', title: 'Training' })
     expect(placeOf('/coach/trainings/defending')).toEqual({ screen: 'library', title: 'Library' })

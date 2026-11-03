@@ -102,13 +102,15 @@ describe('TRAK-289: publishing the evaluation', { timeout: 30_000 }, () => {
   it('waits for every "Did the plan work?" answer before it publishes', async () => {
     const user = userEvent.setup()
     backend()
-    renderApp('/coach/games/g1?tab=evaluation')
+    renderApp('/coach/matches/g1?tab=evaluation')
     await user.click(await screen.findByRole('button', { name: 'Next: Team' }))
+    // TRAK-328 (Imad, 2 Nov): the plan's goals are instructions, here too.
+    expect(screen.getByText('One answer for each instruction.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next: Players' }))
     await user.click(screen.getByRole('button', { name: 'Next: Publish' }))
     expect(screen.getByText('2 players · 1 changed from “Met” · 1 note')).toBeInTheDocument()
     expect(publishButton()).toBeDisabled()
-    expect(screen.getByText('Answer “Did the plan work?” for every goal first.')).toBeInTheDocument()
+    expect(screen.getByText('Answer “Did the plan work?” for every instruction first.')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Back' }))
     await user.click(screen.getByRole('button', { name: 'Back' }))
@@ -125,7 +127,7 @@ describe('TRAK-289: publishing the evaluation', { timeout: 30_000 }, () => {
   it('asks the competition and home or away of a match made without them, and publishes them', async () => {
     const user = userEvent.setup()
     backend({ competition: null, home_away: null }, ['worked', 'partly'])
-    renderApp('/coach/games/g1?tab=evaluation')
+    renderApp('/coach/matches/g1?tab=evaluation')
     await user.click(await screen.findByRole('button', { name: 'Next: Team' }))
     await user.click(screen.getByRole('button', { name: 'Next: Players' }))
     await user.click(screen.getByRole('button', { name: 'Next: Publish' }))
@@ -143,7 +145,7 @@ describe('TRAK-289: publishing the evaluation', { timeout: 30_000 }, () => {
   it('once published, the loop is closed: the History, the preview, and nothing left to edit', async () => {
     const user = userEvent.setup()
     backend({}, ['worked', 'partly'])
-    renderApp('/coach/games/g1?tab=evaluation')
+    renderApp('/coach/matches/g1?tab=evaluation')
     await user.click(await screen.findByRole('button', { name: 'Next: Team' }))
     await user.click(screen.getByRole('button', { name: 'Next: Players' }))
     await user.click(screen.getByRole('button', { name: 'Next: Publish' }))
@@ -159,23 +161,23 @@ describe('TRAK-289: publishing the evaluation', { timeout: 30_000 }, () => {
 
     // A reload still shows it closed.
     cleanup()
-    renderApp('/coach/games/g1?tab=evaluation')
+    renderApp('/coach/matches/g1?tab=evaluation')
     expect(await screen.findByText('Published to 2 players and their families. The loop is closed.')).toBeInTheDocument()
   })
 
-  it('the preview shows each player what they\'ll read, and their parent the same without the note', async () => {
+  it('the preview shows each player what they\'ll read, and their parent the score and how it went, never the job or the note (TRAK-319)', async () => {
     const user = userEvent.setup()
     backend({}, ['worked', 'partly'])
-    renderApp('/coach/games/g1?tab=evaluation')
+    renderApp('/coach/matches/g1?tab=evaluation')
     await user.click(await screen.findByRole('button', { name: 'Next: Team' }))
     await user.click(screen.getByRole('button', { name: 'Next: Players' }))
     await user.click(screen.getByRole('button', { name: 'Next: Publish' }))
     const preview = screen.getByRole('region', { name: 'Preview' })
     // It opens on the first player in line-up order, Dellas.
-    expect(within(preview).getByRole('region', { name: 'After the game' })).toHaveTextContent('You did your job')
+    expect(within(preview).getByRole('region', { name: 'After the match' })).toHaveTextContent('You did your job')
     await user.click(within(preview).getByRole('combobox', { name: 'Player' }))
     await user.click(await screen.findByRole('option', { name: 'Theodoros Zagorakis' }))
-    const after = within(preview).getByRole('region', { name: 'After the game' })
+    const after = within(preview).getByRole('region', { name: 'After the match' })
     expect(after).toHaveTextContent('Final score 2–1')
     expect(after).toHaveTextContent('Your job')
     expect(after).toHaveTextContent('You did part of your job')
@@ -185,9 +187,9 @@ describe('TRAK-289: publishing the evaluation', { timeout: 30_000 }, () => {
     expect(after).toHaveTextContent('Brave all game.')
 
     await user.click(within(preview).getByRole('button', { name: 'As the parent' }))
-    const parent = within(preview).getByRole('region', { name: 'After the game' })
-    expect(parent).toHaveTextContent('Theodoros’s job')
-    expect(parent).not.toHaveTextContent('Brave all game.')
-    expect(parent).toHaveTextContent('Coach Otto Rehhagel’s note is just for Theodoros.')
+    const parent = within(preview).getByRole('region', { name: 'After the match' })
+    expect(parent).toHaveTextContent('Final score 2–1')
+    expect(parent).toHaveTextContent('Went beyond what we asked.')
+    expect(parent).not.toHaveTextContent(/’s job|Your job|You did|note is just for|Brave all game/)
   })
 })

@@ -1,6 +1,7 @@
 /**
  * TRAK-294 (Training 1/5, spec TRAK-293): with the academy's training switch on, Training takes Library's place in
- * the coach's nav. Training home lists the coach's own trainings (Coming up, then Last week) of the squad in view;
+ * the coach's nav. Training home lists the coach's own trainings of the squad in view (TRAK-339 redid it: see
+ * training-home-trak339);
  * Drills holds My drills (add, change, delete, search) and the Library's tiles. With the switch off, the nav keeps
  * Library and Training is parked. Test people are named after footballers.
  */
@@ -8,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { pickSquad } from '../../../../tests/support/squad-switcher'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
@@ -90,13 +92,13 @@ beforeEach(() => {
     table('session_attendance', []),
     table('event_absences', []),
     table('training_plans', []),
+    table('training_notes', []),
+    table('training_plan_drafts', []),
     rpc('feature_on', () => true),
   )
 })
 afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals() })
 
-const comingUp = () => within(screen.getByRole('region', { name: 'Coming up' })).queryAllByRole('article')
-  .map(card => card.getAttribute('aria-label'))
 // TRAK-296: a card's other button, Add to <training>, isn't the drill.
 const myDrills = () => within(screen.getByRole('region', { name: 'My drills' })).queryAllByRole('button')
   .map(button => button.getAttribute('aria-label')).filter(label => label?.endsWith('. Edit'))
@@ -110,44 +112,6 @@ describe('TRAK-294: Training home', { timeout: 20_000 }, () => {
     const nav = screen.getByRole('tablist', { name: 'Coach' })
     await waitFor(() => expect(within(nav).getByRole('tab', { name: 'Training' })).toHaveAttribute('aria-selected', 'true'))
     expect(within(nav).queryByRole('tab', { name: 'Library' })).toBeNull()
-  })
-
-  it("lists the coach's trainings of the squad in view: Coming up soonest first, then last week's newest first", async () => {
-    const user = userEvent.setup()
-    const now = Date.now()
-    const asked = eventsRead([
-      training('later', 'U14', onTheMinute(now + 5 * DAY)),
-      training('last-tue', 'U16', onTheMinute(now - 5 * DAY)),
-      training('soon', 'U16', onTheMinute(now + 2 * DAY), { title: 'Before AEK U16 on Saturday' }),
-      training('last-thu', null, onTheMinute(now - 2 * DAY)),
-    ])
-    drillsTable([])
-    renderApp('/coach/training')
-    await screen.findByRole('region', { name: 'Coming up' })
-    await waitFor(() => expect(comingUp()).toHaveLength(2))
-    expect(comingUp()[0]).toMatch(/Before AEK U16 on Saturday$/)
-    expect(comingUp()[1]).toMatch(/Training later$/)
-    const first = within(screen.getByRole('region', { name: 'Coming up' })).getAllByRole('article')[0]
-    expect(await within(first).findByRole('button', { name: 'Create plan' })).toBeInTheDocument()
-    expect(within(first).getByText(/90 min · U16/)).toBeInTheDocument()
-    // TRAK-310: the buttons say whether it's planned; Schedule is its own tab.
-    expect(within(first).queryByText(/Planned|Not planned/)).toBeNull()
-    expect(within(first).queryByRole('link', { name: 'Open in Schedule' })).toBeNull()
-    const lastWeek = within(screen.getByRole('region', { name: 'Last week' })).getAllByRole('link').map(link => link.getAttribute('href'))
-    // TRAK-298: a training of last week opens its own page.
-    expect(lastWeek).toEqual(['/coach/training/last-thu', '/coach/training/last-tue'])
-
-    // Only the coach's own trainings, never a cancelled one, from about a week ago.
-    const read = asked.find(url => url.searchParams.get('event_type') === 'eq.training')!
-    expect(read.searchParams.get('coach_user_id')).toBe(`eq.${COACH.id}`)
-    expect(read.searchParams.get('status')).toBe('neq.cancelled')
-    expect(Date.parse(read.searchParams.get('starts_at')!.slice(4))).toBeLessThan(now - 7 * DAY)
-
-    // U14: its own training and the whole roster's.
-    await user.click(within(screen.getByRole('group', { name: 'Age group' })).getByRole('button', { name: 'U14' }))
-    await waitFor(() => expect(comingUp()).toHaveLength(1))
-    expect(comingUp()[0]).toMatch(/Training later$/)
-    expect(within(screen.getByRole('region', { name: 'Last week' })).getAllByRole('link')).toHaveLength(1)
   })
 
   it("with no training coming up, Add a training opens Schedule's New event", async () => {
@@ -275,7 +239,7 @@ describe('TRAK-294: My drills', { timeout: 20_000 }, () => {
     eventsRead([])
     drillsTable([])
     renderApp('/coach/training')
-    await screen.findByRole('region', { name: 'Coming up' })
+    await screen.findByText('No training coming up')
     await user.click(screen.getByRole('button', { name: 'Drills' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/training/drills'))
     expect(await screen.findByRole('region', { name: 'My drills' })).toBeInTheDocument()

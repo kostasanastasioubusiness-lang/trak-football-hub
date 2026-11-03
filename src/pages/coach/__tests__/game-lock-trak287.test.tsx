@@ -84,11 +84,11 @@ describe('TRAK-287: locked at kick-off', { timeout: 30_000 }, () => {
   it('with the page open, kick-off turns the plan read-only, with no reload', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     setup({ kickOffIn: 30_000 })
-    renderApp('/coach/games/g1?tab=plan')
-    const goal = await screen.findByRole('textbox', { name: 'Goal' })
+    renderApp('/coach/matches/g1?tab=plan')
+    const goal = await screen.findByRole('textbox', { name: 'Instruction' })
     expect(goal).not.toHaveAttribute('readonly')
     expect(screen.getByRole('button', { name: 'Save draft' })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'Strength' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /^How strong are/ })).toBeInTheDocument()
 
     await act(async () => { await vi.advanceTimersByTimeAsync(31_000) })
 
@@ -96,40 +96,41 @@ describe('TRAK-287: locked at kick-off', { timeout: 30_000 }, () => {
     expect(screen.getByRole('timer', { name: 'Kick-off in' })).toHaveTextContent('Locked')
     expect(screen.getByText(/Jobs and expectations are fixed, so the evaluation reads against what you expected before the game\./)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull()
-    expect(screen.getByRole('textbox', { name: 'Goal' })).toHaveAttribute('readonly')
-    expect(screen.queryByRole('button', { name: /Add a goal|Add a key player/ })).toBeNull()
+    expect(screen.getByRole('textbox', { name: 'Instruction' })).toHaveAttribute('readonly')
+    expect(screen.queryByRole('button', { name: /Add instruction|Remove instruction/ })).toBeNull()
     // The pickers show their choice in words.
-    expect(screen.queryByRole('group', { name: 'Strength' })).toBeNull()
+    expect(screen.queryByRole('group', { name: /^How strong are/ })).toBeNull()
     expect(screen.getByText('Similar')).toBeInTheDocument()
-    expect(screen.getByText('4-3-3')).toBeInTheDocument()
   })
 
   it('locked as a draft, the alert says only the coach saw it, and Share is gone', async () => {
     const user = userEvent.setup()
     setup({ kickOffIn: -MINUTE })
-    renderApp('/coach/games/g1?tab=plan&step=share')
+    renderApp('/coach/matches/g1?tab=plan&step=share')
     expect(await screen.findByText(/It wasn’t shared, so only you saw it\./)).toBeInTheDocument()
     expect(await screen.findByRole('region', { name: 'Not shared' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Share now' })).toBeNull()
-    // The preview still shows what it would have said.
-    expect(within(screen.getByRole('region', { name: 'Preview' })).getByText('Stay tight to their winger.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Share plan' })).toBeNull()
+    // TRAK-332: the review still reads every part, with nothing to edit.
+    const review = screen.getByRole('region', { name: 'Review & share' })
+    expect(within(review).getByText('1 of 1 starters have one')).toBeInTheDocument()
+    expect(within(review).queryByRole('button', { name: /^Edit/ })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Back' }))
     expect(await screen.findByRole('heading', { name: '4-4-2' })).toBeInTheDocument()
   })
 
-  it('shared with changes still unshared, the alert counts who didn\'t get them; there is no Share the changes', async () => {
+  it('shared with changes still unshared, the alert counts who didn\'t get them; there is no Share changes', async () => {
     setup({ kickOffIn: -MINUTE, shared: true, changes: ['zagorakis', 'charisteas'] })
-    renderApp('/coach/games/g1?tab=plan&step=share')
+    renderApp('/coach/matches/g1?tab=plan&step=share')
     expect(await screen.findByText(/2 players didn’t get your last changes\./)).toBeInTheDocument()
     const shared = screen.getByRole('region', { name: 'Shared' })
-    expect(within(shared).queryByRole('button', { name: /Share the changes/ })).toBeNull()
+    expect(within(shared).queryByRole('button', { name: /Share changes/ })).toBeNull()
     expect(shared).not.toHaveTextContent('Edits stay with you')
   })
 
   it('the player\'s sheet only shows: the job reads only, context and expectation are words, nothing moves', async () => {
     const user = userEvent.setup()
     setup({ kickOffIn: -MINUTE })
-    renderApp('/coach/games/g1?tab=plan')
+    renderApp('/coach/matches/g1?tab=plan')
     await user.click(await screen.findByRole('button', { name: 'Next: Line-up and jobs' }))
     await user.click(await screen.findByRole('button', { name: /^Theodoros Zagorakis, slot 4/ }))
     const sheet = await screen.findByRole('complementary', { name: 'Theodoros Zagorakis' })

@@ -1,5 +1,5 @@
 /**
- * TRAK-289 (Games 7/8): once the coach publishes the evaluation, a guardian's event page shows After the game for their
+ * TRAK-289 (Games 7/8): once the coach publishes the evaluation, a guardian's event page shows After the match for their
  * child: the job and how it went against what was asked, and that the coach left the child a note, never the note: the
  * page never asks for it. It's the section the coach's Publish step previews as the parent. The event card says
  * Coach's review. Test people are named after footballers.
@@ -34,8 +34,8 @@ const MATCH = {
   status: 'scheduled', cancel_reason: null, sequence: 0, family_note: null,
 }
 const NAMES: Record<string, string> = { zagorakis: 'Theodoros Zagorakis', 'coach-1': 'Otto Rehhagel' }
-const REVIEW = { event_id: 'g1', session_id: 's1', squad_player_id: 'zagorakis-squad', our_score: 2, their_score: 1, job: 'Stay tight to their winger.',
-  did_job: 'partly', expectation: 'stretch', context: ['out_of_position'], against_expectation: 'above', has_note: true, coach_name: 'Otto Rehhagel',
+const REVIEW = { event_id: 'g1', session_id: 's1', squad_player_id: 'zagorakis-squad', our_score: 2, their_score: 1, job: '',
+  did_job: null, expectation: 'stretch', context: ['out_of_position'], against_expectation: 'above', has_note: false, coach_name: 'Otto Rehhagel',
   published_at: `${today}T08:00:00Z` }
 let askedForNote: string[]
 
@@ -71,14 +71,14 @@ function renderParent(element: JSX.Element, path = '/parent/event/g1') {
   </MemoryRouter></QueryClientProvider>)
 }
 
-describe('TRAK-289: After the game on a guardian\'s event page', () => {
-  it('shows the child\'s job and how it went, and that there\'s a note, never the note, as the coach\'s preview does', async () => {
+describe('TRAK-289: After the match on a guardian\'s event page', () => {
+  it('shows the score and how it went against what was asked: never the job, "did the job" or the note (TRAK-319), as the coach\'s preview does', async () => {
     renderParent(<ParentEvent />)
-    const section = await screen.findByRole('region', { name: 'After the game' })
-    expect(within(section).getByText('Theodoros’s job')).toBeInTheDocument()
-    expect(within(section).getByText('You did part of your job')).toBeInTheDocument()
+    const section = await screen.findByRole('region', { name: 'After the match' })
+    expect(section).toHaveTextContent('Final score 2–1')
     expect(within(section).getByText('Went beyond what we asked.')).toBeInTheDocument()
-    expect(within(section).getByText('Coach Otto Rehhagel’s note is just for Theodoros.')).toBeInTheDocument()
+    expect(section).not.toHaveTextContent(/’s job|Stay tight|You did|Not this time|note is just for|Brave all game/)
+    expect(within(section).getByText('What we asked: A big ask today. A solid job is a good game. (out of position)')).toBeInTheDocument()
     expect(askedForNote).toEqual([])
     const page = section.textContent
     cleanup()
@@ -88,7 +88,7 @@ describe('TRAK-289: After the game on a guardian\'s event page', () => {
       notes: [{ squad_player_id: 'zagorakis', note: 'Brave all game.' }] })
     const plans = { zagorakis: { role: 'starter' as const, slot: 4, job: 'Stay tight to their winger.', note: '', context: ['out_of_position'], expectation: 'stretch' as const } }
     render(<GameReviewSection as="parent" childName="Theodoros" review={previewReview(form, 'zagorakis', plans, 'Otto Rehhagel', 'parent')} />)
-    expect(screen.getByRole('region', { name: 'After the game' }).textContent).toBe(page)
+    expect(screen.getByRole('region', { name: 'After the match' }).textContent).toBe(page)
   })
 
   it('the event card says Coach\'s review', async () => {

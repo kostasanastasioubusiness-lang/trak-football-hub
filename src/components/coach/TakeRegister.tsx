@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { refusalWithNames, registerStart, type RegisterPlayer } from '@/lib/event-register'
+import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 
 /**
  * TRAK-138 (J8.15): the register of an event that went ahead. It opens
@@ -23,6 +24,9 @@ interface TakeRegisterProps {
   /** TRAK-176: the event's squad; null is the whole roster. */
   squad?: string | null
   onSaved: () => void
+  /** TRAK-342: Training's Who's here page. Several names to a row, so the whole squad fits a laptop screen, and the
+   *  button says how many are here ("Done: 15 here"). Everywhere else is the compact sheet register (two or three a row). */
+  wide?: boolean
 }
 
 type Loaded = {
@@ -34,7 +38,7 @@ type Loaded = {
 const font = { fontFamily: 'var(--t-font)' }
 const SAVE_FAILED = "Couldn't save the register. Check your connection and save again; your ticks are still here."
 
-export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = null, onSaved }: TakeRegisterProps) {
+export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = null, onSaved, wide = false }: TakeRegisterProps) {
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -115,7 +119,7 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
       </p>
     )
   }
-  if (!loaded) return <p className="text-[12px] text-ink-3" style={font}>Loading your squad…</p>
+  if (!loaded) return <LoadingSkeleton label="Loading your squad…" lines={1} avatar rows={4} />
 
   const absent = loaded.players.length - present.size
   return (
@@ -125,9 +129,10 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
       ) : (
         <>
           <p className="text-[12px] text-ink-2" style={font}>{present.size} present, {absent} absent</p>
-          {/* Dimos, 29 Oct: the whole squad at once, two names a row on a phone and three on a tablet,
-              so the register never scrolls. The tick and the tint say present; the name says it to a screen reader. */}
-          <ul className="grid grid-cols-2 tablet:grid-cols-3 gap-1.5 short:gap-1">
+          {/* Dimos, 29 Oct: everywhere else the whole squad shows at once too, two names a row on a phone and three
+              on a tablet, so the register sheet never scrolls. The tick and the tint say present; the button's name
+              says it to a screen reader. */}
+          <ul className={wide ? 'grid gap-1.5 tablet:grid-cols-3 laptop:grid-cols-6' : 'grid grid-cols-2 tablet:grid-cols-3 gap-1.5 short:gap-1'}>
             {loaded.players.map(p => {
               const on = present.has(p.id)
               const family = loaded.familyReason.has(p.id)
@@ -137,20 +142,22 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
                   <button type="button" onClick={() => toggle(p.id)} aria-pressed={on}
                     aria-label={`${p.name}: ${on ? 'present' : 'absent'}`}
                     title={family ? (reason ? `Can't make it · ${reason}` : "Can't make it") : undefined}
-                    className="w-full h-full flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left"
+                    className={`w-full h-full flex items-center text-left ${wide ? 'gap-3 rounded-[12px] px-3 py-2' : 'gap-2 rounded-[10px] px-2.5 py-1.5'}`}
                     style={{ background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))', border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}` }}>
-                    <span className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
+                    <span className={`${wide ? 'w-5 h-5' : 'w-4 h-4'} rounded-full flex items-center justify-center flex-shrink-0`}
                       style={{ background: on ? 'rgb(var(--t-brand))' : 'transparent', border: on ? 'none' : '1px solid rgb(var(--t-line-strong))' }}>
-                      {on && <Check size={10} color="rgb(var(--t-on-brand))" />}
+                      {on && <Check size={wide ? 12 : 10} color="rgb(var(--t-on-brand))" />}
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className={`block text-[12px] leading-tight truncate ${on ? 'text-ink' : 'text-ink-3'}`} style={font}>{p.name}</span>
+                      <span className={`block truncate ${wide ? 'text-[13px]' : 'text-[12px] leading-tight'} ${on ? 'text-ink' : 'text-ink-3'}`} style={font}>{p.name}</span>
                       {family && (
-                        <span className="block text-[10px] leading-tight text-ink-3 truncate" style={font}>
+                        <span className={`block truncate text-ink-3 ${wide ? 'text-[11px]' : 'text-[10px] leading-tight'}`} style={font}>
                           {reason ? `Can't make it · ${reason}` : "Can't make it"}
                         </span>
                       )}
                     </span>
+                    {/* TRAK-343 (Kostas, 3 Nov: as clean as the mockup): the tick says it, so the name keeps the width.
+                        The button's name still says present or absent. */}
                   </button>
                 </li>
               )
@@ -166,9 +173,9 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
       {error && <p role="alert" className="text-[12px] text-danger" style={font}>{error}</p>}
       {loaded.players.length > 0 && (
         <button type="button" onClick={save} disabled={saving}
-          className="w-full py-3 rounded-[12px] text-[14px] font-medium disabled:opacity-50"
+          className={`${wide ? 'w-full tablet:w-auto tablet:px-8' : 'w-full'} py-3 rounded-[12px] text-[14px] font-medium disabled:opacity-50`}
           style={{ background: 'rgb(var(--t-brand))', color: 'rgb(var(--t-on-brand))' }}>
-          {saving ? 'Saving…' : 'Save register'}
+          {saving ? 'Saving…' : wide ? `Done: ${present.size} here` : 'Save register'}
         </button>
       )}
     </div>

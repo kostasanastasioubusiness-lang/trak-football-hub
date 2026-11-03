@@ -110,7 +110,7 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
   it('opens at full time and not before, with the page left open', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     backend(89 * MINUTE) // full time in a minute
-    renderApp('/coach/games/g1?tab=evaluation')
+    renderApp('/coach/matches/g1?tab=evaluation')
     expect(await screen.findByRole('heading', { name: /^Opens at full time, \d\d:\d\d$/ })).toBeInTheDocument()
     expect(screen.queryByRole('spinbutton', { name: 'Our score' })).toBeNull()
     expect(screen.queryByRole('button', { name: /Save draft/ })).toBeNull()
@@ -123,7 +123,7 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
 
   it('lists who played from the plan as it locked: starters ticked, the bench unticked, nobody left out', async () => {
     backend(120 * MINUTE)
-    renderApp('/coach/games/g1?tab=evaluation')
+    renderApp('/coach/matches/g1?tab=evaluation')
     const played = await screen.findByRole('region', { name: 'Who played' })
     expect(within(within(played).getByRole('group', { name: 'Started' })).getAllByRole('checkbox').map(box => box.getAttribute('aria-checked')))
       .toEqual(['true', 'true'])
@@ -135,7 +135,7 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
   it('everyone who played starts at Yes · Met, beside the context and expectation from the plan', async () => {
     const user = userEvent.setup()
     backend(120 * MINUTE)
-    renderApp('/coach/games/g1?tab=evaluation')
+    renderApp('/coach/matches/g1?tab=evaluation')
     await screen.findByRole('spinbutton', { name: 'Our score' })
     await next('Next: Team')
     await next('Next: Players')
@@ -153,9 +153,13 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
   })
 
   it('saves every step in one draft that only the coach sees, and it reloads on every step', async () => {
+    // The evening the draft is saved (21:40 in Dubai), so the alert reads its time alone (TRAK-290: another day's adds
+    // the weekday).
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-28T18:00:00Z'))
     const user = userEvent.setup()
     backend(120 * MINUTE)
-    renderApp('/coach/games/g1?tab=evaluation')
+    renderApp('/coach/matches/g1?tab=evaluation')
     // Result: 2–1, Zagorakis scored the first, Dellas didn't play, Charisteas came on.
     await user.click(await screen.findByRole('button', { name: 'Increase Our score' }))
     await user.click(screen.getByRole('button', { name: 'Increase Our score' }))
@@ -178,7 +182,7 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     const open = cardOf('Theodoros Zagorakis')
     await user.click(within(within(open).getByRole('group', { name: 'Did the job' })).getByRole('radio', { name: 'Partly' }))
     await user.click(within(within(open).getByRole('group', { name: 'Against expectation' })).getByRole('radio', { name: 'Above' }))
-    await user.type(within(open).getByRole('textbox', { name: 'Note to Theodoros · only Theodoros, not the family' }), 'Brave all game.')
+    await user.type(within(open).getByRole('textbox', { name: 'Note to Theodoros · only Theodoros sees it' }), 'Brave all game.')
     expect(screen.getByRole('button', { name: /^Theodoros Zagorakis/ })).toHaveTextContent('Did part of the job · Above')
 
     await user.click(screen.getByRole('button', { name: 'Save draft · sleep on it' }))
@@ -197,7 +201,7 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
 
     // A reload shows the draft on every step.
     cleanup()
-    renderApp('/coach/games/g1?tab=evaluation')
+    renderApp('/coach/matches/g1?tab=evaluation')
     expect(await screen.findByText('Draft saved 21:40')).toBeInTheDocument()
     expect(screen.getByRole('spinbutton', { name: 'Our score' })).toHaveAttribute('aria-valuenow', '2')
     expect(screen.getByRole('spinbutton', { name: 'Their score' })).toHaveAttribute('aria-valuenow', '1')
@@ -211,13 +215,13 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     expect(screen.getByRole('button', { name: /^Theodoros Zagorakis/ })).toHaveTextContent('Did part of the job · Above')
     expect(screen.getByRole('button', { name: /^Angelos Charisteas/ })).toHaveTextContent('Did the job · Met')
     await user.click(screen.getByRole('button', { name: /^Theodoros Zagorakis/ }))
-    expect(screen.getByRole('textbox', { name: 'Note to Theodoros · only Theodoros, not the family' })).toHaveValue('Brave all game.')
+    expect(screen.getByRole('textbox', { name: 'Note to Theodoros · only Theodoros sees it' })).toHaveValue('Brave all game.')
   })
 
   it('a refused save keeps everything entered and says why', async () => {
     const user = userEvent.setup()
     backend(120 * MINUTE, 'This evaluation is published, so it can’t change')
-    renderApp('/coach/games/g1?tab=evaluation')
+    renderApp('/coach/matches/g1?tab=evaluation')
     await user.click(await screen.findByRole('button', { name: 'Increase Our score' }))
     await user.click(screen.getByRole('button', { name: 'Save draft · sleep on it' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('This evaluation is published, so it can’t change')

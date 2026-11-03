@@ -1,7 +1,7 @@
 /**
  * TRAK-283 (Games 1/8): a game's page. The header says where the game is in its loop. Logistics shows Schedule's
- * Review rows with Shared with families or Draft and Edit in Schedule; a draft publishes in place, as Home's event
- * sheet does. Game plan and Evaluation say what will happen there, and the panel lives in the URL. Only the
+ * Review rows with Shared with families or Draft; a draft publishes in place, as Home's event sheet does. TRAK-331
+ * (Imad, 2 Nov): Edit pulls up Schedule's edit sheet right here. Game plan and Evaluation say what will happen there, and the panel lives in the URL. Only the
  * coach's own match opens. Test people are named after footballers.
  */
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
@@ -77,11 +77,11 @@ const row = (term: string) => screen.getByText(term, { selector: 'dt' }).nextEle
 describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
   it("shows where the game is and its logistics, as Schedule's Review rows; only the coach's own match is asked for", async () => {
     const asked = events([game(soon())])
-    renderApp('/coach/games/g1')
+    renderApp('/coach/matches/g1')
     expect(await screen.findByRole('heading', { level: 1, name: 'vs Parkview Athletic' })).toBeInTheDocument()
     expect(screen.getByText('Plan not written')).toBeInTheDocument()
     expect(screen.getByRole('timer', { name: 'Kick-off in' })).toBeInTheDocument()
-    const tabs = screen.getByRole('tablist', { name: 'This game' })
+    const tabs = screen.getByRole('tablist', { name: 'This match' })
     expect(within(tabs).getAllByRole('tab').map(t => t.textContent)).toEqual(['Logistics', 'Game plan', 'Evaluation'])
     expect(within(tabs).getByRole('tab', { name: 'Logistics' })).toHaveAttribute('aria-selected', 'true')
 
@@ -89,7 +89,8 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
     expect(row('Type')).toHaveTextContent('Match')
     expect(row('Opponent')).toHaveTextContent('Parkview Athletic (Home)')
     expect(row('Note for families')).toHaveTextContent('Bring water')
-    expect(screen.getByRole('link', { name: 'Edit in Schedule' })).toHaveAttribute('href', '/coach/schedule?edit=g1')
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Edit in Schedule' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
 
     const read = asked.find(url => url.searchParams.get('id') === 'eq.g1')!
@@ -100,9 +101,9 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
   it('Game plan opens its first step (TRAK-284) and Evaluation says what will happen there; the panel is in the URL and the keyboard moves between them', async () => {
     const user = userEvent.setup()
     events([game(soon())])
-    renderApp('/coach/games/g1')
+    renderApp('/coach/matches/g1')
     await user.click(await screen.findByRole('tab', { name: 'Game plan' }))
-    expect(await screen.findByRole('heading', { name: 'Your goals' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Instructions' })).toBeInTheDocument()
     expect(window.location.search).toBe('?tab=plan')
 
     await user.keyboard('{ArrowRight}')
@@ -112,7 +113,7 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
     expect(window.location.search).toBe('?tab=evaluation')
 
     cleanup()
-    renderApp('/coach/games/g1?tab=plan')
+    renderApp('/coach/matches/g1?tab=plan')
     expect(await screen.findByRole('tab', { name: 'Game plan' })).toHaveAttribute('aria-selected', 'true')
   })
 
@@ -131,7 +132,7 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
       }),
       http.post(`${SUPABASE_URL}/functions/v1/send-event-emails`, () => { emails += 1; return HttpResponse.json({}) }),
     )
-    renderApp('/coach/games/g1')
+    renderApp('/coach/matches/g1')
     expect(await screen.findByText('Draft')).toBeInTheDocument()
     expect(screen.getByText('Logistics not shared')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Publish' }))
@@ -142,29 +143,68 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
     expect(patches[0].body).toEqual({ published: true })
     expect(patches[0].url.searchParams.get('id')).toBe('eq.g1')
     await waitFor(() => expect(emails).toBe(1))
-    expect(window.location.pathname).toBe('/coach/games/g1')
+    expect(window.location.pathname).toBe('/coach/matches/g1')
   })
 
   it('once it has kicked off: locked, the countdown says so until full time (TRAK-287), and no edit', async () => {
     events([game(Date.now() - 30 * MINUTE)])
-    renderApp('/coach/games/g1')
+    renderApp('/coach/matches/g1')
     expect(await screen.findByText('Locked at kick-off')).toBeInTheDocument()
     // jsdom never shows a past countdown's label (it can't tell the countdown is on screen); the TRAK-287 test sees it flip.
     expect(screen.getByRole('timer', { name: 'Kick-off in' })).toBeInTheDocument()
     expect(screen.getByText('Shared with families')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Edit in Schedule' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
+  })
+
+  it("TRAK-331: Edit pulls up the event's edit sheet on the match page; a saved change shows here, families are told as from Schedule, and the coach never leaves", async () => {
+    const user = userEvent.setup()
+    const rows = [game(soon())]
+    events(rows)
+    const patches: Record<string, unknown>[] = []
+    let emails = 0
+    server.use(
+      http.patch(`${SUPABASE_URL}/rest/v1/coach_calendar_events`, async ({ request }) => {
+        const body = await request.json() as Record<string, unknown>
+        patches.push(body)
+        rows[0] = { ...rows[0], ...body }
+        return HttpResponse.json([{ id: 'g1' }])
+      }),
+      http.post(`${SUPABASE_URL}/functions/v1/send-event-emails`, () => { emails += 1; return HttpResponse.json({}) }),
+    )
+    renderApp('/coach/matches/g1')
+    await user.click(await screen.findByRole('button', { name: 'Edit' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Edit event' })
+    const venue = within(sheet).getByLabelText('Venue')
+    await user.clear(venue)
+    await user.type(venue, 'Al Barsha Pitch 2')
+    for (let step = 0; step < 3; step++) await user.click(within(sheet).getByRole('button', { name: 'Next' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit event' })).toBeNull())
+    expect(patches).toHaveLength(1)
+    expect(patches[0]).toMatchObject({ venue: 'Al Barsha Pitch 2' })
+    await waitFor(() => expect(row('Venue')).toHaveTextContent('Al Barsha Pitch 2'))
+    await waitFor(() => expect(emails).toBe(1))
+    expect(window.location.pathname).toBe('/coach/matches/g1')
   })
 
   it('a cancelled match says so; a match that is not the coach\'s own does not open', async () => {
     events([game(soon(), { status: 'cancelled' })])
-    renderApp('/coach/games/g1')
+    renderApp('/coach/matches/g1')
     expect(await screen.findByText('This match was cancelled.')).toBeInTheDocument()
     expect(screen.getByText('Cancelled')).toBeInTheDocument()
-    expect(screen.queryByRole('tablist', { name: 'This game' })).toBeNull()
+    expect(screen.queryByRole('tablist', { name: 'This match' })).toBeNull()
 
     cleanup()
     events([])
-    renderApp('/coach/games/someone-elses')
-    expect(await screen.findByText('This game isn’t in your games.')).toBeInTheDocument()
+    renderApp('/coach/matches/someone-elses')
+    expect(await screen.findByText('This match isn’t in your matches.')).toBeInTheDocument()
+  })
+
+  it('TRAK-315: an old Games link opens the same match, tab and step under Matches', async () => {
+    events([game(Date.now() + DAY)])
+    renderApp('/coach/games/g1?tab=plan&step=share')
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/matches/g1?tab=plan&step=share'))
+    expect(await screen.findByRole('tablist', { name: 'This match' })).toBeInTheDocument()
   })
 })

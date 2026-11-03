@@ -423,6 +423,9 @@ export type Database = {
       }
       coach_drills: {
         Row: {
+          group_size: number | null
+          part_type: string | null
+          players_kind: string | null
           area: string
           coach_user_id: string
           conditions: string
@@ -438,6 +441,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          group_size?: number | null
+          part_type?: string | null
+          players_kind?: string | null
           area?: string
           coach_user_id?: string
           conditions?: string
@@ -453,6 +459,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          group_size?: number | null
+          part_type?: string | null
+          players_kind?: string | null
           area?: string
           coach_user_id?: string
           conditions?: string
@@ -663,6 +672,7 @@ export type Database = {
           our_score: number | null
           plan_worked: (string | null)[]
           published_at: string | null
+          remind_at: string | null
           saved_at: string
           their_score: number | null
         }
@@ -673,6 +683,7 @@ export type Database = {
           our_score?: number | null
           plan_worked?: (string | null)[]
           published_at?: string | null
+          remind_at?: string | null
           saved_at?: string
           their_score?: number | null
         }
@@ -683,6 +694,7 @@ export type Database = {
           our_score?: number | null
           plan_worked?: (string | null)[]
           published_at?: string | null
+          remind_at?: string | null
           saved_at?: string
           their_score?: number | null
         }
@@ -726,6 +738,7 @@ export type Database = {
           changed_at: string | null
           event_id: string
           goals: Json
+          job: string
           note: string
           shared_at: string
           squad_player_id: string
@@ -734,6 +747,7 @@ export type Database = {
           changed_at?: string | null
           event_id: string
           goals?: Json
+          job?: string
           note?: string
           shared_at?: string
           squad_player_id: string
@@ -742,6 +756,7 @@ export type Database = {
           changed_at?: string | null
           event_id?: string
           goals?: Json
+          job?: string
           note?: string
           shared_at?: string
           squad_player_id?: string
@@ -831,7 +846,7 @@ export type Database = {
           against_expectation: string
           coach_name: string
           context: string[]
-          did_job: string
+          did_job: string | null
           event_id: string
           expectation: string
           has_note: boolean
@@ -846,7 +861,7 @@ export type Database = {
           against_expectation: string
           coach_name?: string
           context?: string[]
-          did_job: string
+          did_job?: string | null
           event_id: string
           expectation: string
           has_note?: boolean
@@ -861,7 +876,7 @@ export type Database = {
           against_expectation?: string
           coach_name?: string
           context?: string[]
-          did_job?: string
+          did_job?: string | null
           event_id?: string
           expectation?: string
           has_note?: boolean
@@ -876,17 +891,23 @@ export type Database = {
       }
       game_review_for_player: {
         Row: {
+          did_job: string | null
           event_id: string
+          job: string
           note: string
           squad_player_id: string
         }
         Insert: {
+          did_job?: string | null
           event_id: string
-          note: string
+          job?: string
+          note?: string
           squad_player_id: string
         }
         Update: {
+          did_job?: string | null
           event_id?: string
+          job?: string
           note?: string
           squad_player_id?: string
         }
@@ -1299,8 +1320,83 @@ export type Database = {
           },
         ]
       }
+      training_notes: {
+        Row: {
+          again: string | null
+          coach_user_id: string
+          created_at: string
+          event_id: string
+          note: string
+          updated_at: string
+        }
+        Insert: {
+          again?: string | null
+          coach_user_id?: string
+          created_at?: string
+          event_id: string
+          note?: string
+          updated_at?: string
+        }
+        Update: {
+          again?: string | null
+          coach_user_id?: string
+          created_at?: string
+          event_id?: string
+          note?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_notes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "coach_calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plan_drafts: {
+        Row: {
+          body: Json
+          coach_user_id: string
+          created_at: string
+          event_id: string
+          step: number
+          updated_at: string
+        }
+        Insert: {
+          body: Json
+          coach_user_id?: string
+          created_at?: string
+          event_id: string
+          step?: number
+          updated_at?: string
+        }
+        Update: {
+          body?: Json
+          coach_user_id?: string
+          created_at?: string
+          event_id?: string
+          step?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plan_drafts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "coach_calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_plan_practices: {
         Row: {
+          group_size: number | null
+          part: string
+          part_type: string | null
+          players_kind: string | null
+          trak_drill: string | null
           area: string
           conditions: string
           direction: string
@@ -1317,6 +1413,11 @@ export type Database = {
           tell: string
         }
         Insert: {
+          group_size?: number | null
+          part?: string
+          part_type?: string | null
+          players_kind?: string | null
+          trak_drill?: string | null
           area?: string
           conditions?: string
           direction?: string
@@ -1333,6 +1434,11 @@ export type Database = {
           tell?: string
         }
         Update: {
+          group_size?: number | null
+          part?: string
+          part_type?: string | null
+          players_kind?: string | null
+          trak_drill?: string | null
           area?: string
           conditions?: string
           direction?: string
@@ -1367,18 +1473,21 @@ export type Database = {
       }
       training_plans: {
         Row: {
+          note: string
           coach_user_id: string
           created_at: string
           event_id: string
           updated_at: string
         }
         Insert: {
+          note?: string
           coach_user_id?: string
           created_at?: string
           event_id: string
           updated_at?: string
         }
         Update: {
+          note?: string
           coach_user_id?: string
           created_at?: string
           event_id?: string
@@ -1471,6 +1580,10 @@ export type Database = {
       }
       share_game_plan: {
         Args: { p_event_id: string; p_talked?: boolean }
+        Returns: number
+      }
+      schedule_game_plan: {
+        Args: { p_at?: string; p_event_id: string; p_talked?: boolean }
         Returns: number
       }
       publish_game_evaluation: {
@@ -1603,7 +1716,7 @@ export type Database = {
         Returns: undefined
       }
       save_training_plan: {
-        Args: { p_event_id: string; p_practices: Json }
+        Args: { p_event_id: string; p_practices: Json; p_note?: string }
         Returns: undefined
       }
       take_event_register: {

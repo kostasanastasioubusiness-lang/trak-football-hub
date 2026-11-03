@@ -220,6 +220,8 @@ for (const [label, width, height, rail] of [
       await views.filter({ hasText: name }).click()
       await expect(views.filter({ hasText: name })).toHaveAttribute('aria-checked', 'true')
       await expect(page.getByRole('region', { name, exact: true }).getByText(/^(Loading|Checking) /)).toHaveCount(0)
+      // TRAK-335: a load still going is a skeleton now, heard as "Loading …".
+      await expect(page.getByRole('region', { name, exact: true }).getByRole('status', { name: /^Loading/ })).toHaveCount(0)
       await expect(page.getByRole('dialog')).toHaveCount(0)
     }
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
@@ -348,7 +350,7 @@ const drawnEdges = (page: Page) => page.evaluate(() => {
 // Each page's column is the same, its content starts at the margin, and nothing sits in the margins.
 const MENU_PAGES = [
   ['Home', '/coach/home', ['events', 'games', 'training']], ['Schedule', '/coach/schedule', ['events', 'games', 'training']],
-  ['Squad', '/coach/squad', ['events', 'games', 'training']], ['Games', '/coach/games', ['events', 'games', 'training']],
+  ['Squad', '/coach/squad', ['events', 'games', 'training']], ['Matches', '/coach/matches', ['events', 'games', 'training']],
   ['Training', '/coach/training', ['events', 'games', 'training']], ['Drills', '/coach/training/drills', ['events', 'games', 'training']],
   ['Settings', '/settings', ['events', 'games', 'training']], ['Library', '/coach/trainings', ['events']], // Library: Training off
 ] as const
@@ -367,6 +369,7 @@ for (const [label, width, height] of [['a phone', 390, 844], ['an upright tablet
       await expect(page.getByRole('heading').first()).toBeVisible()
       await page.waitForLoadState('networkidle')
       await expect(page.getByText(/^(Loading|Checking) /)).toHaveCount(0)
+      await expect(page.getByRole('status', { name: /^Loading/ })).toHaveCount(0)
       await page.waitForTimeout(400) // let the page settle
       // The menu pages' column (WIDE_COLUMN), if the page has it.
       const columns = page.locator('.trak-wide')

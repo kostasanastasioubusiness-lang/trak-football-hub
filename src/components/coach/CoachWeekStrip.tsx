@@ -16,13 +16,14 @@ import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton
 import { Button } from '@/components/arc/button/button'
 import { WeekPicker, type WeekDay } from '@/components/arc/blocks/availability-picker/week-picker'
 import { useCoachSquad } from '@/lib/coach-squad'
-import { STATE, actionLink } from '@/lib/games/loop'
+import { MatchAction } from '@/components/coach/games/MatchAction'
 import { coachWeek, squadName, type WeekItem, type WeekSession } from '@/lib/coach-week'
 import { loadWeek } from '@/lib/coach-week-load'
 import { publishEvent } from '@/lib/event-publish'
 import { shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
 import { eventHeading, toPlayerEvent } from '@/lib/player-events'
 import type { EventRow } from '@/lib/coach-events'
+import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 
 /**
  * TRAK-163: the coach's week on Home, drafts included, so the schedule is visible without hunting for it.
@@ -90,7 +91,7 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
 
   if (failed) return <div className="mb-4"><LoadError what="this week" onRetry={() => setAttempt(n => n + 1)} /></div>
   if (!week || week.monday !== dates[0]) {
-    return <div role="status" aria-label="Loading this week" className="h-[320px] rounded-2xl border border-line bg-surface animate-pulse motion-reduce:animate-none" />
+    return <LoadingSkeleton label="Loading this week" lines={4} rows={2} className="h-[320px] content-start rounded-2xl border border-line bg-surface p-5" />
   }
 
   const refresh = () => setAttempt(n => n + 1)
@@ -124,7 +125,7 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
         {item.step === 'review' && item.row
           ? <div className="grid gap-3">
               <p className="text-[14px] text-ink-2">The evaluation is published, so the result is final.</p>
-              <Link to={`/coach/games/${item.row.id}?tab=evaluation`}
+              <Link to={`/coach/matches/${item.row.id}?tab=evaluation`}
                 className="flex min-h-11 w-full items-center justify-center rounded-xl bg-raised text-[14px] font-medium text-ink focus-visible:ring-2 focus-visible:ring-primary">
                 Open the review</Link>
             </div>
@@ -172,12 +173,12 @@ export function NextStep({ item, coachId, roster, onChanged }: {
     {close => <TakeRegister eventId={row.id} coachId={coachId} sessionId={null} squad={row.squad ?? null} onSaved={() => { close(); onChanged() }} />}
   </StepSheet>
   // TRAK-288: where Games is on, the match's evaluation on its game page: Evaluate, then Publish once a draft is saved.
+  // TRAK-333: a split button, as every match action, with View plan and Logistics behind its chevron.
   if ((item.step === 'evaluate' || item.step === 'publish-evaluation') && row) {
-    const action = STATE[item.step === 'evaluate' ? 'fullTime' : 'evaluationDraft'].action!
-    return go(action.label, () => navigate(actionLink(row.id, action)))
+    return <MatchAction state={item.step === 'evaluate' ? 'fullTime' : 'evaluationDraft'} eventId={row.id} />
   }
   // TRAK-289: a published evaluation is final; it's read on the game page, never in the old log's editor.
-  if (item.step === 'review' && row) return go('View review', () => navigate(`/coach/games/${row.id}?tab=evaluation`))
+  if (item.step === 'review' && row) return go('View review', () => navigate(`/coach/matches/${row.id}?tab=evaluation`))
   if (item.step === 'log' && row) return go('Log it', () => navigate('/coach/sessions/quick', {
     state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away, squad: row.squad ?? null } },
   }))
