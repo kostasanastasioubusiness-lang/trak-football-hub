@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarDays, House, Settings, TrafficCone, Users } from 'lucide-react'
@@ -12,11 +12,10 @@ import { GlassTabBar } from '@/components/arc/glass-tabbar/glass-tabbar'
 import { CoachAlertsBell } from '@/components/coach/CoachAlertsBell'
 import { CoachCreate } from '@/components/coach/QuickAdd'
 import { CoachFrameContext, useCoachFrame, type CoachFrame as Frame } from '@/components/coach/coach-frame-context'
-import { useCoachSquad } from '@/lib/coach-squad'
 import { SquadSwitcher } from '@/components/coach/SquadSwitcher'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
-import { BARLESS, COACH_SCREEN_PATH, placeOf, type CoachScreen } from '@/lib/coach-places'
-import { CoachTrailProvider } from '@/components/coach/CoachTrail'
+import { BARLESS, COACH_SCREEN_PATH, placeOf, tabOf, type CoachScreen } from '@/lib/coach-places'
+import { CoachTrailProvider, TrailLink, type Trail } from '@/components/coach/CoachTrail'
 
 /* TRAK-259 (Imad, 22 Oct): the coach's frame, around every coach page.
    Laptop: Arc's sidebar rail (the club, Home, Calendar, Squads, Library, then
@@ -28,8 +27,11 @@ import { CoachTrailProvider } from '@/components/coach/CoachTrail'
    academy's games switch is on. TRAK-294: where the training switch is on,
    Training takes Library's place; the Library's pages open from Training.
    TRAK-305 (Kostas, 28 Oct): a coach with two squads or more picks All or one
-   squad here, once, and every coach page shows only that: in the top bar on a
-   laptop (top right), in a row at the top of the page on a phone. */
+   squad here, once, and every coach page shows only that: in the sidebar on a
+   laptop, and in the sheet on a phone (TRAK-376, Imad 5 Nov: no row on the page). TRAK-347 (Imad, 3 Nov): a laptop's top bar is the
+   trail, "Matches / vs Mirdif Rangers", and no longer starts with the club. TRAK-377 (Imad, 5 Nov): the page waits for
+   its code inside the frame, so the frame never does; when the app's own wait held the frame too, a phone's sidebar
+   tapped shut while a page loaded slid back in and stayed, the page under it blocked until a refresh. */
 
 type Screen = CoachScreen
 const TO = COACH_SCREEN_PATH
@@ -63,11 +65,12 @@ function Framed({ userId, name }: { userId: string; name: string }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const wide = useSideMenuScreen()
-  const coachSquad = useCoachSquad(userId)
   const identity = useCoachIdentity(userId).data
   const games = useFeature('games')
   const training = useFeature('training')
   const [sheetOpen, setSheetOpen] = useState(false)
+  // TRAK-347: the trail a page hands up on a laptop; until it does (its name still loading), its nav row's name.
+  const [trail, setTrail] = useState<Trail | null>(null)
   const listeners = useRef(new Set<() => void>())
   const { screen: place, title } = placeOf(pathname)
   const screen = training && place === 'library' ? 'training' : place
@@ -96,20 +99,19 @@ function Framed({ userId, name }: { userId: string; name: string }) {
   const tabs = [...items.map(item => TO[item.id as Screen]), TO.settings]
   const club = identity?.club || 'Your academy'
   const barred = BARLESS.test(pathname)
-  // TRAK-324: the squad switcher sits in the sidebar (a phone: at the top of the page), not in the top bar.
+  // TRAK-324: the squad switcher sits in the sidebar, not in the top bar. TRAK-376: on a phone, in the sidebar's sheet.
   const switcher = <SquadSwitcher coachId={userId} />
 
-  return <CoachFrameContext.Provider value={frame}><CoachTrailProvider tabs={tabs}>
-    <SidebarRail label={club} title={title} narrow={!wide} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen} onWidthChange={setRail}
+  return <CoachFrameContext.Provider value={frame}><CoachTrailProvider tabs={tabs} topBar={wide ? setTrail : null}>
+    <SidebarRail label={club} title={trail?.current ?? (place ? tabOf(pathname).label : title)} narrow={!wide}
+      trail={trail?.crumbs.map(crumb => <TrailLink key={crumb.href} crumb={crumb} />)} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen} onWidthChange={setRail}
       brand={{ name: club, logo: <Avatar name={club} src={identity?.logo ?? undefined} size="sm" /> }}
       items={items} footerItem={{ id: 'settings', label: 'Settings', icon: Settings }}
       profile={{ name, detail: identity?.role ?? undefined, avatar: <Avatar name={name} size="sm" /> }}
       active={screen ?? ''} onSelect={select}
       afterBrand={!barred && switcher}
       actions={<><CoachAlertsBell coachId={userId} /><CoachCreate placement="top" onSaved={saved} /></>}>
-      {/* TRAK-307: the menu pages' margins, so the pills end where the page does. */}
-      {!wide && !barred && coachSquad.view && <div className="flex justify-end bg-ground px-5 pt-3 tablet:px-8">{switcher}</div>}
-      <Outlet />
+      <Suspense fallback={<div className="min-h-screen bg-ground" />}><Outlet /></Suspense>
     </SidebarRail>
     {!wide && !barred && <div className="arc fixed inset-x-0 z-50 px-3 pointer-events-none" style={{ bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
       <GlassTabBar label="Coach" value={screen ?? ''} onValueChange={value => navigate(TO[value as Screen])}

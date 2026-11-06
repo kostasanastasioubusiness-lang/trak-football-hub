@@ -1,56 +1,58 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { format, isToday, isTomorrow } from 'date-fns'
-import { ClipboardCheck, Moon } from 'lucide-react'
+import { ClipboardCheck } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import type { EventRow } from '@/lib/coach-events'
 import type { PlayerPlans } from '@/lib/games/lineup'
 import { formToSave, hasPlayed, lineUpAtKickOff, publishSummary, type EvaluationForm } from '@/lib/games/evaluation'
-import { useWhoCanCome } from './useGames'
+import type { useWhoCanCome } from './useGames'
 import { ResultStep } from './ResultStep'
-import { TeamStep } from './TeamStep'
 import { PlayersStep } from './PlayersStep'
 import { PublishStep, ReviewPreview, type PublishChoices } from './PublishStep'
 import { GameHistory } from './GameHistory'
 import { LoadError } from '@/components/trak'
 import { Alert } from '@/components/arc/alert/alert'
+import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 
-/* TRAK-288 (Games 6/8): the Evaluation tab. It opens at full time; before that it says when. Result, Team and Players,
-   read against the plan as it locked at kick-off, as one draft only the coach sees: Save draft · sleep on it saves
+/* TRAK-288 (Games 6/8): the Evaluation tab. It opens at full time; before that it says when. Its steps,
+   read against the plan as it locked at kick-off, as one draft only the coach sees: Save draft saves
    every step at once and never publishes. The game page holds what's entered and the step, above its tabs, as it does
    for the plan. TRAK-289: Publish saves what's entered, then publishes it, and the loop closes: the alert, what each
-   reads, and the game's History. Published is final. In the app only: no email, no push. */
+   reads, and the game's History. Published is final. In the app only: no email, no push. TRAK-374 (Imad, 5 Nov): Result
+   (with "Did the plan work?"), Player evaluation and Publish, any of them from the stepper; Arc's Draft badge in the
+   bar, and no saved-at alert, moon or "sleep on it" (the 09:00 nudge stays on Home's Needs you). Match header (Imad,
+   6 Nov): Save draft moves to the match's header, so the page holds the draft's saving and publishing
+   (useEvaluationDraft); the bottom bar keeps Back, the Draft badge and Next. */
 
-const STEPS = [{ id: 'result', label: 'Result' }, { id: 'team', label: 'Team' }, { id: 'players', label: 'Players' }, { id: 'publish', label: 'Publish' }]
-const NEXT = ['Next: Team', 'Next: Players', 'Next: Publish']
+const STEPS = [{ id: 'result', label: 'Result' }, { id: 'players', label: 'Player evaluation' }, { id: 'publish', label: 'Publish' }]
+const NEXT = ['Next: Player evaluation', 'Next: Publish']
 const SAVE_FAILED = "Couldn't save the evaluation. Check your connection and try again; everything you entered is still here."
 const PUBLISH_FAILED = "Couldn't publish the evaluation. Check your connection and try again; everything you entered is still here."
 // The database says why it refused: not full time yet, published, a missing answer, or a child who can't be recorded.
 const said = (error: { code?: string; message?: string }, otherwise: string) =>
   (error.code === 'P0001' || error.code === '42501') && error.message ? error.message : otherwise
 
-export function Evaluation({ game, opensAt, plans, planGoals, form, onFormChange, step, onStep, savedAt, remindAt, publishedAt, planCreatedAt }: {
-  game: EventRow
-  /** Full time as the header shows it ("12:30") while it's still to come; null once it has passed. */
-  opensAt: string | null
-  /** The line-up and the plan's goals, as they locked at kick-off. */
-  plans: PlayerPlans; planGoals: string[]
-  form: EvaluationForm; onFormChange: (form: EvaluationForm) => void; step: number; onStep: (step: number) => void
-  /** When the draft was last saved, and when it was published; null before. */
-  savedAt: string | null; publishedAt: string | null
-  /** TRAK-290: the first 09:00 after the last save, on the academy's clock; null before a save. */
-  remindAt: string | null
-  /** For the History: when the plan was first saved; null without one. */
-  planCreatedAt: string | null
+/** Who the evaluation is about: the line-up as it locked at kick-off, among players who can still be recorded. */
+export function evaluationLineUp(plans: PlayerPlans, players: ReturnType<typeof useWhoCanCome>['players']) {
+  const { starters, bench } = lineUpAtKickOff(plans, players)
+  const listed = [...starters.map(p => ({ id: p.id, name: p.name, starter: true })), ...bench.map(p => ({ id: p.id, name: p.name, starter: false }))]
+  return { starters, bench, listed }
+}
+
+/** The evaluation as a draft: what Save draft and Publish write, and what they said. `change` is the form's onChange. */
+export function useEvaluationDraft({ game, form, onFormChange, listed, onSaved }: {
+  game: EventRow; form: EvaluationForm; onFormChange: (form: EvaluationForm) => void
+  /** After Save draft has saved. */
+  onSaved?: () => void
+  listed: ReturnType<typeof evaluationLineUp>['listed']
 }) {
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const client = useQueryClient()
-  const who = useWhoCanCome(game)
   const [savedNow, setSavedNow] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const [publishProblem, setPublishProblem] = useState<string | null>(null)
@@ -78,6 +80,7 @@ export function Evaluation({ game, opensAt, plans, planGoals, form, onFormChange
     },
     onSuccess: (_, sent) => {
       if (sent.version === version.current) setSavedNow(true)
+      onSaved?.()
       void refresh()
     },
     onError: (error: { code?: string; message?: string }) => setProblem(said(error, SAVE_FAILED)),
@@ -101,6 +104,28 @@ export function Evaluation({ game, opensAt, plans, planGoals, form, onFormChange
     onError: (error: { code?: string; message?: string }) => setPublishProblem(said(error, PUBLISH_FAILED)),
   })
 
+  return {
+    change, saving: save.isPending, savedNow, problem, published, publishing: publish.isPending, publishProblem,
+    submit: () => save.mutate({ args: formToSave(game.id, form, listed), version: version.current }),
+    publish: (choices: PublishChoices) => { setPublishProblem(null); publish.mutate({ args: formToSave(game.id, form, listed), choices }) },
+  }
+}
+
+export function Evaluation({ game, opensAt, who, plans, planGoals, form, draft, step, onStep, savedAt, publishedAt, planCreatedAt }: {
+  game: EventRow
+  /** Full time as the header shows it ("12:30") while it's still to come; null once it has passed. */
+  opensAt: string | null
+  who: ReturnType<typeof useWhoCanCome>
+  /** The line-up and the plan's goals, as they locked at kick-off. */
+  plans: PlayerPlans; planGoals: string[]
+  form: EvaluationForm; draft: ReturnType<typeof useEvaluationDraft>; step: number; onStep: (step: number) => void
+  /** When the draft was last saved, and when it was published; null before. */
+  savedAt: string | null; publishedAt: string | null
+  /** For the History: when the plan was first saved; null without one. */
+  planCreatedAt: string | null
+}) {
+  const { profile } = useAuth()
+  const { change, published } = draft
   if (opensAt !== null) {
     return <div className="pt-4"><EmptyState icon={<ClipboardCheck size={24} strokeWidth={1.5} />} title={`Opens at full time, ${opensAt}`}
       description="The result, whether the plan worked, and each player against what you expected. Only you see it until you publish it." /></div>
@@ -108,8 +133,7 @@ export function Evaluation({ game, opensAt, plans, planGoals, form, onFormChange
   if (who.error) return <div className="pt-4"><LoadError what="who played" onRetry={who.retry} /></div>
   if (who.isPending) return <LoadingSkeleton label="Loading who played…" lines={1} avatar rows={4} className="pt-6" />
 
-  const { starters, bench } = lineUpAtKickOff(plans, who.players)
-  const listed = [...starters.map(p => ({ id: p.id, name: p.name, starter: true })), ...bench.map(p => ({ id: p.id, name: p.name, starter: false }))]
+  const { starters, bench, listed } = evaluationLineUp(plans, who.players)
   const named = (players: typeof starters) => players.map(p => ({ id: p.id, name: p.name }))
   const played = [...starters.filter(p => hasPlayed(form, p.id, true)), ...bench.filter(p => hasPlayed(form, p.id, false))]
   const coachName = profile?.full_name?.trim() || null
@@ -135,28 +159,17 @@ export function Evaluation({ game, opensAt, plans, planGoals, form, onFormChange
 
   return (
     <div className="grid gap-5 pt-4">
-      <Alert tone="info" icon={Moon} open={savedAt !== null}
-        title={savedAt ? `Draft saved ${format(new Date(savedAt), isToday(new Date(savedAt)) ? 'HH:mm' : 'EEE HH:mm')}` : 'Draft saved'}>
-        {/* TRAK-290: the morning-after nudge, worked out as the page is read. Times are this phone's clock, as on every screen. */}
-        {remindAt && Date.now() >= Date.parse(remindAt) ? 'Good morning. Add anything you remembered overnight, then publish.'
-          : `Only you can see it.${remindAt ? ` We’ll remind you ${isToday(new Date(remindAt)) ? 'today' : isTomorrow(new Date(remindAt)) ? 'tomorrow' : format(new Date(remindAt), 'EEEE')} at ${format(new Date(remindAt), 'HH:mm')}.` : ''}`}
-      </Alert>
-      <Stepper steps={STEPS} current={step} onStepSelect={onStep} label="Evaluation" />
-      {step === 0 ? <ResultStep form={form} onFormChange={change} starters={named(starters)} bench={named(bench)} />
-        : step === 1 ? <TeamStep eventId={game.id} form={form} onFormChange={change} goals={planGoals} />
-        : step === 2 ? <PlayersStep eventId={game.id} form={form} onFormChange={change} played={named(played)} plans={plans} />
-        : <PublishStep eventId={game.id} form={form} listed={listed} plans={plans} goals={planGoals.length} coachName={coachName}
+      <Stepper steps={STEPS} current={step} onStepSelect={onStep} label="Evaluation" jumpAhead />
+      {step === 0 ? <ResultStep eventId={game.id} form={form} onFormChange={change} starters={named(starters)} bench={named(bench)} goals={planGoals} />
+        : step === 1 ? <PlayersStep eventId={game.id} form={form} onFormChange={change} played={named(played)} plans={plans} />
+        : <PublishStep eventId={game.id} form={form} listed={listed} goals={planGoals.length} onStep={onStep}
             askCompetition={!game.competition} askHomeAway={game.home_away !== 'home' && game.home_away !== 'away'}
-            onPublish={choices => { setPublishProblem(null); publish.mutate({ args: formToSave(game.id, form, listed), choices }) }}
-            publishing={publish.isPending} problem={publishProblem} />}
+            onPublish={draft.publish} publishing={draft.publishing} problem={draft.publishProblem} />}
       <div className="flex flex-wrap items-center gap-3">
         {step > 0 && <Button variant="ghost" onClick={() => onStep(step - 1)}>Back</Button>}
-        <span className="ml-auto text-sm text-ink-3">Draft · only you see it</span>
-        <Button variant="secondary" loading={save.isPending} onClick={() => save.mutate({ args: formToSave(game.id, form, listed), version: version.current })}>
-          <Moon size={16} aria-hidden="true" />{savedNow ? 'Saved' : 'Save draft · sleep on it'}</Button>
-        {step < 3 && <Button onClick={() => onStep(step + 1)}>{NEXT[step]}</Button>}
+        <span className="arc ml-auto"><Badge>Draft</Badge></span>
+        {step < 2 && <Button onClick={() => onStep(step + 1)}>{NEXT[step]}</Button>}
       </div>
-      {problem && <p role="alert" className="text-right text-[15px] text-danger">{problem}</p>}
     </div>
   )
 }

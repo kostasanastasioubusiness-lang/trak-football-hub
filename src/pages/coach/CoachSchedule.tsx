@@ -17,6 +17,7 @@ import { useCoachSquad } from '@/lib/coach-squad'
 import { squadName } from '@/lib/coach-week'
 import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
+import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useGameEvaluations } from '@/components/coach/games/useGames'
@@ -47,8 +48,9 @@ import { describeEventKit } from '@/lib/kit-templates'
 import { withAlpha } from '@/lib/with-alpha'
 import { Chip, EventEditSheet, Field, ScopeChoice } from '@/components/coach/EventEditSheet'
 import {
-  KIND_LABEL, SAVE_FAILED, SHEET, SHEET_BOTTOM, competitionProblem, failed, font, inSeries, inputClass, mono, pastProblem, type EditSheet, type Scope,
+  KIND_LABEL, SAVE_FAILED, SHEET, SHEET_BOTTOM, competitionProblem, failed, font, inSeries, inputClass, mono, pastProblem, type EditSheet, type Scope, NOTE_STEP,
 } from '@/lib/event-edit'
+import { useNotedTrainings } from '@/components/coach/training/useTraining'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 
 /* TRAK-127 (J8.4): the coach creates, edits and cancels events. A save is a
@@ -141,7 +143,7 @@ export default function CoachSchedule() {
   const navigate = useNavigate()
   // TRAK-275: a card's actions carry words only where the side menu shows (a laptop).
   const wide = useSideMenuScreen()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   // TRAK-176: the squad picked; its events and the whole-roster ones show, and new ones are saved for it.
   const coachSquad = useCoachSquad(user?.id)
   // TRAK-305: All or one squad, as picked at the top of the frame (Imad, 24 Oct: never another squad's events hidden
@@ -275,21 +277,22 @@ export default function CoachSchedule() {
 
   // TRAK-255: a day waits for the coach while an event that has started has no register (training,
   // other) or no match log (match): the same rules as its Take register and Log match buttons.
+  const noted = useNotedTrainings()
   const needsYou = useMemo(() => {
     const days = new Set<string>()
     for (const e of allEvents) {
       const r = e.row
-      if (!r || !r.published || isCancelled(r) || registerSession.has(r.id) || !hasStarted(r)) continue
+      if (!r || !r.published || isCancelled(r) || registerSession.has(r.id) || !hasStarted(r) || noted.has(r.id)) continue
       if (r.event_type === 'match' || !registerProblem(r)) days.add(e.date)
     }
     return days
-  }, [allEvents, registerSession])
+  }, [allEvents, registerSession, noted])
 
   const openNew = (date: string) =>
     setSheet({ kind: 'edit', row: null, form: { ...blankForm(date), squad: coachSquad.squad }, repeat: blankRepeat(date), scope: 'one', step: 0, error: null })
   // TRAK-182 (live run 3): an edit opens on the first step, filled in, not on Review.
-  const openEdit = (row: EventRow) =>
-    setSheet({ kind: 'edit', row, form: rowToForm(row), repeat: blankRepeat(''), scope: 'one', step: 0, error: null })
+  const openEdit = (row: EventRow, step = 0) =>
+    setSheet({ kind: 'edit', row, form: rowToForm(row), repeat: blankRepeat(''), scope: 'one', step, error: null })
   /** `evaluate`: a match already played (TRAK-288), published and opened on its evaluation. */
   const saveEvent = async (publishNow = false, evaluate = false) => {
     if (parked) return comingSoon()
@@ -421,7 +424,8 @@ export default function CoachSchedule() {
     }
     // TRAK-230: a started event isn't edited or cancelled, whatever the link says.
     if ((action === 'edit' || action === 'cancel') && startedLocked(row)) toast.error(STARTED_LOCKED)
-    else if (action === 'edit') openEdit(row)
+    // TRAK-367: Training's message line opens the form at the note (?step=).
+    else if (action === 'edit') openEdit(row, params.get('step') === String(NOTE_STEP) ? NOTE_STEP : 0)
     else if (action === 'cancel') setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })
     // The quick-add's Take register (TRAK-182 part 8): only when it can open.
     else if (action === 'register') { if (!registerProblem(row)) setSheet({ kind: 'register', row }) }
@@ -539,6 +543,8 @@ export default function CoachSchedule() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
+            {/* TRAK-376 (Imad, 5 Nov): on a phone the avatar opens the side menu, where the squad picker is. */}
+            <CoachMenuButton name={profile?.full_name || 'Coach'} />
             {/* TRAK-272: a phone has no Schedule tab, so a Back (where the coach came from, else Home). A laptop has the sidebar. */}
             <div className="laptop:hidden"><BackButton fallback="/coach/home" label="Back" /></div>
             <h1 className="text-[22px] font-light text-ink tracking-tight"

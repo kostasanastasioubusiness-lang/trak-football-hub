@@ -3,8 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { LayoutGroup } from 'motion/react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { MobileShell, NavBar } from '@/components/trak'
-import { Avatar } from '@/components/arc/avatar/avatar'
+import { PlayerFace } from '@/components/trak/PlayerFace'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useCoachSquad } from '@/lib/coach-squad'
@@ -30,7 +31,7 @@ const LEVEL: Record<AttentionLevel, { word: string; color: string }> = {
 type Overview = { squad: string | null; rows: AttentionRow[]; players: number }
 
 export default function CoachFeedbackPage() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const coachSquad = useCoachSquad(user?.id)
@@ -122,7 +123,11 @@ export default function CoachFeedbackPage() {
   return (
     <MobileShell width="wide">
       <div className="px-5 pt-4 pb-40">
-        <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Feedback and assessment</h1>
+        {/* TRAK-376 (Imad, 5 Nov): on a phone the avatar opens the side menu, where the squad picker is. */}
+        <div className="flex items-center gap-3">
+          <CoachMenuButton name={profile?.full_name || 'Coach'} />
+          <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Feedback and assessment</h1>
+        </div>
 
         <section aria-label="Feedback and assessment" className="rounded-[18px] border border-line p-4 mt-3" style={{ background: 'rgb(var(--t-surface))' }}>
           {failed ? (
@@ -142,7 +147,7 @@ export default function CoachFeedbackPage() {
             <p className="text-[12px] text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>Your players are waiting for a parent's approval.</p>
           ) : (
             asTable ? <FeedbackTable rows={overview.rows} show={show} onShow={setShow}
-              onOpen={id => navigate(`/coach/player/${id}`)}
+              onOpen={id => navigate(`/coach/squad/player/${id}`)}
               onAssess={id => navigate('/coach/assess', { state: { preselectedPlayerId: id } })} /> :
             // TRAK-252: two columns on a coach's upright tablet.
             <ul className="flex flex-col gap-2 tablet:grid tablet:grid-cols-2">
@@ -151,8 +156,8 @@ export default function CoachFeedbackPage() {
                   className="flex items-center gap-3 rounded-[10px] py-2.5 px-3 cursor-pointer active:scale-[0.99] transition-transform"
                   style={{ background: 'rgb(var(--t-raised))', borderLeft: `3px solid ${LEVEL[row.level].color}` }}
                   // TRAK-179: the player's profile, as Squad → Open profile.
-                  {...openable(`Open ${row.name}'s profile: ${LEVEL[row.level].word}`, () => navigate(`/coach/player/${row.playerId}`))}>
-                  <Avatar name={row.name} size="sm" className="arc flex-shrink-0" aria-hidden />
+                  {...openable(`Open ${row.name}'s profile: ${LEVEL[row.level].word}`, () => navigate(`/coach/squad/player/${row.playerId}`))}>
+                  <PlayerFace name={row.name} size="sm" className="arc flex-shrink-0" aria-hidden />
                   <div className="min-w-0 flex-1">
                     <p className="flex items-baseline justify-between gap-2">
                       <span className="truncate text-[13px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>{row.name}</span>
@@ -210,7 +215,7 @@ function FeedbackTable({ rows, show, onShow, onOpen, onAssess }: {
               <td className="py-2.5 pr-3">
                 <button type="button" onClick={() => onOpen(row.playerId)} aria-label={`Open ${row.name}'s profile`}
                   className="flex items-center gap-3 text-left text-[13px] font-medium text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md">
-                  <Avatar name={row.name} size="sm" className="arc flex-shrink-0" aria-hidden />
+                  <PlayerFace name={row.name} size="sm" className="arc flex-shrink-0" aria-hidden />
                   {row.name}
                 </button>
               </td>

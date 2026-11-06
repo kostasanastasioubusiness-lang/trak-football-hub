@@ -46,15 +46,22 @@ const PLAYERS = [
 
 function coachReads(players: Record<string, unknown>[] = PLAYERS) {
   server.use(
+    // TRAK-355: who the coach is watching; no one.
+    table('player_watches', []),
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach Rehearsal', nationality: 'AE' }]),
     table('squad_players', players),
     table('coach_assessments', []),
     table('coach_sessions', []),
     rpc('coach_squad_player_consent_required', () => false),
-    rpc('feature_on', () => true),
+    // TRAK-357: Squad as it is without the season plan; where it's on, Formations takes Attributes' place (formations-trak357).
+    rpc('feature_on', args => args.p_feature !== 'season_plan'),
     rpc('coach_squad_season', () => []),
     // TRAK-263: the Players view's profile facts (TRAK-260).
     table('squad_player_profiles', []),
+    // TRAK-353: the player's Can also play and roles; none.
+    table('squad_player_also_plays', []), table('squad_player_roles', []),
+    // TRAK-354: the player's objectives; none.
+    table('player_objectives', []),
     rpcRows('coach_player_birth_dates', []),
   )
 }
@@ -242,8 +249,8 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     expect(row(panel, 'Newcomer R.').querySelector('figure')).toBeNull()
     expect(row(panel, 'Leo M.')).not.toHaveTextContent('Mixed')
     expect(within(panel).queryByText(/assessed/)).toBeNull()
-    // Nobody is picked until the coach taps a row.
-    expect(within(panel).getByText('Pick a player to see their profile.')).toBeInTheDocument()
+    // Nobody's page opens until the coach taps a row (TRAK-351: a player opens as their own page, not beside the list).
+    expect(within(panel).queryByRole('region', { name: /^About / })).toBeNull()
   })
 
   // TRAK-266 (Imad, 22 Oct): the colour key only where the coach is needed, as Home's Needs you.
@@ -337,7 +344,7 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     expect(within(panel).queryByRole('button', { name: 'Edit profile' })).toBeNull()
   })
 
-  it("a failed profile read says so, never \"Not set\", and keeps the squad on screen", async () => {
+  it("a failed profile read says so, never \"Not set\", and Back still finds the whole squad", async () => {
     const user = userEvent.setup()
     coachReads(SNAP_PLAYERS)
     server.use(http.get(`${SUPABASE_URL}/rest/v1/squad_player_profiles`, () => HttpResponse.json({ message: 'unavailable' }, { status: 500 })))
@@ -346,7 +353,9 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     await user.click(await within(panel).findByRole('button', { name: /^Leo M\./ }))
     expect(await within(panel).findByRole('button', { name: 'Retry' }, { timeout: 5000 })).toBeInTheDocument()
     expect(within(panel).queryByText('Not set')).toBeNull()
-    expect(playerList(panel).getAllByRole('listitem')).toHaveLength(3)
+    // TRAK-351: the player's page has the screen to itself; Back brings the squad back, all three.
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(playerList(panel).getAllByRole('listitem')).toHaveLength(3))
   })
 })
 

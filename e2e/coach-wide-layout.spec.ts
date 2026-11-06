@@ -186,13 +186,14 @@ test("a player's Home keeps the phone column on a laptop", async ({ page, contex
 
 // TRAK-250: Squad is a coach workspace of views. TRAK-263 (Imad, 22 Oct): Players (Arc's team
 // directory) replaced Snapshot, and the views sit on Arc's glass segmented control. On a tablet
-// or a laptop it uses the room: a page wider than the phone column, the profile beside the list.
+// or a laptop it uses the room: a page wider than the phone column. TRAK-351 (Tarek, 3 Nov): a player opens as their
+// own full page, with no list beside it, and Back returns to the list.
 // [screen, width, height, rail]
 for (const [label, width, height, rail] of [
   ['an upright tablet', 820, 1180, 0],
   ['a laptop', 1440, 900, 240],
 ] as const) {
-  test(`coach Squad on ${label}: the three views across a wide page, a player's profile beside the list, no sheet`, async ({ page, context }, testInfo) => {
+  test(`coach Squad on ${label}: the three views across a wide page, a player's own full page, no sheet`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/squad', width, height)
     const views = page.getByRole('radiogroup', { name: 'Squad view' }).getByRole('radio')
     await expect(views).toHaveText(['Players', 'Attributes', 'Availability']) // TRAK-283: Games left Squad
@@ -204,16 +205,21 @@ for (const [label, width, height, rail] of [
     expect(Math.round(panel.width)).toBe(Math.min(1280, width - rail) - 64)
     expect(Math.round(panel.x)).toBeGreaterThanOrEqual(rail)
 
-    // Picking a player opens their profile beside the list.
-    const first = playersView.getByRole('list', { name: 'Players' }).getByRole('button').first()
+    // Picking a player opens their own page: their address, the page's whole width, and no list beside it.
+    const list = playersView.getByRole('list', { name: 'Players' })
     const name = players[0].player_name
-    await first.click()
+    await list.getByRole('button').first().click()
+    await expect(page).toHaveURL(/\/coach\/squad\/player\/sq-1$/)
     // The profile is the article named after the player (their assessment cards are articles too).
     const profile = playersView.getByRole('article', { name: new RegExp(`^${name},`) })
     await expect(profile.getByRole('heading', { level: 3, name })).toBeVisible()
-    expect((await profile.boundingBox())!.x).toBeGreaterThan((await first.boundingBox())!.x + (await first.boundingBox())!.width - 1)
+    await expect(list).toBeHidden()
+    await expect(page.getByRole('radiogroup', { name: 'Squad view' })).toBeHidden()
+    expect((await profile.boundingBox())!.width).toBeGreaterThan(panel.width * 0.95)
     await page.waitForTimeout(600) // let the radar draw in for the screenshot
     await page.screenshot({ path: testInfo.outputPath(`coach-squad-${width}.png`) })
+    await page.getByRole('button', { name: 'Back' }).click()
+    await expect(list).toBeVisible()
 
     // Each view opens in place: no Arc sheet, and no read the backend does not answer.
     for (const name of ['Attributes', 'Availability', 'Players']) {
@@ -296,6 +302,33 @@ test("a phone's sidebar sheet takes a tap: the row opens its page and the sheet 
   expect(errors).toEqual([])
 })
 
+// TRAK-377 (Imad, 5 Nov): the sidebar sometimes stayed on screen until a refresh. On a phone's network a page's code
+// takes a moment; the sheet must still slide away while it loads, and stay away once it has.
+test("a phone's sidebar sheet closes while a page's code is still on its way", async ({ page, context }) => {
+  const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', 390, 844)
+  await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible()
+  await page.route(/\/assets\/.+\.js$/, async route => { await new Promise(done => setTimeout(done, 1500)); await route.continue() })
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  const sheet = page.getByRole('navigation', { name: 'Your academy' })
+  await sheet.getByRole('button', { name: 'Squad', exact: true }).click()
+  await expect(page).toHaveURL(/\/coach\/squad$/)
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toHaveCount(0, { timeout: 5000 })
+  // The page's code arrives: the sheet must not slide back in, nor leave the page under it blocked.
+  await page.unrouteAll({ behavior: 'wait' })
+  await page.waitForTimeout(1200)
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toHaveCount(0)
+  expect(await page.evaluate(() => document.body.style.pointerEvents)).toBe('')
+  // The page takes taps (Home from the tab bar), and the menu still opens and closes there.
+  await page.getByRole('tab', { name: 'Home' }).or(page.getByRole('button', { name: 'Home', exact: true })).first().click()
+  await expect(page).toHaveURL(/\/coach\/home$/)
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close menu' }).click()
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toHaveCount(0)
+  expect(unexpected).toEqual([])
+  expect(errors).toEqual([])
+})
+
 test("a laptop's breadcrumb names the page, one title after several moves", async ({ page, context }) => {
   const { errors } = await open(page, context, 'coach', '/coach/home', 1440, 900)
   const side = page.getByRole('navigation', { name: 'Your academy' })
@@ -303,7 +336,8 @@ test("a laptop's breadcrumb names the page, one title after several moves", asyn
     await side.getByRole('button', { name, exact: true }).click()
     await page.waitForTimeout(300)
   }
-  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveText(/^Your academy\s*\/?\s*Home$/)
+  // TRAK-347 (Imad, 3 Nov): the club is in the sidebar, not in the top bar's trail.
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveText(/^Home$/)
   expect(errors).toEqual([])
 })
 

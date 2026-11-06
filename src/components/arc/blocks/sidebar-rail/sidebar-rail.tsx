@@ -36,11 +36,15 @@ export interface SidebarRailProps {
   /** Id of the current row; a child's id lights its group. */
   active: string;
   onSelect: (id: string) => void;
-  /** The current page's name, after the brand in the top bar's trail. */
+  /** The current page's name: the last crumb of the top bar's trail. */
   title: string;
+  /** Trak (TRAK-347, Imad 3 Nov): the pages before this one, each a link, ahead of `title`. The brand no longer leads the
+   *  trail: the sidebar shows it, beside its logo. */
+  trail?: ReactNode[];
   /** Right side of the top bar, such as the bell and Create. */
   actions?: ReactNode;
-  /** Trak (TRAK-324): under the brand in the open sidebar, such as the coach's squad switcher. Folded to a rail, it hides. */
+  /** Trak (TRAK-324): under the brand in the open sidebar, such as the coach's squad switcher. Folded to a rail, it hides.
+   *  TRAK-376 (Imad, 5 Nov): the phone's sheet has it too, under the brand. */
   afterBrand?: ReactNode;
   /** Phone and small tablet: no rail or top bar; the sidebar opens as a sheet. */
   narrow?: boolean;
@@ -148,7 +152,7 @@ function PanelGlyph({ collapsed, reduce }: { collapsed: boolean; reduce: boolean
   </svg>;
 }
 
-export function SidebarRail({ label, brand, items, footerItem, profile, active, onSelect, title, actions, afterBrand, narrow = false, sheetOpen = false, onSheetOpenChange, defaultOpen = {}, onWidthChange, children }: SidebarRailProps) {
+export function SidebarRail({ label, brand, items, footerItem, profile, active, onSelect, title, trail, actions, afterBrand, narrow = false, sheetOpen = false, onSheetOpenChange, defaultOpen = {}, onWidthChange, children }: SidebarRailProps) {
   const baseId = useId();
   const prefersReduced = !!useReducedMotion();
   // The first measurement settles the layout before paint, so it never animates.
@@ -264,6 +268,7 @@ export function SidebarRail({ label, brand, items, footerItem, profile, active, 
                 <Identity className={styles.brand} mark={brand.logo} name={brand.name} detail={brand.detail} collapsed={false} reduce={reduce} />
                 <Dialog.Close asChild><button type="button" className={styles.iconButton} aria-label="Close menu"><X size={18} strokeWidth={1.75} aria-hidden="true" /></button></Dialog.Close>
               </div>
+              {afterBrand && <div className={styles.afterBrand}>{afterBrand}</div>}
               <Navigation variant="sheet" collapsed={false} onSelect={id => select(id, true)} onGroup={id => toggleGroup(id, true)} {...navShared} />
               <Identity className={styles.profile} mark={profile.avatar} name={profile.name} detail={profile.detail} collapsed={false} reduce={reduce} />
             </motion.div>
@@ -296,7 +301,7 @@ export function SidebarRail({ label, brand, items, footerItem, profile, active, 
             <button type="button" className={styles.iconButton} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand sidebar  [" : "Collapse sidebar  ["} aria-expanded={!collapsed} aria-controls={sidebarId} aria-keyshortcuts="[" onClick={toggleRail}><PanelGlyph collapsed={collapsed} reduce={reduce} /></button>
             <nav className={styles.crumbs} aria-label="Breadcrumb">
               <ol>
-                <li className={styles.crumbRoot}>{brand.name}</li>
+                {trail?.map((crumb, index) => <li key={index}>{crumb}</li>)}
                 {/* Trak: the new title rises in; the old one leaves at once. A lazy page's suspense interrupted the exit, so old titles stayed. */}
                 <li className={styles.crumbCurrent} aria-current="page"><motion.span key={title} variants={rise} initial="hidden" animate="shown" transition={swap}>{title}</motion.span></li>
               </ol>

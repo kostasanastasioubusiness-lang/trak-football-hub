@@ -14,6 +14,8 @@ import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { SquadShape } from '@/components/coach/home/SquadShape'
 import { TodayPlan } from '@/components/coach/home/TodayPlan'
 import { NeedsYou, type OwedEvent } from '@/components/coach/home/NeedsYou'
+import { SeasonPlanCard } from '@/components/coach/home/SeasonPlanCard'
+import { planSquad } from '@/lib/season-plan'
 import { useOwedEvents } from '@/components/coach/home/useOwedEvents'
 import { gameTitle, gameWhen, useGamePlanChanges, useGamePlans, useGameShares, useGames } from '@/components/coach/games/useGames'
 import { STATE, gameState, needsAPlan } from '@/lib/games/loop'
@@ -24,6 +26,9 @@ import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { needsYou } from '@/lib/coach-needs-you'
+import { unplacedBySquad } from '@/lib/positions'
+import { useWatchList } from '@/components/coach/season-plan/useWatching'
+import { Button } from '@/components/arc/button/button'
 import { squadShape } from '@/lib/squad/shape'
 import { localParts, localTodayISO } from '@/lib/event-time'
 
@@ -125,6 +130,28 @@ export default function CoachHomePage() {
       action: <MatchAction state={state} eventId={game.id} />,
     }]
   })
+  // TRAK-352: where the season plan is on, one card per squad with consented players still to place. A newly
+  // consented child has no position, so they join it.
+  // Under All, a card picks its squad as the switcher does (TRAK-361): the season plan is one squad's, so All has to go.
+  const seasonPlanOn = useFeature('season_plan')
+  const positionEvents: OwedEvent[] = !seasonPlanOn || !loaded ? [] : unplacedBySquad(roster.players, roster.consentPending).map(({ squad, count }) => ({
+    id: `positions:${squad ?? ''}`,
+    title: `${count} ${count === 1 ? 'player needs' : 'players need'} a position`,
+    when: '',
+    squad: coachSquad.squads.length >= 2 ? squad : null,
+    reason: 'A player needs a position before they get objectives.',
+    action: <span className="arc"><Button size="sm" onClick={() => { if (everySquad && squad) coachSquad.pick(squad); navigate('/coach/season-plan/positions') }}>Place them</Button></span>,
+  }))
+  // TRAK-355: a watched player whose reminder is due comes back, one card each, opening the step where they were left.
+  const watching = useWatchList(user?.id, roster, seasonPlanOn)
+  const watchEvents: OwedEvent[] = !seasonPlanOn ? [] : watching.list.filter(w => w.ready).map(w => ({
+    id: `watch:${w.playerId}`,
+    title: `${w.why === '4 weeks, the latest' ? 'Watched 4 weeks' : w.why} · Set ${w.name.split(' ')[0]} up`,
+    when: '',
+    squad: coachSquad.squads.length >= 2 ? w.squad : null,
+    reason: w.step === 'positions' ? 'Give them a position, then objectives, or keep watching.' : 'Give them objectives, or keep watching.',
+    action: <span className="arc"><Button size="sm" onClick={() => { if (everySquad && w.squad) coachSquad.pick(w.squad); navigate(`/coach/season-plan/${w.step}?player=${w.playerId}`) }}>Set up</Button></span>,
+  }))
 
 
   return (
@@ -139,18 +166,22 @@ export default function CoachHomePage() {
           {user && <CoachWeekStrip coachId={user.id} version={weekVersion} everySquad={everySquad} />}
           {showToday
             // Kostas, 28 Oct: on a phone the week comes first, then today's plan.
-            ? <TodayPlan trainingOn={trainingOn} gamesOn={gamesOn} inView={squad => everySquad || coachSquad.eventInSquad(squad)} />
+            ? <TodayPlan trainingOn={trainingOn} gamesOn={gamesOn} inView={squad => everySquad || coachSquad.eventInSquad(squad)}
+              squadOf={everySquad && coachSquad.squads.length >= 2 ? squadName : null} />
             : <SquadShape squadLabel={squadLabel} shape={shape} failed={!!roster.error} onRetry={roster.retry} />}
         </div>
         {/* Shown once the switch is known, so a coach who turned it off never sees it flash in. */}
         {(needsYouSwitch.data === true || needsYouSwitch.isError) && <div className={wide ? 'mt-6' : 'mt-5'}>
-          <NeedsYou items={needsReady ? cards : null} events={[...owedEvents, ...planEvents]} failed={!!roster.error || owed.failed || gamesFailed}
+          <NeedsYou items={needsReady ? cards : null} events={[...owedEvents, ...planEvents, ...positionEvents, ...watchEvents]} failed={!!roster.error || owed.failed || gamesFailed}
             onRetry={() => { roster.retry(); owed.retry(); if (gamesOn) { void games.refetch(); void plans.refetch(); void shares.refetch() } }}
             onOpen={item => item.kind === 'draft'
               // TRAK-200: the profile's assessment card says Draft and has Publish.
-              ? navigate(`/coach/player/${item.playerId}`)
+              ? navigate(`/coach/squad/player/${item.playerId}`)
               : navigate('/coach/assess', { state: { preselectedPlayerId: item.playerId } })} />
         </div>}
+        {/* TRAK-350: the season plan, where the academy's switch is on; TRAK-361: the card that folds, one per squad under All. */}
+        {user && <SeasonPlanCard coachId={user.id} squads={coachSquad.squads} squad={planSquad(coachSquad)} everySquad={everySquad}
+          onPick={coachSquad.pick} className={wide ? 'mt-6' : 'mt-5'} />}
       </div>
       <QuickAdd onSaved={() => setWeekVersion(v => v + 1)} />
     </MobileShell>

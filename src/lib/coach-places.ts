@@ -10,9 +10,10 @@ export const COACH_SCREEN_PATH: Record<CoachScreen, string> = {
 const PLACES: [prefix: string, screen: CoachScreen | null, title: string][] = [
   ['/coach/home', 'home', 'Home'],
   ['/coach/schedule', 'calendar', 'Schedule'], // TRAK-255
+  ['/coach/squad/player', 'squad', 'Player'], // TRAK-351: a player's own page, in Squad
   ['/coach/squad', 'squad', 'Squad'],
-  ['/coach/player', 'squad', 'Player'],
   ['/coach/matches', 'games', 'Matches'], // TRAK-283: Games home and each game's page
+  ['/coach/training/drills', 'training', 'Drills'], // TRAK-367: so a page opened from Drills doesn't read Training / Training
   ['/coach/training', 'training', 'Training'], // TRAK-294: Training home, its drills and plans
   ['/coach/trainings', 'library', 'Library'],
   ['/settings', 'settings', 'Settings'],
@@ -38,4 +39,4 @@ export function tabOf(path: string): { label: string; href: string } {
 
 /** Pages with no bottom bar on a phone before (TRAK-254's `sideMenuOnly`) keep none: their own actions sit at the bottom,
  *  and Back leaves them. Settings, the manual, a player's page, and adding or editing a session (not History). */
-export const BARLESS = /^\/(settings|coach\/(manual|player\/.+|sessions\/(?!list$)[^/]+))$/
+export const BARLESS = /^\/(settings|coach\/(manual|squad\/player\/.+|sessions\/(?!list$)[^/]+))$/

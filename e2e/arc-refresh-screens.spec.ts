@@ -65,12 +65,20 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     if (path === '/rest/v1/notification_settings') return json([])
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
+    // TRAK-350: the season plan's switch is on here, so Home asks for the squad's plan; there is none.
+    if (path === '/rest/v1/season_plans') return json([])
+    // TRAK-355: who the coach is watching; no one.
+    if (path === '/rest/v1/player_watches') return json([])
+    // TRAK-353: so a player's page lists their Can also play and roles; there are none.
+    if (path === '/rest/v1/squad_player_also_plays' || path === '/rest/v1/squad_player_roles') return json([])
+    // TRAK-354: so a player's page lists their objectives; there are none.
+    if (path === '/rest/v1/player_objectives') return json([])
     if (path.startsWith('/rest/v1/rpc/')) return json([])
     if (path === '/rest/v1/session_attendance') return json(players.map(p => ({ session_id: 'session-1', squad_player_id: p.id, status: 'present' })))
     // TRAK-262: notification_settings is Home's Needs you switch (no row: on).
     if (['matches', 'event_absences', 'recognition_awards', 'coach_shared_feedback', 'player_details', 'coach_assessment_notes', 'notification_settings',
       // TRAK-286: no game plan, shared or not.
-      'game_plans', 'game_shares', 'game_evaluations', 'game_evaluation_players', 'game_evaluation_notes', 'game_for_family', 'game_for_player', 'game_review_for_family', 'game_review_for_player', 'training_plans', 'training_plan_practices'].some(t => path === `/rest/v1/${t}`)) return json([])
+      'game_plans', 'game_shares', 'game_evaluations', 'game_evaluation_players', 'game_evaluation_notes', 'game_for_family', 'game_for_player', 'game_review_for_family', 'game_review_for_player', 'training_plans', 'training_plan_practices', 'training_notes'].some(t => path === `/rest/v1/${t}`)) return json([])
     unexpected.push(`${req.method()} ${path}`)
     return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
   })
@@ -115,7 +123,8 @@ test.describe('TRAK-182 coach screens', () => {
     ['feedback', '/coach/feedback', 'Hugo Lloris'],
     ['squad', '/coach/squad', 'Bukayo Saka'],
     ['assess', '/coach/assess', 'Assessment'],
-    ['player', '/coach/player/sq-2', 'Bukayo Saka'],
+    // TRAK-368: the player's own page in Squad; the list behind it is hidden, so wait for the page's own section.
+    ['player', '/coach/squad/player/sq-2', 'Season so far'],
   ] as const) {
     test(`coach ${name}`, async ({ page, context }, testInfo) => {
       const unexpected: string[] = [], errors: string[] = []
@@ -296,8 +305,9 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
   test('the card menu, the expanded card and its backdrop are opaque', async ({ page, context }, testInfo) => {
     const unexpected: string[] = []
     await coachBackend(context, unexpected)
-    await page.goto('/coach/player/sq-2')
-    const card = page.getByRole('article').or(page.locator('[aria-label*="assessment, Bukayo Saka"]')).first()
+    await page.goto('/coach/squad/player/sq-2')
+    // TRAK-368: the player's page is an article too, so the card is picked by its name.
+    const card = page.getByRole('article', { name: /assessment, Bukayo Saka/ }).first()
     await card.getByRole('button', { name: /more actions$/ }).click()
     const menu = page.getByRole('menu')
     await expect(menu.getByRole('menuitem', { name: 'Edit' })).toBeVisible()
@@ -348,11 +358,12 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
 })
 
 // Imad's 23 Oct phone review: picking a player in a long list lagged, and the profile under the list needed scrolling to.
-// On a phone the profile now takes the list's place, and "All players" returns to the same spot.
+// On a phone the profile now takes the list's place, and "All players" returns to the same spot. TRAK-351: on every
+// screen a player opens as their own page, and its Back button returns to the same spot.
 test.describe('Squad Players on a phone', () => {
   test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 500 } })
 
-  test("a picked player's profile replaces the list, and All players returns to it", async ({ page, context }) => {
+  test("a picked player's page replaces the list, and Back returns to it", async ({ page, context }) => {
     const unexpected: string[] = []
     await coachBackend(context, unexpected)
     await page.goto('/coach/squad')
@@ -364,7 +375,7 @@ test.describe('Squad Players on a phone', () => {
     const profile = page.locator('article[aria-label^="Thiago Silva"]')
     await expect(profile).toBeInViewport()
     await expect(list).toBeHidden()
-    await page.getByRole('button', { name: 'All players' }).click()
+    await page.getByRole('button', { name: 'Back' }).click()
     await expect(list).toBeVisible()
     await expect.poll(() => page.evaluate(() => scrollY)).toBe(before)
     expect(unexpected).toEqual([])
@@ -571,7 +582,8 @@ test.describe('The "+" form\'s pickers on a phone', () => {
     expect(calendar.top, JSON.stringify(calendar)).toBeGreaterThanOrEqual(0)
     expect(calendar.inside, JSON.stringify(calendar)).toBe(true)
     await page.keyboard.press('Escape')
-    await page.getByRole('button', { name: /^Start/ }).click()
+    // The form's own Start time (TRAK-350 put the season plan's Start on Home, behind the form).
+    await page.getByRole('dialog', { name: 'New event' }).getByRole('button', { name: /^Start/ }).click()
     await page.waitForTimeout(500)
     const times = await whole('[role="listbox"]')
     expect(times.top, JSON.stringify(times)).toBeGreaterThanOrEqual(0)

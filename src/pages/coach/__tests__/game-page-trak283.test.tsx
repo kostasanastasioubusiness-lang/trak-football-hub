@@ -1,6 +1,6 @@
 /**
  * TRAK-283 (Games 1/8): a game's page. The header says where the game is in its loop. Logistics shows Schedule's
- * Review rows with Shared with families or Draft; a draft publishes in place, as Home's event sheet does. TRAK-331
+ * Review rows with Shared or Draft (TRAK-344); a draft publishes in place, as Home's event sheet does. TRAK-331
  * (Imad, 2 Nov): Edit pulls up Schedule's edit sheet right here. Game plan and Evaluation say what will happen there, and the panel lives in the URL. Only the
  * coach's own match opens. Test people are named after footballers.
  */
@@ -80,15 +80,22 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
     renderApp('/coach/matches/g1')
     expect(await screen.findByRole('heading', { level: 1, name: 'vs Parkview Athletic' })).toBeInTheDocument()
     expect(screen.getByText('Plan not written')).toBeInTheDocument()
-    expect(screen.getByRole('timer', { name: 'Kick-off in' })).toBeInTheDocument()
+    // TRAK-344: the header has no countdown; Game plan review has the one.
+    expect(screen.queryByRole('timer')).toBeNull()
     const tabs = screen.getByRole('tablist', { name: 'This match' })
-    expect(within(tabs).getAllByRole('tab').map(t => t.textContent)).toEqual(['Logistics', 'Game plan', 'Evaluation'])
-    expect(within(tabs).getByRole('tab', { name: 'Logistics' })).toHaveAttribute('aria-selected', 'true')
+    // Match header (Imad, 6 Nov): each tab says where it is. A plan not written has four of Review & share's five parts
+    // to do, counted once the squad is read.
+    expect(await within(tabs).findByRole('tab', { name: 'Game plan 4 to do' }, { timeout: 5000 })).toBeInTheDocument()
+    const [logistics, gamePlan, evaluation] = within(tabs).getAllByRole('tab')
+    expect(logistics).toHaveAccessibleName('Logistics shared')
+    expect(gamePlan).toHaveAccessibleName('Game plan 4 to do')
+    expect(evaluation).toHaveAccessibleName('Evaluation After the match')
+    expect(within(tabs).getByRole('tab', { name: /^Logistics/ })).toHaveAttribute('aria-selected', 'true')
 
-    expect(screen.getByText('Shared with families')).toBeInTheDocument()
+    expect(screen.getByText('Shared')).toBeInTheDocument()
     expect(row('Type')).toHaveTextContent('Match')
     expect(row('Opponent')).toHaveTextContent('Parkview Athletic (Home)')
-    expect(row('Note for families')).toHaveTextContent('Bring water')
+    expect(row('Message to players')).toHaveTextContent('Bring water')
     expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Edit in Schedule' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
@@ -102,19 +109,19 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
     const user = userEvent.setup()
     events([game(soon())])
     renderApp('/coach/matches/g1')
-    await user.click(await screen.findByRole('tab', { name: 'Game plan' }))
+    await user.click(await screen.findByRole('tab', { name: /^Game plan/ }))
     expect(await screen.findByRole('heading', { name: 'Instructions' })).toBeInTheDocument()
     expect(window.location.search).toBe('?tab=plan')
 
     await user.keyboard('{ArrowRight}')
-    expect(screen.getByRole('tab', { name: 'Evaluation' })).toHaveFocus()
+    expect(screen.getByRole('tab', { name: /^Evaluation/ })).toHaveFocus()
     // TRAK-288: until full time it says when it opens.
     expect(await screen.findByRole('heading', { name: /^Opens at full time, \d\d:\d\d$/ })).toBeInTheDocument()
     expect(window.location.search).toBe('?tab=evaluation')
 
     cleanup()
     renderApp('/coach/matches/g1?tab=plan')
-    expect(await screen.findByRole('tab', { name: 'Game plan' })).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByRole('tab', { name: /^Game plan/ })).toHaveAttribute('aria-selected', 'true')
   })
 
   it("a draft's Publish publishes it here, as Home's event sheet does, and families are emailed the logistics as today", async () => {
@@ -136,7 +143,7 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
     expect(await screen.findByText('Draft')).toBeInTheDocument()
     expect(screen.getByText('Logistics not shared')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Publish' }))
-    expect(await screen.findByText('Shared with families')).toBeInTheDocument()
+    expect(await screen.findByText('Shared')).toBeInTheDocument()
     expect(screen.getByText('Plan not written')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
     expect(patches).toHaveLength(1)
@@ -146,13 +153,11 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
     expect(window.location.pathname).toBe('/coach/matches/g1')
   })
 
-  it('once it has kicked off: locked, the countdown says so until full time (TRAK-287), and no edit', async () => {
+  it('once it has kicked off: locked (TRAK-287), and no edit', async () => {
     events([game(Date.now() - 30 * MINUTE)])
     renderApp('/coach/matches/g1')
     expect(await screen.findByText('Locked at kick-off')).toBeInTheDocument()
-    // jsdom never shows a past countdown's label (it can't tell the countdown is on screen); the TRAK-287 test sees it flip.
-    expect(screen.getByRole('timer', { name: 'Kick-off in' })).toBeInTheDocument()
-    expect(screen.getByText('Shared with families')).toBeInTheDocument()
+    expect(screen.getByText('Shared')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
   })
 

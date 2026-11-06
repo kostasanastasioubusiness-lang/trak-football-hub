@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { DEFAULT_FORMATION, FORMATIONS, FORMATS, lineName } from '@/lib/games/formations'
-import { CONTEXT, EXPECTATIONS, fitFormat, playerPlan, type PlayerPlans } from '@/lib/games/lineup'
+import { CONTEXT, EXPECTATIONS, EXPECTATION_COLOR, fitFormat, playerPlan, type PlayerPlans } from '@/lib/games/lineup'
 import type { PlanForm } from '@/lib/games/plan'
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { Candidate, useWhoCanCome } from './useGames'
 import { Pitch, type PitchPlayer } from './Pitch'
 import { PlayerPanel, type Target } from './PlayerPanel'
 import { LoadError } from '@/components/trak'
-import { Avatar } from '@/components/arc/avatar/avatar'
+import { PlayerFace } from '@/components/trak/PlayerFace'
 import { Badge } from '@/components/arc/badge/badge'
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { ExpandableText } from '@/components/arc/expandable-text/expandable-text'
@@ -63,7 +63,7 @@ export function LineUpAndJobs({ form, onFormChange, who, locked = false }: {
   // The name opens the sheet. The job sits beside it, not inside the button: a long job has its own Read more.
   const row = (player: Candidate, detail: string) => (
     <li key={player.id} className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-x-3 gap-y-1 px-2 py-3">
-      <Avatar name={player.name} size="sm" aria-hidden="true" />
+      <PlayerFace name={player.name} size="sm" aria-hidden="true" />
       <button type="button" onClick={() => setTarget({ kind: 'player', id: player.id })}
         className="justify-self-start rounded text-left text-base font-medium text-ink underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
         {player.name}<span className="font-normal text-ink-3">{detail}</span>
@@ -75,8 +75,8 @@ export function LineUpAndJobs({ form, onFormChange, who, locked = false }: {
         {(player.absent || plan(player).expectation !== 'usual' || plan(player).context.length > 0) && <span className="arc flex flex-wrap gap-1.5">
           {/* TRAK-286: a starter whose family said they can't make it, after the plan was made. Never the reason. */}
           {player.absent && <Badge size="sm" tone="warning">Can’t make it</Badge>}
-          {plan(player).context.map(tag => <Badge key={tag} size="sm" tone="warning">{contextLabel.get(tag)}</Badge>)}
-          {plan(player).expectation !== 'usual' && <Badge size="sm" tone="info">Expect: {expectationLabel.get(plan(player).expectation)}</Badge>}
+          {plan(player).context.map(tag => <Badge key={tag} size="sm" color="amber">{contextLabel.get(tag)}</Badge>)}
+          {plan(player).expectation !== 'usual' && <Badge size="sm" color={EXPECTATION_COLOR[plan(player).expectation]}>Expect: {expectationLabel.get(plan(player).expectation)}</Badge>}
         </span>}
       </div>
     </li>
@@ -87,7 +87,7 @@ export function LineUpAndJobs({ form, onFormChange, who, locked = false }: {
       {/* TRAK-323 (Imad, 30 Oct): on a laptop the pitch, everyone's list and the selected player's sheet sit side by side,
           the pitch and the sheet staying in view while the list scrolls; on a tablet the list goes under them. */}
       <div className="grid gap-4 tablet:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] tablet:items-start laptop:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(0,3fr)]">
-        <section aria-labelledby="plan-pitch" className={`${card} tablet:sticky tablet:top-4`}>
+        <section aria-labelledby="plan-pitch" className={`${card} tablet:sticky tablet:top-[calc(var(--ph-pinned,0px)+1rem)]`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="plan-pitch" className={locked ? 'text-lg font-medium text-ink' : 'sr-only'}>{shape}</h2>
             {!locked && <span className="arc"><MorphSelect label="Formation" hideLabel items={SHAPES} value={shape} onValueChange={setShape}
@@ -99,11 +99,11 @@ export function LineUpAndJobs({ form, onFormChange, who, locked = false }: {
             onSelect={slot => setTarget(starters.has(slot) ? { kind: 'player', id: starters.get(slot)!.id } : { kind: 'slot', slot })} />
           <p className="text-sm text-ink-3">{locked ? 'Tap a player to see their job.' : 'Tap a slot to pick who plays there, or a player to give them a job.'}</p>
           {[...onPitch.values()].some(player => player.stretch) && <p className="flex items-center gap-2 text-sm text-ink-3">
-            <span aria-hidden="true" className="size-3 rounded-full border border-ink/60 bg-[rgb(var(--t-attention))]" />Yellow: stretch</p>}
+            <span aria-hidden="true" className="size-3 rounded-full border border-ink/60 bg-[rgb(var(--t-orange))]" />Orange: stretch</p>}
         </section>
         {phone
           ? <BottomSheet className="arc" open={!!target} onOpenChange={open => { if (!open) setTarget(null) }} title={title} detents={[0.6, 0.92]}>{panel}</BottomSheet>
-          : <aside aria-label={target ? title : 'Selected player'} className={`${card} tablet:sticky tablet:top-4 laptop:order-3`}>
+          : <aside aria-label={target ? title : 'Selected player'} className={`${card} tablet:sticky tablet:top-[calc(var(--ph-pinned,0px)+1rem)] laptop:order-3`}>
               {target ? <><h2 className="text-lg font-medium text-ink">{title}</h2>{panel}</>
                 : <p className="text-sm text-ink-2">Pick a slot or a player to see their job and expectation here.</p>}
             </aside>}
@@ -131,7 +131,7 @@ export function LineUpAndJobs({ form, onFormChange, who, locked = false }: {
           <h2 id="plan-cant" className="text-lg font-medium text-ink">Can’t make it</h2>
           <p className="text-sm text-ink-3">Their families said they can’t make it, so they can’t be placed.</p>
           <ul className="grid gap-2">{cantMakeIt.map(player => <li key={player.id} className="flex items-center gap-3 px-2 py-1">
-            <Avatar name={player.name} size="sm" aria-hidden="true" />
+            <PlayerFace name={player.name} size="sm" aria-hidden="true" />
             <span className="flex-1 text-base text-ink-2">{player.name}</span>
             <span className="arc"><Badge size="sm" tone="warning">Can’t make it</Badge></span>
           </li>)}</ul>

@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -65,7 +65,6 @@ const CoachSessionsChooser = lazy(() => import("./pages/coach/CoachSessionsChoos
 const CoachSessionEdit = lazy(() => import("./pages/coach/CoachSessionEdit"));
 const CoachProfilePage = lazy(() => import("./pages/coach/CoachProfilePage"));
 const CoachManual = lazy(() => import("./pages/coach/CoachManual"));
-const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfilePage"));
 const TrainingsPage = lazy(() => import("./pages/TrainingsPage"));
 const CoachLibrary = lazy(() => import("./pages/coach/library/CoachLibrary"));
 
@@ -87,6 +86,8 @@ const CoachAssistant = lazy(() => import("./pages/coach/CoachAssistant"));
 const CoachSchedule = lazy(() => import("./pages/coach/CoachSchedule"));
 // TRAK-283: Games, parked until the academy's games switch is on.
 const CoachGames = lazy(() => import("./pages/coach/CoachGames"));
+// TRAK-350: the season plan, parked until the academy's season_plan switch is on.
+const CoachSeasonPlan = lazy(() => import("./pages/coach/CoachSeasonPlan"));
 const CoachGame = lazy(() => import("./pages/coach/CoachGame"));
 const CoachTraining = lazy(() => import("./pages/coach/training/CoachTraining"));
 const CoachRecognition = lazy(() => import("./pages/coach/CoachRecognition"));
@@ -97,6 +98,12 @@ const ClubSquads = lazy(() => import("./pages/club/ClubSquads"));
 const ClubCoaches = lazy(() => import("./pages/club/ClubCoaches"));
 const ClubProfile = lazy(() => import("./pages/club/ClubProfile"));
 const ClubRadar = lazy(() => import("./pages/club/ClubRadar"));
+
+/** TRAK-368: /coach/player/:id was the older player page; the player's own page in Squad replaced it. */
+function PlayerPageMoved() {
+  const { id } = useParams();
+  return <Navigate to={`/coach/squad/player/${id}`} replace />;
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -160,7 +167,8 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/how-it-works" element={<HowTrakWorks />} />
             <Route path="/coach/home" element={<RouteGuard allowedRole="coach"><CoachHomePage /></RouteGuard>} />
-            <Route path="/coach/squad" element={<RouteGuard allowedRole="coach"><CoachSquadPage /></RouteGuard>} />
+            {/* TRAK-351: /coach/squad/player/:id is a player's own page, inside Squad so the list keeps its place. */}
+            <Route path="/coach/squad/*" element={<RouteGuard allowedRole="coach"><CoachSquadPage /></RouteGuard>} />
             <Route path="/coach/squad/add" element={<RouteGuard allowedRole="coach"><Navigate to="/coach/squad" replace /></RouteGuard>} />
             <Route path="/coach/assess" element={<RouteGuard allowedRole="coach"><CoachAssessPage /></RouteGuard>} />
             <Route path="/coach/feedback" element={<RouteGuard allowedRole="coach"><CoachFeedbackPage /></RouteGuard>} />
@@ -182,11 +190,13 @@ const App = () => (
             <Route path="/coach/trainings/*" element={<RouteGuard allowedRole="coach"><CoachLibrary /></RouteGuard>} />
             <Route path="/coach/manual" element={<CoachManual />} />
             <Route path="/coach/quick-assess" element={<RouteGuard allowedRole="coach"><Navigate to="/coach/assess" replace /></RouteGuard>} />
-            <Route path="/coach/player/:id" element={<RouteGuard allowedRole="coach"><CoachPlayerProfilePage /></RouteGuard>} />
+            {/* TRAK-368: a player's page is in Squad now, with their whole history; old links and bookmarks land there. */}
+            <Route path="/coach/player/:id" element={<PlayerPageMoved />} />
             <Route path="/coach/recognition" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachRecognition /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/award" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachAwardPlayer /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/schedule" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="events"><CoachSchedule /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/matches" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="games"><CoachGames /></ParkedScreen></RouteGuard>} />
+            <Route path="/coach/season-plan/*" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="season_plan"><CoachSeasonPlan /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/matches/:eventId" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="games"><CoachGame /></ParkedScreen></RouteGuard>} />
             {/* TRAK-315: Games became Matches; an old link or bookmark still opens the same match. */}
             <Route path="/coach/games/*" element={<OldGamesLink />} />

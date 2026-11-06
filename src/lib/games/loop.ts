@@ -21,8 +21,9 @@ export const STATE: Record<GameState, {
   // Publishing the match in Schedule is "share the logistics" (TRAK-282, step 1).
   logistics: { label: 'Logistics not shared', tone: 'neutral', action: { label: 'Share logistics', tab: 'logistics' } },
   plan: { label: 'Plan not written', tone: 'warning', action: { label: 'Write plan', tab: 'plan' } },
-  // TRAK-284: a draft only the coach sees. Sharing it (TRAK-286) closes "Plan not shared".
-  planDraft: { label: 'Plan not shared', tone: 'warning', action: { label: 'Share plan', tab: 'plan', step: 'share' } },
+  // TRAK-284: a draft only the coach sees. Sharing it (TRAK-286) closes it. TRAK-344 (Imad, 3 Nov): "Draft", not
+  // "Plan not shared"; Home's Needs you line still says why the match needs the coach.
+  planDraft: { label: 'Draft', tone: 'warning', action: { label: 'Share plan', tab: 'plan', step: 'share' } },
   // TRAK-290: shared at a time still to come. Nothing to do: what's saved by then goes out.
   scheduled: { label: 'Plan scheduled', tone: 'info' },
   shared: { label: 'Plan shared', tone: 'success' },
@@ -40,6 +41,26 @@ export const STATE: Record<GameState, {
 /** Full time: the event's end, or 90 minutes after kick-off when it has none, as the database reads it (event_wall_end). */
 export function fullTime(game: GameEvent): number {
   return game.ends_at ? Date.parse(game.ends_at) : Date.parse(game.starts_at) + 90 * 60_000
+}
+
+const MINUTE = 60_000
+const HALF_TIME = 15 * MINUTE
+
+/** TRAK-373 (Imad, 5 Nov): the match clock, from kick-off to full time. Half-time is 15 minutes in the middle of the
+ *  match's slot, so each half is (slot − 15) ÷ 2; a slot of 30 minutes or less has no break. The minute is counted as
+ *  on TV (Imad's pick): the first minute is 1', 14 minutes played is 15', so two halves of 45 read 1'–45', HT, 46'–90'.
+ *  `share`: how much of the playing time has gone. */
+export function matchClock(game: GameEvent, now: number): { minute: number | 'HT'; share: number } | 'before' | 'over' {
+  const kickOff = Date.parse(game.starts_at)
+  const end = fullTime(game)
+  if (now < kickOff) return 'before'
+  if (now >= end) return 'over'
+  const pause = end - kickOff > 2 * HALF_TIME ? HALF_TIME : 0
+  const playing = end - kickOff - pause
+  const elapsed = now - kickOff
+  if (pause && elapsed >= playing / 2 && elapsed < playing / 2 + pause) return { minute: 'HT', share: 0.5 }
+  const played = elapsed < playing / 2 ? elapsed : elapsed - pause
+  return { minute: Math.floor(played / MINUTE) + 1, share: played / playing }
 }
 
 export function gameState(game: GameEvent, now: number, plan: PlanProgress = {}): GameState {

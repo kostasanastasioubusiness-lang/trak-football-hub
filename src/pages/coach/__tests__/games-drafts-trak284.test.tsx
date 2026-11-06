@@ -41,6 +41,8 @@ beforeEach(() => {
   COACH = { id: `coach-284-drafts-${++n}` }
   signInAs(COACH)
   server.use(
+    // TRAK-355: who the coach is watching; no one.
+    table('player_watches', []),
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Otto Rehhagel', invite_code: 'ABCD' }]),
     table('coach_details', [{ user_id: COACH.id, coach_role: 'Head Coach', team: 'U16', organization_id: 'org-1' }]),
     table('organizations', [{ id: 'org-1', name: 'Rehearsal FC', logo_url: null }]),
@@ -77,7 +79,7 @@ describe('TRAK-284: plan drafts on Games home and in Needs you', { timeout: 30_0
     expect(within(drafts).getByText('Game plan · saved Tue 27 Oct, 21:40')).toBeInTheDocument()
 
     const next = screen.getByRole('region', { name: 'Next match' })
-    expect(within(next).getByText('Plan not shared')).toBeInTheDocument()
+    expect(within(next).getByText('Draft')).toBeInTheDocument()
     const strip = screen.getByRole('region', { name: 'Your matches' })
     expect(within(within(strip).getByRole('link', { name: /Riverside Rovers/ })).getByText('Plan not written')).toBeInTheDocument()
 

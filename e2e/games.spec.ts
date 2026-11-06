@@ -145,6 +145,8 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
       return json([...plans.entries()].filter(([key]) => key.startsWith(`line-up:${one}:`)).map(([, row]) => row))
     }
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
+    // TRAK-350: the season plan's switch is on here, so Home asks for the squad's plan; there is none.
+    if (path === '/rest/v1/season_plans') return json([])
     if (path === '/rest/v1/coach_calendar_events') {
       const one = url.searchParams.get('id')?.replace(/^eq\./, '')
       return json(one ? MATCHES.filter(m => m.id === one) : MATCHES)
@@ -172,6 +174,19 @@ async function open(page: Page, context: BrowserContext, path: string, width: nu
   await backend(context, unexpected, plans, me)
   await page.goto(path)
   return { unexpected, errors }
+}
+/** Match header (Imad, 6 Nov): the match's state beside its title. Once the page scrolls, the compact row repeats it. */
+const matchStatus = (page: Page) => page.getByRole('heading', { level: 1 }).locator('..')
+/** Save draft is in the match header. On a phone it folds into the header's "…" menu, and a toast says it's saved. */
+async function saveDraft(page: Page) {
+  if (page.viewportSize()!.width > 560) {
+    await page.getByRole('button', { name: 'Save draft' }).click()
+    await expect(page.getByRole('button', { name: 'Saved' })).toBeVisible()
+    return
+  }
+  await page.getByRole('button', { name: 'More actions', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Save draft' }).click()
+  await expect(page.getByText('Draft saved', { exact: true })).toBeVisible()
 }
 const sideways = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
 
@@ -203,7 +218,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await expect(page.getByRole('heading', { level: 1, name: 'Matches' })).toBeVisible()
     const next = page.getByRole('region', { name: 'Next match' })
     await expect(next.getByText('vs Parkview Athletic U16')).toBeVisible()
-    await expect(next.getByText('Plan not shared')).toBeVisible()
+    await expect(next.getByText('Draft', { exact: true })).toBeVisible()
     // TRAK-286: with a draft, sharing it is next. TRAK-333: on a split button, with the match's other pages behind it.
     await expect(next.getByRole('button', { name: 'Share plan', exact: true })).toBeVisible()
     await expect(next.getByRole('button', { name: 'Share plan more actions' })).toBeVisible()
@@ -246,7 +261,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   // TRAK-331 (Imad, 2 Nov): Edit pulls up Schedule's own edit sheet on the match page; the coach never leaves the match.
   test(`a game's logistics at ${width} px: Edit pulls up the event's sheet on the match page`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/matches/m-next', width, height)
-    await expect(page.getByText('Shared with families')).toBeVisible()
+    await expect(page.getByText('Shared', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Edit', exact: true }).click()
     const sheet = page.getByRole('dialog', { name: 'Edit event' })
     await expect(sheet).toBeVisible()
@@ -285,14 +300,13 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
 
     // A look at Logistics, with the panel's exit animation, keeps every field.
     await page.getByRole('tab', { name: 'Logistics' }).click()
-    await expect(page.getByText('Shared with families')).toBeVisible()
+    await expect(page.getByText('Shared', { exact: true })).toBeVisible()
     await page.waitForTimeout(600)
     await page.getByRole('tab', { name: 'Game plan' }).click()
     await expect(goal.getByLabel('Instruction', { exact: true })).toHaveValue('Win it back in their half')
 
-    await page.getByRole('button', { name: 'Save draft' }).click()
-    await expect(page.getByRole('button', { name: 'Saved' })).toBeVisible()
-    await expect(page.getByText('Plan not shared')).toBeVisible()
+    await saveDraft(page)
+    await expect(matchStatus(page).getByText('Draft', { exact: true })).toBeVisible()
     expect(plans.get('m-next')).toMatchObject({ strength: 'stronger',
       goals: [{ title: 'Win it back in their half', looks_like: 'Press when their keeper plays short.' }] })
     await page.waitForTimeout(500)
@@ -372,6 +386,12 @@ test("a game's line-up at 1440 px: the pitch stays in view while the panel besid
   await expect(pitch).toBeInViewport()
   await expect(job).toBeInViewport()
   await expect(page.getByRole('progressbar', { name: '1 of 11 starters have a job' })).toBeVisible()
+  // Match header (Imad, 6 Nov): scrolled, the pitch pins under the header's tabs, never behind them.
+  await page.mouse.wheel(0, 600)
+  await page.waitForTimeout(400)
+  const tabs = (await page.getByRole('tablist', { name: 'This match' }).boundingBox())!
+  expect((await pitch.boundingBox())!.y).toBeGreaterThanOrEqual(tabs.y + tabs.height)
+  await expect(pitch).toBeInViewport()
   await page.getByRole('button', { name: 'Save draft' }).click()
   await expect(page.getByRole('button', { name: 'Saved' })).toBeVisible()
   expect(plans.get('line-up:m-next:sq-4')).toMatchObject({ role: 'starter', slot: 2, job: 'Stay tight to their number 9. Win the first header.' })
@@ -393,15 +413,31 @@ const DRAFT = (): Plans => new Map([
   ['line-up:m-next:sq-1', { event_id: 'm-next', squad_player_id: 'sq-1', role: 'starter', slot: 4, job: 'Stay tight to their winger.',
     note: 'Second game at right-back. Proud of you.', context: ['out_of_position'], expectation: 'stretch' }],
 ])
-// TRAK-317: a starter expected to stretch is yellow on the pitch (TRAK-270's attention yellow), with a key under it.
+// TRAK-317: a starter expected to stretch stands out on the pitch, with a key under it. TRAK-370 (Imad, 5 Nov): stretch
+// and context are Trak's orange, lead Trak's blue, on Arc's current badge (soft corners, no border).
 for (const [width, height] of [[390, 844], [1440, 900]] as const) {
-  test(`a stretch starter at ${width} px: a yellow circle on the pitch, and the key`, async ({ page, context }, testInfo) => {
-    const { unexpected, errors } = await open(page, context, '/coach/matches/m-next?tab=plan', width, height, DRAFT())
+  test(`a stretch starter at ${width} px: an orange circle on the pitch, the key, and orange, blue and soft-cornered badges`, async ({ page, context }, testInfo) => {
+    const plans = DRAFT()
+    plans.set('line-up:m-next:sq-2', { event_id: 'm-next', squad_player_id: 'sq-2', role: 'starter', slot: 2, job: 'Organise the back four.',
+      note: '', context: [], expectation: 'lead' })
+    const { unexpected, errors } = await open(page, context, '/coach/matches/m-next?tab=plan', width, height, plans)
     await page.getByRole('button', { name: 'Next: Line-up and jobs' }).click()
     const stretch = page.getByRole('button', { name: /, slot 4, stretch$/ })
     await expect(stretch).toBeVisible()
-    expect(await stretch.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(234, 179, 8)')
-    await expect(page.getByText('Yellow: stretch')).toBeVisible()
+    const trak = (token: string) => page.evaluate(name => `rgb(${getComputedStyle(document.documentElement).getPropertyValue(name).trim().split(/\s+/).join(', ')})`, token)
+    const orange = await trak('--t-orange')
+    expect(orange).toBe('rgb(156, 69, 22)')
+    expect(await stretch.evaluate(el => getComputedStyle(el).backgroundColor)).toBe(orange)
+    await expect(page.getByText('Orange: stretch')).toBeVisible()
+    // Each badge's tone, as its stylesheet resolves it, and its shape.
+    const badge = (text: string) => page.getByText(text, { exact: true }).locator('xpath=ancestor::span[contains(@class, "badge")][1]')
+    const tone = (text: string) => badge(text).evaluate(el => getComputedStyle(el).getPropertyValue('--badge-tone').replace(/\s+/g, ' ').trim())
+    const rgbOf = (value: string) => value.replace(/^rgb\((\d+) (\d+) (\d+)\)$/, 'rgb($1, $2, $3)')
+    expect(rgbOf(await tone('Expect: Stretch'))).toBe(orange)
+    expect(rgbOf(await tone('Out of position'))).toBe(orange)
+    expect(rgbOf(await tone('Expect: Lead'))).toBe(await trak('--t-info'))
+    const shape = await badge('Expect: Stretch').evaluate(el => ({ radius: getComputedStyle(el).borderTopLeftRadius, edge: getComputedStyle(el).borderTopColor }))
+    expect(shape).toEqual({ radius: '5px', edge: 'rgba(0, 0, 0, 0)' })
     await page.waitForTimeout(400)
     await page.getByRole('region', { name: '4-4-2' }).screenshot({ path: testInfo.outputPath(`stretch-pitch-${width}.png`) })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
@@ -414,12 +450,42 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   test(`a game's Review & share at ${width} px: every part at a glance, then tick and share by keyboard`, async ({ page, context }, testInfo) => {
     const plans = DRAFT()
     const { unexpected, errors } = await open(page, context, '/coach/matches/m-next?tab=plan&step=share', width, height, plans)
-    const card = page.getByRole('region', { name: 'Review & share' })
+    const card = page.getByRole('region', { name: 'Game plan review' })
     await expect(card).toBeVisible()
     await expect(card.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(5)
+    // TRAK-347 (Imad, 3 Nov): a laptop's top bar is the trail, with no trail on the page; a phone keeps the page's own.
+    if (width >= 1024) {
+      await expect(page.getByRole('navigation', { name: 'Breadcrumb', exact: true })).toHaveText(/^Matches\s*\/?\s*vs Parkview Athletic U16$/)
+      await expect(page.getByRole('navigation', { name: 'Breadcrumb', exact: true }).getByRole('link', { name: 'Matches' })).toHaveAttribute('href', '/coach/matches')
+      await expect(page.getByRole('navigation', { name: 'Breadcrumb trail' })).toHaveCount(0)
+    } else {
+      await expect(page.getByRole('navigation', { name: 'Breadcrumb trail' })).toBeVisible()
+      await expect(page.getByRole('navigation', { name: 'Breadcrumb', exact: true })).toHaveCount(0)
+    }
+    // TRAK-369 (Imad, 4 Nov): two equal halves, the gauge with what's left under it and the countdown, nothing between
+    // them; on a phone the countdown goes under the gauge.
+    const box = async (locator: ReturnType<typeof page.getByRole>) => (await locator.boundingBox())!
+    const [whole, gauge, left, label, clock] = await Promise.all([box(card), box(card.getByRole('img', { name: /parts ready/ })),
+      // What's left is its icon and its words, centred together.
+      box(card.getByText('1 incomplete', { exact: true }).locator('..')), box(card.getByText('Kick-off in', { exact: true })),
+      box(card.getByRole('timer', { name: 'Kick-off in' }))])
+    const middleY = (top: number, bottom: number) => (top + bottom) / 2
+    const centreX = (b: { x: number; width: number }) => b.x + b.width / 2
+    expect(left.y).toBeGreaterThanOrEqual(gauge.y + gauge.height)
+    expect(Math.abs(centreX(left) - centreX(gauge))).toBeLessThanOrEqual(2)
+    if (width >= 1024) {
+      expect(Math.abs(middleY(gauge.y, left.y + left.height) - middleY(label.y, clock.y + clock.height))).toBeLessThanOrEqual(2)
+      expect(Math.abs((centreX(gauge) + centreX(clock)) / 2 - centreX(whole))).toBeLessThanOrEqual(2)
+      expect(centreX(gauge)).toBeLessThan(centreX(whole))
+    } else {
+      expect(label.y).toBeGreaterThan(left.y + left.height)
+    }
+    // Arc's countdown digits are the gauge count's size.
+    expect(await card.getByRole('timer').evaluate(el => getComputedStyle(el.querySelector('[class*="units"]')!).fontSize)).toBe('28px')
     const share = card.getByRole('button', { name: 'Share plan', exact: true })
     await expect(share).toBeDisabled()
-    await expect(card.getByText('Tick “I’ve talked selection through” to share')).toBeVisible()
+    // TRAK-369: no line for who gets it and none for the tick before sharing.
+    await expect(card.getByText(/and their families|^Tick /)).toHaveCount(0)
     await expect(page.getByRole('region', { name: 'Preview' })).toHaveCount(0)
     await page.waitForTimeout(600)
     await page.screenshot({ path: testInfo.outputPath(`review-share-${width}.png`), fullPage: true })
@@ -439,7 +505,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await expect(page.getByRole('region', { name: 'Shared' })).toBeVisible()
     expect(plans.get('share:m-next')).toMatchObject({ talked: true })
     expect(plans.get('m-next')).toMatchObject({ goals: [{ title: 'Win it back in their half' }] })
-    await expect(page.getByText('Plan shared').first()).toBeVisible()
+    await expect(matchStatus(page).getByText('Plan shared')).toBeVisible()
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`shared-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
@@ -448,23 +514,41 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   })
 }
 
-// TRAK-290: Share at… sits behind Share plan's chevron and opens by keyboard; its day and time pickers fit the step. A
+// TRAK-290: Schedule (Share at… until TRAK-345) sits behind Share plan's chevron and opens by keyboard; its day and
+// time pickers fit the step, side by side under the button (TRAK-345), and Share plan is the app's green. A
 // scheduled plan waits with "Shares …", Change time opens the pickers on the time it has, and every control takes focus
 // from the keyboard. What's sent is the unit tests' (game-share-at-trak290).
 for (const [width, height] of [[390, 844], [1440, 900]] as const) {
-  test(`Share at… at ${width} px: the chevron by keyboard, then a scheduled plan waits`, async ({ page, context }, testInfo) => {
+  test(`Schedule at ${width} px: the chevron by keyboard, then a scheduled plan waits`, async ({ page, context }, testInfo) => {
     const plans = DRAFT()
     const { unexpected, errors } = await open(page, context, '/coach/matches/m-next?tab=plan&step=share', width, height, plans)
-    await expect(page.getByRole('region', { name: 'Review & share' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Game plan review' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Share plan more actions' })).toBeDisabled()
     await page.getByRole('checkbox', { name: /talked selection through/ }).focus()
     await page.keyboard.press('Space')
     await page.getByRole('button', { name: 'Share plan more actions' }).focus()
     await page.keyboard.press('Enter')
-    await expect(page.getByRole('menuitem', { name: 'Share at…' })).toBeFocused()
+    await expect(page.getByRole('menuitem', { name: 'Schedule' })).toBeFocused()
     await page.keyboard.press('Enter')
-    await expect(page.getByRole('button', { name: /^Day\b/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /^Time\b/ })).toBeVisible()
+    const day = page.getByRole('button', { name: /^Day\b/ }), time = page.getByRole('button', { name: /^Time\b/ })
+    await expect(day).toBeVisible()
+    await expect(time).toBeVisible()
+    // Under Share plan, side by side.
+    const [shareBox, dayBox, timeBox] = await Promise.all([page.getByRole('button', { name: 'Share plan', exact: true }).boundingBox(), day.boundingBox(), time.boundingBox()])
+    expect(dayBox!.y).toBeGreaterThan(shareBox!.y + shareBox!.height)
+    expect(Math.abs(dayBox!.y - timeBox!.y)).toBeLessThanOrEqual(1)
+    expect(timeBox!.x).toBeGreaterThan(dayBox!.x + dayBox!.width)
+    // Share plan is Arc's accent, the app's green, as its primary buttons are.
+    const green = await page.getByRole('button', { name: 'Share plan', exact: true }).evaluate(button => {
+      const probe = document.createElement('span')
+      probe.style.background = 'var(--accent)'
+      button.parentElement!.appendChild(probe)
+      const accent = getComputedStyle(probe).backgroundColor
+      probe.remove()
+      return { button: getComputedStyle(button).backgroundColor, accent }
+    })
+    expect(green.button).toBe(green.accent)
+    expect(green.accent).not.toBe('rgba(0, 0, 0, 0)')
     await expect(page.locator('[role="tabpanel"]:not([hidden])').getByRole('button', { name: 'Schedule', exact: true })).toBeDisabled()
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`share-at-${width}.png`), fullPage: true })
@@ -508,9 +592,47 @@ test("the player's event page at 390 px: the shared game plan", async ({ page, c
   expect(errors).toEqual([])
 })
 
-// TRAK-287: a match that has kicked off shows its plan locked: read only, with no Save or Share, and the lock's note.
+// TRAK-373 (Imad, 5 Nov): while the match is on, Review & share's top right is the minute over a green bar, "HT" at
+// half-time (15 minutes in the middle of the 90-minute slot), then "Locked" with the lock. The page's clock is set to
+// 14 minutes after Lakeside's kick-off, then moved on.
 for (const [width, height] of [[390, 844], [1440, 900]] as const) {
-  test(`a locked plan at ${width} px: read only, with the lock's note`, async ({ page, context }, testInfo) => {
+  test(`the match clock at ${width} px: the minute (as on TV) over a green bar, HT, then Locked`, async ({ page, context }, testInfo) => {
+    const lakeside = MATCHES.find(m => m.id === 'm-past')!
+    await page.clock.install({ time: new Date(Date.parse(lakeside.starts_at) + 14 * MINUTE + 10_000) })
+    const plans: Plans = new Map([['m-past', { event_id: 'm-past', strength: 'similar', their_formation: null, key_players: [], scouting: '',
+      format: 11, formation: '4-4-2', goals: [], created_at: '2026-10-20T17:00:00Z', updated_at: '2026-10-20T17:40:00Z' }]])
+    const { unexpected, errors } = await open(page, context, '/coach/matches/m-past?tab=plan&step=share', width, height, plans)
+    const card = page.getByRole('region', { name: 'Game plan review' })
+    const clock = card.getByRole('progressbar', { name: 'Match clock' })
+    // Counted as on TV: 14 minutes played is 15'.
+    await expect(clock).toHaveAttribute('aria-valuetext', 'Minute 15')
+    await expect(card.getByText('15\'', { exact: true })).toBeVisible()
+    await expect(card.getByRole('timer')).toHaveCount(0)
+    // Trak's green, a fifth of the way along (14 of 75 minutes of play).
+    const fill = clock.locator('span')
+    expect(await fill.evaluate(el => getComputedStyle(el).backgroundColor)).toBe(await page.evaluate(() =>
+      `rgb(${getComputedStyle(document.documentElement).getPropertyValue('--t-brand').trim().split(/\s+/).join(', ')})`))
+    await page.waitForTimeout(600)
+    const share = await fill.evaluate(el => el.getBoundingClientRect().width / el.parentElement!.getBoundingClientRect().width)
+    expect(share).toBeCloseTo(14 / 75, 1)
+    await card.screenshot({ path: testInfo.outputPath(`match-clock-${width}.png`) })
+    await page.clock.fastForward('24:00')
+    await expect(card.getByText('HT', { exact: true })).toBeVisible()
+    await expect(clock).toHaveAttribute('aria-valuetext', 'Half-time')
+    await page.clock.fastForward('01:00:00')
+    await expect(card.getByText('Locked', { exact: true })).toBeVisible()
+    await expect(clock).toHaveCount(0)
+    await card.screenshot({ path: testInfo.outputPath(`match-locked-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+}
+
+// TRAK-287: a match that has kicked off shows its plan locked, with no Save or Share. TRAK-372 (Imad, 5 Nov): no lock
+// alert, and what was written reads as written, with no boxes.
+for (const [width, height] of [[390, 844], [1440, 900]] as const) {
+  test(`a locked plan at ${width} px: written, not boxes, with no lock alert`, async ({ page, context }, testInfo) => {
     const plans: Plans = new Map([
       ['m-past', { event_id: 'm-past', strength: 'similar', their_formation: '4-3-3', key_players: [], scouting: 'Their 9 is quick.', format: 11,
         formation: '4-4-2', goals: [{ title: 'Win it back in their half', looks_like: 'Press when their keeper plays short.' }],
@@ -519,15 +641,16 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
         note: '', context: [], expectation: 'usual' }],
     ])
     const { unexpected, errors } = await open(page, context, '/coach/matches/m-past?tab=plan', width, height, plans)
-    await expect(page.getByText(/^Locked at kick-off, \d\d:\d\d$/)).toBeVisible()
-    await expect(page.getByText(/It wasn’t shared, so only you saw it\./)).toBeVisible()
+    await expect(page.getByText('Win it back in their half', { exact: true })).toBeVisible()
+    await expect(page.getByText('Press when their keeper plays short.', { exact: true })).toBeVisible()
+    await expect(page.getByText('Their 9 is quick.', { exact: true })).toBeVisible()
+    await expect(page.getByText(/^Locked at kick-off, \d\d:\d\d$/)).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Save draft' })).toHaveCount(0)
-    await expect(page.getByRole('textbox', { name: 'Instruction' })).toHaveAttribute('readonly', '')
+    await expect(page.locator('[role="tabpanel"]:not([hidden])').getByRole('textbox')).toHaveCount(0)
     await expect(page.getByRole('button', { name: /Add instruction/ })).toHaveCount(0)
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`locked-plan-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    // Read-only fields still take focus, so the plan can be read with the keyboard.
     const keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
     expect(keyboard.count).toBeGreaterThan(3)
     expect(keyboard.missed).toEqual([])
@@ -541,8 +664,9 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   })
 }
 
-// TRAK-288: after full time, the evaluation as one draft: Result, Team and Players, read against the plan as it locked,
-// saved with Save draft · sleep on it and reloaded. Every field is reachable by keyboard, and nothing scrolls sideways.
+// TRAK-288: after full time, the evaluation as one draft, read against the plan as it locked, saved and reloaded. Every
+// field is reachable by keyboard, and nothing scrolls sideways. TRAK-374 (Imad, 5 Nov): Result (with "Did the plan
+// work?") and Player evaluation, each player's job shown, "Did the job?", and a Draft badge in place of the alert.
 for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   test(`an evaluation at ${width} px: every step by keyboard, saved as a draft and reloaded`, async ({ page, context }, testInfo) => {
     const plans: Plans = new Map([
@@ -563,6 +687,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.getByRole('option', { name: 'Theodoros Zagorakis' }).click()
     await page.getByRole('checkbox', { name: 'Angelos Charisteas' }).click()
     await page.getByRole('textbox', { name: 'How their goals came' }).fill('A corner at the back post.')
+    await page.getByRole('group', { name: 'Win it back in their half' }).getByText('Worked').click()
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`evaluation-result-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
@@ -570,21 +695,15 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(keyboard.count).toBeGreaterThan(10)
     expect(keyboard.missed).toEqual([])
 
-    // Team: did the plan work?
-    await page.getByRole('button', { name: 'Next: Team' }).click()
-    await page.getByRole('group', { name: 'Win it back in their half' }).getByText('Worked').click()
-    await page.waitForTimeout(400)
-    await page.screenshot({ path: testInfo.outputPath(`evaluation-team-${width}.png`), fullPage: true })
-    expect(await sideways(page)).toBeLessThanOrEqual(0)
-
-    // Players: everyone starts at Did the job · Met; Zagorakis did part of his job, above what was expected.
-    await page.getByRole('button', { name: 'Next: Players' }).click()
+    // Player evaluation: everyone starts at Did the job · Met; Zagorakis did part of his job, above what was expected.
+    await page.getByRole('button', { name: 'Next: Player evaluation' }).click()
     const card = page.getByRole('button', { name: /^Theodoros Zagorakis/ })
     await expect(card).toContainText('Did the job · Met')
     await expect(card).toContainText('Expected: Stretch')
     await card.click()
     const expanded = page.locator('article').filter({ has: card })
-    await expanded.getByRole('group', { name: 'Did the job' }).getByText('Partly').click()
+    await expect(expanded.getByText('Stay tight to their winger.', { exact: true })).toBeVisible()
+    await expanded.getByRole('group', { name: 'Did the job?' }).getByText('Partly').click()
     await expanded.getByRole('group', { name: 'Against expectation' }).getByText('Above').click()
     await expanded.getByRole('textbox', { name: /^Note to Theodoros/ }).fill('Brave all game.')
     await expect(card).toContainText('Did part of the job · Above')
@@ -594,9 +713,10 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
     expect(keyboard.missed).toEqual([])
 
-    await page.getByRole('button', { name: 'Save draft · sleep on it' }).click()
-    await expect(page.getByText(/^Draft saved \d\d:\d\d$/)).toBeVisible()
-    await expect(page.getByText('Evaluation draft')).toBeVisible()
+    await expect(page.getByText('Draft', { exact: true })).toBeVisible()
+    await saveDraft(page)
+    await expect(page.getByText(/^Draft saved /)).toHaveCount(0)
+    await expect(matchStatus(page).getByText('Evaluation draft')).toBeVisible()
     await page.evaluate(() => window.scrollTo(0, 0))
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`evaluation-saved-${width}.png`) })
@@ -627,10 +747,14 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
         p_players: [{ id: 'sq-1', played: true, did_job: 'partly', against_expectation: 'above', note: 'Brave all game.' }, { id: 'sq-4', played: true }] }],
     ])
     const coach = await open(page, context, '/coach/matches/m-past?tab=evaluation', width, height, plans)
-    await page.getByRole('button', { name: 'Next: Team' }).click()
-    await page.getByRole('button', { name: 'Next: Players' }).click()
+    await page.getByRole('button', { name: 'Next: Player evaluation' }).click()
     await page.getByRole('button', { name: 'Next: Publish' }).click()
-    await expect(page.getByText('2 players · 1 changed from “Met” · 1 note')).toBeVisible()
+    // TRAK-375 (Imad, 5 Nov): one Evaluation review card, with no preview or "Who sees what".
+    const review = page.getByRole('region', { name: 'Evaluation review' })
+    await expect(review.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(4)
+    await expect(review.getByText('Won 2–1 · 1 goal without a scorer', { exact: true })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Preview' })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'Who sees what' })).toHaveCount(0)
     // This match was made before New event asked the competition (Imad, 29 Oct): the Publish step asks it.
     await expect(page.getByText('Pick the competition first.')).toBeVisible()
     await page.getByRole('group', { name: 'Competition' }).getByText('League').click()
@@ -644,7 +768,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.getByRole('button', { name: 'Publish to 2 players and families' }).click()
     await expect(page.getByText('Published to 2 players and their families. The loop is closed.')).toBeVisible()
     await expect(page.getByRole('region', { name: 'History' }).getByText('Evaluation published. The loop is closed.')).toBeVisible()
-    await expect(page.locator('header.arc').getByText('Published')).toBeVisible()
+    await expect(matchStatus(page).getByText('Published')).toBeVisible()
     await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`published-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
@@ -664,5 +788,98 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(kid.unexpected).toEqual([])
     expect(kid.errors).toEqual([])
     await player.close()
+  })
+}
+
+// Match header (Imad, 6 Nov, Concept A): Arc's Page header over the three tabs, with each match's own details. Two
+// matches, one before kick-off (Evaluation after the match) and one after full time (Evaluation open). The tabs switch
+// by pointer and keyboard; scrolled, the title and details go under a pinned compact row and the tabs, in the window's
+// one scroll, and the compact title goes back to the top.
+for (const [width, height] of [[390, 844], [1440, 900]] as const) {
+  test(`the match header at ${width} px: two matches, the tabs, scrolling to compact and back`, async ({ page, context }, testInfo) => {
+    const { unexpected, errors } = await open(page, context, '/coach/matches/m-next', width, height)
+    const header = page.getByRole('region', { name: 'vs Parkview Athletic U16' })
+    await expect(header.getByRole('heading', { level: 1, name: 'vs Parkview Athletic U16' })).toBeVisible()
+    await expect(header).toContainText(/Kick-off 11:00/)
+    await expect(header).toContainText('Rehearsal Park · Home')
+    await expect(header.getByText(/^U16 · \d+ players$/)).toBeVisible()
+    const tabs = page.getByRole('tablist', { name: 'This match' })
+    await expect(tabs.getByRole('tab', { name: 'Evaluation After the match' })).toBeVisible()
+    await expect(tabs.getByRole('tab', { name: /^Game plan \d to do$/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Review game plan' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'More actions', exact: true })).toBeVisible()
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`header-logistics-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    const keyboard = await everyControlByKeyboard(page, '.trak-wide')
+    expect(keyboard.missed).toEqual([])
+
+    // The keyboard moves along the tabs; Evaluation says when it opens.
+    await tabs.getByRole('tab', { name: /^Logistics/ }).focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(tabs.getByRole('tab', { name: /^Game plan/ })).toHaveAttribute('aria-selected', 'true')
+    await page.keyboard.press('ArrowRight')
+    await expect(page.getByRole('heading', { name: /^Opens at full time, \d\d:\d\d$/ })).toBeVisible()
+
+    // Review game plan opens Review & share; scrolled, the header is compact and the tabs stay usable.
+    await page.getByRole('button', { name: 'Review game plan' }).click()
+    await expect(page.getByRole('region', { name: 'Game plan review' })).toBeVisible()
+    // The header's, before the stepper's step of the same name.
+    await expect(page.getByRole('button', { name: 'Review & share' }).first()).toBeVisible()
+    // The "…" menu: Schedule share, and on a phone Save draft, folded in from the top row.
+    // Folded, the top row's Save draft is inert: out of reach of the pointer, the keyboard and screen readers.
+    expect(await page.getByRole('button', { name: 'Save draft' }).evaluate(el => !!el.closest('[inert]'))).toBe(width < 560)
+    await page.getByRole('button', { name: 'More actions', exact: true }).click()
+    const menu = page.getByRole('menu')
+    await expect(menu.getByRole('menuitem', { name: 'Schedule share' })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: 'Save draft' })).toHaveCount(width < 560 ? 1 : 0)
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: testInfo.outputPath(`header-menu-${width}.png`) })
+    await page.keyboard.press('Escape')
+    await expect(menu).toHaveCount(0)
+    await page.mouse.wheel(0, 700)
+    const compact = page.getByRole('button', { name: 'vs Parkview Athletic U16, back to top' })
+    await expect(compact).toBeVisible()
+    await expect(tabs).toBeInViewport()
+    await expect(header.getByRole('heading', { level: 1 })).not.toBeInViewport()
+    // One scroll, the window's: nothing in the page scrolls on its own.
+    const scrollers = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('body *')].filter(el => {
+      const overflow = getComputedStyle(el).overflowY
+      return (overflow === 'auto' || overflow === 'scroll') && el.scrollHeight > el.clientHeight + 1 && el.offsetParent !== null
+    }).map(el => el.className))
+    expect(scrollers).toEqual([])
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`header-compact-${width}.png`) })
+
+    // A tab while compact keeps the compact row and shows the top of the new tab.
+    await tabs.getByRole('tab', { name: /^Logistics/ }).click()
+    await expect(compact).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeInViewport()
+    const pinnedTabs = (await tabs.boundingBox())!
+    expect((await page.getByRole('button', { name: 'Edit', exact: true }).boundingBox())!.y).toBeGreaterThan(pinnedTabs.y + pinnedTabs.height)
+    // The compact title goes back to the top.
+    await compact.click()
+    await expect(header.getByRole('heading', { level: 1 })).toBeInViewport()
+    await expect(header.getByRole('heading', { level: 1 })).toBeFocused()
+    await expect(compact).toHaveCount(0)
+
+    // Another match: its own header, and after full time its Evaluation is open.
+    await page.goto('/coach/matches/m-past')
+    const past = page.getByRole('region', { name: 'vs Lakeside FC U16' })
+    await expect(past.getByRole('heading', { level: 1, name: 'vs Lakeside FC U16' })).toBeVisible()
+    await expect(matchStatus(page).getByText('Full time')).toBeVisible()
+    await expect(tabs.getByRole('tab', { name: 'Evaluation', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Review evaluation' }).click()
+    await expect(page.getByRole('region', { name: 'Evaluation review' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Review & publish' })).toBeVisible()
+    await tabs.getByRole('tab', { name: /^Evaluation/ }).focus()
+    await page.keyboard.press('ArrowLeft')
+    await expect(tabs.getByRole('tab', { name: /^Game plan/ })).toHaveAttribute('aria-selected', 'true')
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`header-past-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
   })
 }

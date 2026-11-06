@@ -84,6 +84,8 @@ beforeEach(() => {
   COACH = { id: `coach-286-${++n}` }
   signInAs(COACH)
   server.use(
+    // TRAK-355: who the coach is watching; no one.
+    table('player_watches', []),
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Otto Rehhagel', invite_code: 'ABCD' }]),
     table('coach_details', [{ user_id: COACH.id, coach_role: 'Head Coach', team: 'U16', organization_id: 'org-1' }]),
     table('organizations', [{ id: 'org-1', name: 'Rehearsal FC', logo_url: null }]),
@@ -116,31 +118,27 @@ describe('TRAK-286, TRAK-332: Review & share', { timeout: 30_000 }, () => {
     const user = userEvent.setup()
     const calls = store()
     shareStep()
-    const card = await screen.findByRole('region', { name: 'Review & share' })
-    // Who can come or is placed reads it; who can't make it and isn't placed doesn't, nor a child waiting for consent.
-    expect(within(card).getByText('3 players and their families, in the app only')).toBeInTheDocument()
-    expect(within(card).getByRole('img', { name: '4 of 5 parts ready, 1 to check' })).toBeInTheDocument()
+    const card = await screen.findByRole('region', { name: 'Game plan review' })
+    expect(within(card).getByRole('img', { name: '4 of 5 parts ready, 1 incomplete' })).toBeInTheDocument()
     const parts = within(card).getByRole('list', { name: 'The plan' })
     expect(within(parts).getAllByRole('listitem').map(item => item.querySelector('[class*="rowLabel"]')?.textContent))
       .toEqual(['Logistics', 'Tactics & analysis', 'Instructions', 'Line-up', 'Jobs'])
-    expect(within(parts).getByText('Shared with families')).toBeInTheDocument()
-    expect(within(parts).getByText('Stronger · scouting written')).toBeInTheDocument()
     expect(within(parts).getByText('1 instruction')).toBeInTheDocument()
     expect(within(parts).getByText('1 of 11 placed · 1 on the bench')).toBeInTheDocument()
     expect(within(parts).getByText('1 of 1 starters have one')).toBeInTheDocument()
     const share = within(card).getByRole('button', { name: 'Share plan' })
     expect(share).toBeDisabled()
-    expect(within(card).getByText('Tick “I’ve talked selection through” to share')).toBeInTheDocument()
 
-    await user.click(within(card).getByRole('checkbox', { name: 'I’ve talked selection through with the players, face to face' }))
-    expect(within(card).queryByText('Tick “I’ve talked selection through” to share')).toBeNull()
+    await user.click(within(card).getByRole('checkbox', { name: 'I’ve talked selection through with the players' }))
     await user.click(share)
 
     await waitFor(() => expect(calls.map(call => call.fn)).toEqual(['save plan', 'save line-up', 'share']))
     expect(calls[2].body).toEqual({ p_event_id: 'g1', p_talked: true })
     const shared = await screen.findByRole('region', { name: 'Shared' })
     expect(within(shared).getByText('Shared Thu 19:30')).toBeInTheDocument()
-    expect(within(shared).getByText(/Edits stay with you until you share them\./)).toBeInTheDocument()
+    // Who can come or is placed reads it; who can't make it and isn't placed doesn't, nor a child waiting for consent.
+    // TRAK-369: the count shows once it's shared, not before.
+    expect(within(shared).getByText('3 players and their families read it in the app. Edits stay with you until you share them.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Share plan' })).toBeNull()
   })
 
@@ -148,7 +146,7 @@ describe('TRAK-286, TRAK-332: Review & share', { timeout: 30_000 }, () => {
     const user = userEvent.setup()
     const calls = store()
     shareStep()
-    const card = await screen.findByRole('region', { name: 'Review & share' })
+    const card = await screen.findByRole('region', { name: 'Game plan review' })
     expect(screen.queryByRole('region', { name: 'Who sees what' })).toBeNull()
     expect(screen.queryByRole('region', { name: 'Preview' })).toBeNull()
     // Share sits in the card, not in the bar.
@@ -162,7 +160,7 @@ describe('TRAK-286, TRAK-332: Review & share', { timeout: 30_000 }, () => {
     expect(await screen.findByRole('heading', { name: 'Instructions' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next: Line-up and jobs' }))
     await user.click(screen.getByRole('button', { name: 'Next: Review & share' }))
-    await user.click(within(await screen.findByRole('region', { name: 'Review & share' })).getByRole('button', { name: 'Edit line-up' }))
+    await user.click(within(await screen.findByRole('region', { name: 'Game plan review' })).getByRole('button', { name: 'Edit line-up' }))
     expect(await screen.findByRole('heading', { name: '4-4-2' })).toBeInTheDocument()
   })
 
@@ -185,7 +183,7 @@ describe('TRAK-286, TRAK-332: Review & share', { timeout: 30_000 }, () => {
   it('a shared plan opens on Review & share, not on its first step', async () => {
     store({ shared: true })
     renderApp('/coach/matches/g1?tab=plan')
-    expect(await screen.findByRole('region', { name: 'Review & share' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Game plan review' })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Game plan' }).querySelector('[aria-current="step"]')).toHaveTextContent('Review & share')
   })
 
@@ -195,7 +193,7 @@ describe('TRAK-286, TRAK-332: Review & share', { timeout: 30_000 }, () => {
     server.use(http.post(`${SUPABASE_URL}/rest/v1/rpc/share_game_plan`, () =>
       HttpResponse.json({ code: 'P0001', message: 'This match has kicked off, so its plan can\'t be shared' }, { status: 400 })))
     shareStep()
-    const card = await screen.findByRole('region', { name: 'Review & share' })
+    const card = await screen.findByRole('region', { name: 'Game plan review' })
     await user.click(within(card).getByRole('checkbox', { name: /talked selection through/ }))
     await user.click(within(card).getByRole('button', { name: 'Share plan' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('This match has kicked off, so its plan can\'t be shared')
@@ -211,7 +209,9 @@ describe('TRAK-286, TRAK-332: Review & share', { timeout: 30_000 }, () => {
     const keeper = within(jobs).getByRole('button', { name: /Antonios Nikopolidis/ }).closest('li')!
     expect(within(keeper).getByText('Can’t make it')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next: Review & share' }))
-    expect(await screen.findByText('4 players and their families, in the app only')).toBeInTheDocument()
+    await user.click(await screen.findByRole('checkbox', { name: /talked selection through/ }))
+    await user.click(screen.getByRole('button', { name: 'Share plan' }))
+    expect(within(await screen.findByRole('region', { name: 'Shared' })).getByText(/^4 players and their families read it in the app\./)).toBeInTheDocument()
   })
 })
 

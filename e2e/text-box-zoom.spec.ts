@@ -44,6 +44,8 @@ async function signedInCoach(page: Page) {
     if (url.pathname === '/rest/v1/coach_details') return json([{ user_id: coach, organization_id: null, team: 'U14' }])
     // TRAK-288: Games off, so the session screen still offers the match log this measures.
     if (url.pathname === '/rest/v1/rpc/feature_on') return json(request.postDataJSON()?.p_feature !== 'games')
+    // TRAK-350: the season plan's switch is on here, so Home asks for the squad's plan; there is none.
+    if (url.pathname === '/rest/v1/season_plans') return json([])
     if (url.pathname === '/rest/v1/rpc/my_session_is_live') return json(true)
     // Read-only screens: the rest of the reads (GET) are empty lists.
     if (request.method() === 'GET') return json([])
@@ -75,7 +77,7 @@ test.describe('TRAK-178 on a phone', () => {
     await sheet.getByRole('button', { name: 'Next' }).click()
     await expect(sheet.getByLabel('Kit', { exact: true })).toBeVisible()
     eventForm.push(...await boxSizes(page))
-    expect(eventForm.map(b => b.box)).toEqual(expect.arrayContaining(['Venue', 'Kit', 'Note for families']))
+    expect(eventForm.map(b => b.box)).toEqual(expect.arrayContaining(['Venue', 'Kit', 'Message to players']))
     for (const { box, px } of eventForm) expect(px, `event form: ${box}`).toBeGreaterThanOrEqual(16)
 
     // The match log's big boxes keep their size; its small ones grow.

@@ -1,28 +1,31 @@
 import { Plus } from 'lucide-react'
 import { LIMITS, MAX_GOALS, STRENGTHS, emptyGoal, type Goal, type PlanForm, type Strength } from '@/lib/games/plan'
-import { LockIcon } from '@/components/icons/LockIcon'
 import { Button } from '@/components/arc/button/button'
 import { Input } from '@/components/arc/input/input'
 import { RadioGroup } from '@/components/arc/radio-group/radio-group'
 import { Textarea } from '@/components/arc/textarea/textarea'
-import { Tooltip } from '@/components/arc/tooltip/tooltip'
+import { OnlyYou } from './OnlyYou'
 
 /* TRAK-284 (Games 2/8): plan step 1 (TRAK-282). TRAK-287: locked at kick-off, the fields read only, the picker becomes
    words, and nothing can be added or removed. TRAK-328 (Imad, 2 Nov): the step is Tactics & analysis; the goals are
    Instructions, none shown until the coach adds one; their likely line-up is gone; how strong they are asks only its
    question, with his lock saying who sees it (Arc tooltip, which a tap opens too). TRAK-337 (Imad, 2 Nov): Scouting has
-   the same lock. */
+   the same lock. TRAK-371 (Imad, 5 Nov): example text in the boxes says what to write, in place of a helper line.
+   TRAK-372 (Imad, 5 Nov): locked, what was written reads as written, with no boxes; nothing written says so. */
 
 const card = 'grid min-w-0 content-start gap-4 rounded-2xl border border-line bg-surface p-5'
 
-/** Imad's lock at a card's top right: "Only you can see this" on hover, focus or a tap. `what` names it for screen readers. */
-function OnlyYou({ what }: { what: string }) {
-  return <Tooltip content="Only you can see this" openOnTap>
-    <button type="button" aria-label={`Who sees ${what}`}
-      className="-m-1.5 grid size-9 shrink-0 place-items-center rounded-full text-ink-2 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-      <LockIcon size={20} />
-    </button>
-  </Tooltip>
+/** The instructions as they locked: each numbered, its title over what it looks like. */
+function Written({ goals }: { goals: Goal[] }) {
+  const written = goals.filter(goal => goal.title.trim() || goal.looksLike.trim())
+  if (!written.length) return <p className="text-[15px] text-ink-2">No instructions.</p>
+  return <ol className="grid gap-4">
+    {written.map((goal, index) => <li key={index} className="grid grid-cols-[28px_minmax(0,1fr)] gap-x-3 gap-y-1">
+      <span aria-hidden="true" className="row-span-2 grid size-7 place-items-center rounded-full bg-ink text-sm font-medium text-surface">{index + 1}</span>
+      {goal.title.trim() && <p className="self-center text-base font-medium text-ink">{goal.title}</p>}
+      {goal.looksLike.trim() && <p className="col-start-2 whitespace-pre-line text-[15px] text-ink-2">{goal.looksLike}</p>}
+    </li>)}
+  </ol>
 }
 
 export function TacticsAndAnalysis({ eventId, opponent, form, onFormChange, locked = false }: {
@@ -37,24 +40,22 @@ export function TacticsAndAnalysis({ eventId, opponent, form, onFormChange, lock
       <div className="grid gap-4 laptop:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] laptop:items-start">
         <div className="grid min-w-0 gap-4">
         <section aria-labelledby="plan-goals" className={card}>
-          <div>
-            <h2 id="plan-goals" className="text-lg font-medium text-ink">Instructions</h2>
-            <p className="mt-1 text-sm text-ink-3">Up to three. Players see them once you share the plan.</p>
-          </div>
-          {form.goals.length > 0 && <ol className="grid gap-5">
+          <h2 id="plan-goals" className="text-lg font-medium text-ink">Instructions</h2>
+          {locked ? <Written goals={form.goals} /> : form.goals.length > 0 && <ol className="grid gap-5">
             {form.goals.map((goal, index) => <li key={index}>
               <fieldset className="grid grid-cols-[28px_minmax(0,1fr)] gap-3">
                 <legend className="sr-only">Instruction {index + 1}</legend>
                 <span aria-hidden="true" className="row-span-3 grid size-7 place-items-center rounded-full bg-ink text-sm font-medium text-surface">{index + 1}</span>
-                <Input label="Instruction" value={goal.title} maxLength={LIMITS.title} readOnly={locked} onChange={event => setGoal(index, { title: event.target.value })} />
-                <Textarea label="What it looks like" rows={2} value={goal.looksLike} maxLength={LIMITS.looksLike} readOnly={locked}
+                <Input label="Instruction" value={goal.title} maxLength={LIMITS.title}
+                  placeholder="e.g. Press together when their keeper has the ball" onChange={event => setGoal(index, { title: event.target.value })} />
+                <Textarea label="What it looks like" rows={2} value={goal.looksLike} maxLength={LIMITS.looksLike}
+                  placeholder="e.g. The nearest player goes at the keeper; the other two cut off the short pass."
                   onChange={event => setGoal(index, { looksLike: event.target.value })} />
-                {!locked && <span><Button variant="ghost" size="sm" aria-label={`Remove instruction ${index + 1}`}
-                  onClick={() => change({ goals: form.goals.filter((_, i) => i !== index) })}>Remove</Button></span>}
+                <span><Button variant="ghost" size="sm" aria-label={`Remove instruction ${index + 1}`}
+                  onClick={() => change({ goals: form.goals.filter((_, i) => i !== index) })}>Remove</Button></span>
               </fieldset>
             </li>)}
           </ol>}
-          {locked && form.goals.length === 0 && <p className="text-sm text-ink-2">No instructions.</p>}
           {form.goals.length < MAX_GOALS && !locked && <span><Button variant="ghost" size="sm" onClick={() => change({ goals: [...form.goals, emptyGoal()] })}>
             <Plus size={16} aria-hidden="true" />Add instruction</Button></span>}
         </section>
@@ -64,8 +65,10 @@ export function TacticsAndAnalysis({ eventId, opponent, form, onFormChange, lock
             <h2 id="plan-scouting" className="text-lg font-medium text-ink">Scouting</h2>
             <OnlyYou what="scouting" />
           </div>
-          <Textarea label="What you know about them" rows={4} value={form.scouting} maxLength={LIMITS.scouting} readOnly={locked}
-            onChange={event => change({ scouting: event.target.value })} />
+          {locked ? <p className="whitespace-pre-line text-[15px] text-ink">{form.scouting.trim() || 'No scouting.'}</p>
+            : <Textarea label="What you know about them" rows={4} value={form.scouting} maxLength={LIMITS.scouting}
+                placeholder="e.g. Their number 9 is quick and runs in behind. They go long when pressed."
+                onChange={event => change({ scouting: event.target.value })} />}
         </section>
         </div>
 

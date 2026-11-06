@@ -37,6 +37,8 @@ beforeEach(() => {
   COACH = { id: `coach-334-trail-${++n}` }
   signInAs(COACH)
   server.use(
+    // TRAK-355: who the coach is watching; no one.
+    table('player_watches', []),
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Otto Rehhagel', invite_code: 'ABCD' }]),
     table('coach_details', [{ user_id: COACH.id, coach_role: 'Head Coach', team: 'U16', organization_id: 'org-1' }]),
     table('organizations', [{ id: 'org-1', name: 'Rehearsal FC', logo_url: null }]),
@@ -79,7 +81,7 @@ describe('TRAK-334: a match page\'s trail', { timeout: 30_000 }, () => {
     expect(screen.queryByRole('link', { name: 'Matches' })).toBeNull()
     expect(within(screen.getByRole('navigation', { name: 'Breadcrumb trail' })).getByText('vs Parkview Athletic')).toHaveAttribute('aria-current', 'page')
 
-    await user.click(screen.getByRole('tab', { name: 'Logistics' }))
+    await user.click(screen.getByRole('tab', { name: /^Logistics/ }))
     expect(await crumbs('vs Parkview Athletic')).toEqual(['Home', 'vs Parkview Athletic'])
     await user.click(within(screen.getByRole('navigation', { name: 'Breadcrumb trail' })).getByRole('link', { name: 'Home' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/home'))
