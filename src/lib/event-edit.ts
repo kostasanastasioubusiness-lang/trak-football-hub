@@ -14,7 +14,11 @@ export function failed(error: unknown, data: unknown[] | null) {
 
 export const SAVE_FAILED = "Couldn't save the event. Check your connection and try again; your details are still here."
 
-export const inputClass = 'w-full bg-ground border border-line rounded-[12px] px-3 py-2.5 text-[14px] text-ink placeholder-ink-3 outline-none'
+export const inputClass = 'w-full bg-ground border border-line rounded-[12px] px-3 py-2.5 short:py-2 text-[14px] text-ink placeholder-ink-3 outline-none'
+// Dimos, 29 Oct: a sheet takes the screen's height, over the tab bar, so Edit, Take register and Cancel
+// show everything without scrolling; a phone's home bar keeps its gap under the buttons.
+export const SHEET = { background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', maxHeight: 'calc(100dvh - 12px)' }
+export const SHEET_BOTTOM = 'max(20px, env(safe-area-inset-bottom))'
 export const font = { fontFamily: 'var(--t-font)' }
 export const mono = { fontFamily: 'var(--t-font-mono)' }
 

@@ -25,7 +25,7 @@ interface TakeRegisterProps {
   squad?: string | null
   onSaved: () => void
   /** TRAK-342: Training's Who's here page. Several names to a row, so the whole squad fits a laptop screen, and the
-   *  button says how many are here ("Done: 15 here"). Everywhere else keeps the one-column list. */
+   *  button says how many are here ("Done: 15 here"). Everywhere else is the compact sheet register (two or three a row). */
   wide?: boolean
 }
 
@@ -129,34 +129,35 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
       ) : (
         <>
           <p className="text-[12px] text-ink-2" style={font}>{present.size} present, {absent} absent</p>
-          <ul className={wide ? 'grid gap-1.5 tablet:grid-cols-3 laptop:grid-cols-6' : 'space-y-1.5'}>
+          {/* Dimos, 29 Oct: everywhere else the whole squad shows at once too, two names a row on a phone and three
+              on a tablet, so the register sheet never scrolls. The tick and the tint say present; the button's name
+              says it to a screen reader. */}
+          <ul className={wide ? 'grid gap-1.5 tablet:grid-cols-3 laptop:grid-cols-6' : 'grid grid-cols-2 tablet:grid-cols-3 gap-1.5 short:gap-1'}>
             {loaded.players.map(p => {
               const on = present.has(p.id)
               const family = loaded.familyReason.has(p.id)
               const reason = loaded.familyReason.get(p.id)
               return (
-                <li key={p.id}>
+                <li key={p.id} className="min-w-0">
                   <button type="button" onClick={() => toggle(p.id)} aria-pressed={on}
                     aria-label={`${p.name}: ${on ? 'present' : 'absent'}`}
-                    className={`w-full flex items-center gap-3 rounded-[12px] px-3 ${wide ? 'py-2' : 'py-2.5'} text-left`}
+                    title={family ? (reason ? `Can't make it · ${reason}` : "Can't make it") : undefined}
+                    className={`w-full h-full flex items-center text-left ${wide ? 'gap-3 rounded-[12px] px-3 py-2' : 'gap-2 rounded-[10px] px-2.5 py-1.5'}`}
                     style={{ background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))', border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}` }}>
-                    <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                    <span className={`${wide ? 'w-5 h-5' : 'w-4 h-4'} rounded-full flex items-center justify-center flex-shrink-0`}
                       style={{ background: on ? 'rgb(var(--t-brand))' : 'transparent', border: on ? 'none' : '1px solid rgb(var(--t-line-strong))' }}>
-                      {on && <Check size={12} color="rgb(var(--t-on-brand))" />}
+                      {on && <Check size={wide ? 12 : 10} color="rgb(var(--t-on-brand))" />}
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-[13px] text-ink truncate" style={font}>{p.name}</span>
+                      <span className={`block truncate ${wide ? 'text-[13px]' : 'text-[12px] leading-tight'} ${on ? 'text-ink' : 'text-ink-3'}`} style={font}>{p.name}</span>
                       {family && (
-                        <span className="block text-[11px] text-ink-3" style={font}>
+                        <span className={`block truncate text-ink-3 ${wide ? 'text-[11px]' : 'text-[10px] leading-tight'}`} style={font}>
                           {reason ? `Can't make it · ${reason}` : "Can't make it"}
                         </span>
                       )}
                     </span>
-                    {/* TRAK-343 (Kostas, 3 Nov: as clean as the mockup): in the wide register the tick says it, so the
-                        name keeps the width. The button's name still says present or absent. */}
-                    {!wide && <span className="text-[11px]" style={{ ...font, color: on ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))' }}>
-                      {on ? 'Present' : 'Absent'}
-                    </span>}
+                    {/* TRAK-343 (Kostas, 3 Nov: as clean as the mockup): the tick says it, so the name keeps the width.
+                        The button's name still says present or absent. */}
                   </button>
                 </li>
               )

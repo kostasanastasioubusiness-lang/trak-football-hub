@@ -48,7 +48,7 @@ import { describeEventKit } from '@/lib/kit-templates'
 import { withAlpha } from '@/lib/with-alpha'
 import { Chip, EventEditSheet, Field, ScopeChoice } from '@/components/coach/EventEditSheet'
 import {
-  KIND_LABEL, SAVE_FAILED, competitionProblem, failed, font, inSeries, inputClass, mono, pastProblem, type EditSheet, type Scope, NOTE_STEP,
+  KIND_LABEL, SAVE_FAILED, SHEET, SHEET_BOTTOM, competitionProblem, failed, font, inSeries, inputClass, mono, pastProblem, type EditSheet, type Scope, NOTE_STEP,
 } from '@/lib/event-edit'
 import { useNotedTrainings } from '@/components/coach/training/useTraining'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
@@ -153,8 +153,8 @@ export default function CoachSchedule() {
 
   // Calendar view state
   const today = new Date()
-  const [viewYear,  setViewYear]  = useState(today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(today.getMonth())
+  // Dimos, 29 Oct: the calendar shows the weeks around this day; it opens on this week, on top.
+  const [viewDate,  setViewDate]  = useState<string>(toDateStr(today))
   const [selected,  setSelected]  = useState<string>(toDateStr(today))
 
   // Data
@@ -420,8 +420,7 @@ export default function CoachSchedule() {
     if (!row) return
     setParams({}, { replace: true })
     if (row.event_date) {
-      const [y, m] = row.event_date.split('-').map(Number)
-      setViewYear(y); setViewMonth(m - 1); setSelected(row.event_date)
+      setViewDate(row.event_date); setSelected(row.event_date)
     }
     // TRAK-230: a started event isn't edited or cancelled, whatever the link says.
     if ((action === 'edit' || action === 'cancel') && startedLocked(row)) toast.error(STARTED_LOCKED)
@@ -583,8 +582,7 @@ export default function CoachSchedule() {
             {/* TRAK-252 (option A): on a laptop the same Arc calendar fills its column. */}
             <Calendar locale="en-GB" showToday className="laptop:!w-full"
               value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
-              month={new Date(viewYear, viewMonth, 1)}
-              onMonthChange={month => { setViewYear(month.getFullYear()); setViewMonth(month.getMonth()) }}
+              weeks={5} month={new Date(`${viewDate}T12:00:00`)} onMonthChange={date => setViewDate(toDateStr(date))}
               marks={date => (byDate[toDateStr(date)] ?? []).map(ev => ev.row && isCancelled(ev.row) ? { color: CANCELLED_COLOR, hollow: true } : TYPE_COLOR[ev.type])}
               attention={date => needsYou.has(toDateStr(date))} />
           </div>
@@ -794,8 +792,8 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Cancel event"
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Cancel {sheet.row.title}?</span>
             <p className="text-[12px] text-ink-2" style={font}>
               It stays on everyone's schedule, marked Cancelled.
@@ -829,8 +827,8 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Event cancelled"
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Event cancelled</span>
             <p className="text-[12px] text-ink-2" style={font}>
               {sheet.note} Let the team group know.
@@ -854,8 +852,8 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Import fixtures"
-            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <div className="flex items-center justify-between">
               <span className="text-[16px] font-medium text-ink" style={font}>Import fixtures</span>
               <button onClick={() => setSheet({ kind: 'closed' })} aria-label="Close">
@@ -876,11 +874,12 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Take register"
-            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3 short:space-y-2 short:pt-4"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <div className="flex items-center justify-between gap-3">
               <span className="text-[16px] font-medium text-ink" style={font}>
-                {`Register: ${sheet.row.title}, ${formatEventDay(displayEventTime(sheet.row).date)}`}
+                {/* Dimos, 29 Oct: "Thu 29 Oct", so the title keeps to one line and the squad has the room. */}
+                {`Register: ${sheet.row.title}, ${new Date(`${displayEventTime(sheet.row).date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}`}
               </span>
               <button onClick={() => setSheet({ kind: 'closed' })} aria-label="Close">
                 <X size={18} className="text-ink-2" />
@@ -901,8 +900,8 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={sheet.action === 'publish' ? 'Publish event' : 'Delete draft'}
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>
               {sheet.action === 'publish' ? 'Publish' : 'Delete'} {sheet.row.title}, {formatEventDay(sheet.row.event_date!)}
             </span>
@@ -935,8 +934,8 @@ export default function CoachSchedule() {
         <div className="fixed inset-0 z-[70] flex items-end justify-center"
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}>
           <div role="dialog" aria-label="Not published"
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Not published</span>
             <p className="text-[12px] text-ink-2" style={font}>
               None of the {sheet.count} events went out. They’re saved as drafts only you can see.
@@ -952,8 +951,7 @@ export default function CoachSchedule() {
             {sheet.weeks[0] && (
               <button onClick={() => {
                 const date = sheet.weeks[0].date
-                const [y, m] = date.split('-').map(Number)
-                setViewYear(y); setViewMonth(m - 1); setSelected(date)
+                setViewDate(date); setSelected(date)
                 setSheet({ kind: 'closed' })
               }}
                 className="w-full py-3 rounded-[12px] text-[14px] font-medium"

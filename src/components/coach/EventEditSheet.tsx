@@ -10,7 +10,7 @@ import {
   repeatProblem, seriesDates, type EventForm, type Repeat,
 } from '@/lib/coach-events'
 import {
-  EVENT_STEPS, KIND_LABEL, REVIEW, font, inSeries, inputClass, mono, pastProblem, playedMatch, seriesCount, stepProblem,
+  EVENT_STEPS, KIND_LABEL, REVIEW, SHEET, SHEET_BOTTOM, font, inSeries, inputClass, mono, pastProblem, playedMatch, seriesCount, stepProblem,
   type EditSheet, type Scope,
 } from '@/lib/event-edit'
 import { familyNoteProblem } from '@/lib/event-share'
@@ -60,11 +60,11 @@ function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange:
   return (
     <div className="space-y-2">
       <span id="training-theme" className="block text-[9px] tracking-[0.1em] uppercase text-ink-3" style={mono}>Theme</span>
-      <div role="radiogroup" aria-labelledby="training-theme" className="grid grid-cols-2 gap-2">
+      <div role="radiogroup" aria-labelledby="training-theme" className="grid grid-cols-2 tablet:grid-cols-3 gap-1.5">
         {TRAINING_THEMES.map(t => {
           const on = t.key === theme
           return (
-            <label key={t.key} className="flex items-start gap-2 rounded-[12px] px-3 py-2 cursor-pointer transition-colors"
+            <label key={t.key} className="flex items-start gap-2 rounded-[12px] px-2.5 py-1.5 cursor-pointer transition-colors"
               style={{
                 background: on ? withAlpha(EVENT_COLOR.training, 0.1) : 'rgb(var(--t-ground))',
                 border: `1px solid ${on ? withAlpha(EVENT_COLOR.training, 0.33) : 'rgb(var(--t-line))'}`,
@@ -74,7 +74,7 @@ function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange:
                 className="mt-[2px] w-3.5 h-3.5 shrink-0" style={{ accentColor: EVENT_COLOR.training }} />
               <span className="min-w-0">
                 <span className={`block text-[13px] leading-tight text-ink ${on ? 'font-medium' : ''}`}>{t.label}</span>
-                <span className="block text-[11px] text-ink-3 mt-0.5 whitespace-nowrap">{t.sessions} sessions · {t.topics} {t.topics === 1 ? 'topic' : 'topics'}</span>
+                <span className="block text-[11px] leading-tight text-ink-3 whitespace-nowrap short:hidden">{t.sessions} sessions · {t.topics} {t.topics === 1 ? 'topic' : 'topics'}</span>
               </span>
             </label>
           )
@@ -186,8 +186,8 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
       style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div role="dialog" aria-label={sheet.row ? 'Edit event' : 'New event'}
-        className="w-full max-w-sheet rounded-t-[24px] px-5 pt-5 space-y-3 overflow-y-auto"
-        style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', maxHeight: '85vh', marginBottom: 64 }}>
+        className="w-full max-w-sheet rounded-t-[24px] px-5 pt-5 space-y-3 short:space-y-2 short:pt-4 overflow-y-auto"
+        style={SHEET}>
         <div className="flex items-center justify-between">
           <span className="text-[16px] font-medium text-ink" style={font}>
             {sheet.row ? 'Edit event' : 'New event'}
@@ -255,21 +255,22 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
               className={inputClass} style={font} />
           </Field>
 
-          {/* TRAK-255: a venue is a name everyone reads; its map link has a box of its own. */}
-          <Field label="Venue">
-            <input value={splitVenue(sheet.form.venue).name} onChange={e => setVenueName(e.target.value)}
-              list="saved-venues" placeholder="Pick a saved venue or type its name" className={inputClass} style={font} />
-            <datalist id="saved-venues">
-              {venues.map(v => <option key={v.name} value={v.name} />)}
-            </datalist>
-          </Field>
-          <div className="space-y-1">
+          {/* TRAK-255: a venue is a name everyone reads; its map link has a box of its own.
+              Dimos, 29 Oct: side by side, so the step shows whole without scrolling. */}
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+            <Field label="Venue">
+              <input value={splitVenue(sheet.form.venue).name} onChange={e => setVenueName(e.target.value)}
+                list="saved-venues" placeholder="Saved venue or a name" className={inputClass} style={font} />
+              <datalist id="saved-venues">
+                {venues.map(v => <option key={v.name} value={v.name} />)}
+              </datalist>
+            </Field>
             <Field label="Map link (optional)">
               <input value={mapLinkText ?? splitVenue(sheet.form.venue).link} onChange={e => setVenueLink(e.target.value)}
-                inputMode="url" placeholder="Paste a Google Maps or Apple Maps link" className={inputClass} style={font} />
+                inputMode="url" placeholder="Google or Apple Maps link" className={inputClass} style={font} />
             </Field>
             {mapLinkText && !isMapsUrl(mapLinkText) && (
-              <p className="text-[11px] text-warning" style={font}>That isn't a Google Maps or Apple Maps link, so it won't be saved.</p>
+              <p className="col-span-2 text-[11px] text-warning" style={font}>That isn't a Google Maps or Apple Maps link, so it won't be saved.</p>
             )}
           </div>
         </>}
@@ -405,7 +406,7 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
         )}
 
         {/* The decision sits where the thumb is, as on the assessment. */}
-        <div className="arc sticky bottom-0 -mx-5 px-5 pt-3 pb-5 flex gap-2 bg-raised border-t border-line">
+        <div className="arc sticky bottom-0 -mx-5 px-5 pt-3 flex gap-2 bg-raised border-t border-line" style={{ paddingBottom: SHEET_BOTTOM }}>
           {sheet.step === REVIEW ? <>
             <Button size="lg" variant="secondary" aria-label={`Back to ${EVENT_STEPS[REVIEW - 1].label}`} onClick={() => toStep(REVIEW - 1)}>
               <ChevronLeft size={18} aria-hidden="true" />
