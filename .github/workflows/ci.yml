@@ -25,7 +25,10 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+      # Depth 2 keeps the merge ref's base, for scripts/ci-scope.mjs.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
 
       - uses: actions/setup-node@v6
         with:
@@ -53,28 +56,48 @@ jobs:
       - name: Consent calendar timezones
         run: npm run test:consent-timezones
 
+      # Fast lane: the database steps below read only supabase/, scripts/,
+      # the workflows and the pinned dependencies. A PR touching none of
+      # them skips them (about five minutes); anything uncertain runs them.
+      # Every other step always runs. src/__tests__/ci-fast-lane.test.ts
+      # lists the skippable steps.
+      - name: Fast-lane classifier
+        run: node --test scripts/ci-scope.test.mjs
+
+      - name: Does this PR change database inputs?
+        id: scope
+        run: node scripts/ci-scope.mjs
+
       - name: Database security regressions
+        if: steps.scope.outputs.database == 'true'
         run: npm run test:db
 
       - name: Parent migration after deployed reporting migration
+        if: steps.scope.outputs.database == 'true'
         run: npm run test:db -- --parent-upgrade-review
 
       - name: Academy access and account deletion regressions
+        if: steps.scope.outputs.database == 'true'
         run: npm run test:db -- --coach-departure-review
 
       - name: Academy repair after current main migrations
+        if: steps.scope.outputs.database == 'true'
         run: npm run test:db -- --academy-upgrade-review
 
       - name: Assessment index after current main and academy repair
+        if: steps.scope.outputs.database == 'true'
         run: npm run test:db -- --assessment-upgrade-review
 
       - name: Academy history convergence and mutation controls
+        if: steps.scope.outputs.database == 'true'
         run: npm run test:db:academy-history
 
       - name: Disposable database runner safeguards
+        if: steps.scope.outputs.database == 'true'
         run: npm run test:db:runner
 
       - name: Install PostgreSQL 17 for concurrent database regressions
+        if: steps.scope.outputs.database == 'true'
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl --fail --silent --show-error --location https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
@@ -83,17 +106,19 @@ jobs:
           sudo apt-get install -y --no-install-recommends postgresql-17
 
       - name: Native PostgreSQL replay and concurrent player linking
+        if: steps.scope.outputs.database == 'true'
         run: npm run test:db:concurrency
         env:
           TRAK_TEST_PG_BIN: /usr/lib/postgresql/17/bin
 
       - name: Native assessment query plan and result regressions
+        if: steps.scope.outputs.database == 'true'
         run: npm run test:db:query-plans
         env:
           TRAK_TEST_PG_BIN: /usr/lib/postgresql/17/bin
 
       - name: Preserve synthetic query plans
-        if: always()
+        if: always() && steps.scope.outputs.database == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: synthetic-assessment-query-plans
@@ -102,6 +127,7 @@ jobs:
           retention-days: 14
 
       - name: Native PostgreSQL academy upgrade after current main
+        if: steps.scope.outputs.database == 'true'
         run: npm run test:db:native -- --academy-upgrade-review
         env:
           TRAK_TEST_PG_BIN: /usr/lib/postgresql/17/bin
@@ -110,6 +136,7 @@ jobs:
       # is the gap a withdrawn-and-replaced migration falls through: the replay
       # goes green while the already-applied database keeps the old effects.
       - name: Migration histories converge
+        if: steps.scope.outputs.database == 'true'
         run: npm run test:db:convergence
 
       # tests/msw and tests/support hold the MSW fidelity contract and the
