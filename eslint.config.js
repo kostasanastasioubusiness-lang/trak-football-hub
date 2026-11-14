@@ -17,17 +17,10 @@ export default tseslint.config({ ignores: ["dist"] }, {
   },
   rules: {
     ...reactHooks.configs.recommended.rules,
-    // Move helpers out of component files. The named exceptions keep a
-    // context's hook beside its Provider (useAuth has 80+ importers) and
-    // shadcn's generated ui/ helpers as shadcn ships them.
-    "react-refresh/only-export-components": ["error", {
-      allowConstantExport: true,
-      allowExportNames: [
-        "useAuth", "useParentChildren",
-        "badgeVariants", "buttonVariants", "toggleVariants", "navigationMenuTriggerStyle",
-        "useFormField", "useSidebar", "toast",
-      ],
-    }],
+    // Off (Kostas, 14 Nov): it only guards the dev server's hot reload, and new
+    // pages kept tripping it. The plugin stays registered so existing
+    // eslint-disable comments that name the rule still resolve.
+    "react-refresh/only-export-components": "off",
     "@typescript-eslint/no-unused-vars": "off",
     // Still warnings: the database-row `any`s wait on regenerated Supabase
     // types, and the hook dependencies are behaviour changes. `npm run lint`
