@@ -47,6 +47,79 @@ export type Database = {
         }
         Relationships: []
       }
+      objective_progress: {
+        Row: { evaluation_id: string; player_objective_id: string; status: string }
+        Insert: { evaluation_id: string; player_objective_id: string; status: string }
+        Update: { evaluation_id?: string; player_objective_id?: string; status?: string }
+        Relationships: [
+          {
+            foreignKeyName: "objective_progress_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "season_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_progress_player_objective_id_fkey"
+            columns: ["player_objective_id"]
+            isOneToOne: false
+            referencedRelation: "player_objectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      objective_stuck_choices: {
+        Row: {
+          after_evaluation_id: string
+          choice: string
+          chosen_at: string
+          chosen_by: string | null
+          id: string
+          new_objective_id: string | null
+          player_objective_id: string
+        }
+        Insert: {
+          after_evaluation_id: string
+          choice: string
+          chosen_at?: string
+          chosen_by?: string | null
+          id?: string
+          new_objective_id?: string | null
+          player_objective_id: string
+        }
+        Update: {
+          after_evaluation_id?: string
+          choice?: string
+          chosen_at?: string
+          chosen_by?: string | null
+          id?: string
+          new_objective_id?: string | null
+          player_objective_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objective_stuck_choices_after_evaluation_id_fkey"
+            columns: ["after_evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "season_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_stuck_choices_new_objective_id_fkey"
+            columns: ["new_objective_id"]
+            isOneToOne: false
+            referencedRelation: "player_objectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_stuck_choices_player_objective_id_fkey"
+            columns: ["player_objective_id"]
+            isOneToOne: false
+            referencedRelation: "player_objectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           admin_user_id: string
@@ -209,6 +282,7 @@ export type Database = {
           coachability: number
           consistency: number
           created_at: string | null
+          evaluation_id: string | null
           flag: string | null
           id: string
           impact: number
@@ -234,6 +308,7 @@ export type Database = {
           coachability?: number
           consistency?: number
           created_at?: string | null
+          evaluation_id?: string | null
           flag?: string | null
           id?: string
           impact?: number
@@ -259,6 +334,7 @@ export type Database = {
           coachability?: number
           consistency?: number
           created_at?: string | null
+          evaluation_id?: string | null
           flag?: string | null
           id?: string
           impact?: number
@@ -276,6 +352,13 @@ export type Database = {
           workrate?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "coach_assessments_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "season_evaluations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coach_assessments_session_id_fkey"
             columns: ["session_id"]
@@ -420,6 +503,24 @@ export type Database = {
           referencedRelation: "organizations"
           referencedColumns: ["id"]
         }]
+      }
+      coach_drill_bookmarks: {
+        Row: {
+          coach_user_id: string
+          created_at: string
+          drill: string
+        }
+        Insert: {
+          coach_user_id?: string
+          created_at?: string
+          drill: string
+        }
+        Update: {
+          coach_user_id?: string
+          created_at?: string
+          drill?: string
+        }
+        Relationships: []
       }
       coach_drills: {
         Row: {
@@ -622,6 +723,48 @@ export type Database = {
         }
         Relationships: []
       }
+      formation_copies: {
+        Row: {
+          by_default: boolean
+          copied_at: string
+          event_id: string
+          formation_id: string
+          not_coming: number
+          skipped: number
+        }
+        Insert: {
+          by_default?: boolean
+          copied_at?: string
+          event_id: string
+          formation_id: string
+          not_coming: number
+          skipped: number
+        }
+        Update: {
+          by_default?: boolean
+          copied_at?: string
+          event_id?: string
+          formation_id?: string
+          not_coming?: number
+          skipped?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formation_copies_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "coach_calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formation_copies_formation_id_fkey"
+            columns: ["formation_id"]
+            isOneToOne: false
+            referencedRelation: "formations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       formation_players: {
         Row: {
           formation_id: string
@@ -661,6 +804,7 @@ export type Database = {
           created_at: string
           format: number
           id: string
+          is_default: boolean
           name: string
           shape: string
           squad: string
@@ -671,6 +815,7 @@ export type Database = {
           created_at?: string
           format: number
           id?: string
+          is_default?: boolean
           name: string
           shape: string
           squad: string
@@ -681,6 +826,7 @@ export type Database = {
           created_at?: string
           format?: number
           id?: string
+          is_default?: boolean
           name?: string
           shape?: string
           squad?: string
@@ -1182,6 +1328,7 @@ export type Database = {
           id: string
           retired_at: string | null
           season_objective_id: string | null
+          shared_at: string | null
           slot: number
           source: string
           squad_player_id: string
@@ -1194,6 +1341,7 @@ export type Database = {
           id?: string
           retired_at?: string | null
           season_objective_id?: string | null
+          shared_at?: string | null
           slot: number
           source: string
           squad_player_id: string
@@ -1206,6 +1354,7 @@ export type Database = {
           id?: string
           retired_at?: string | null
           season_objective_id?: string | null
+          shared_at?: string | null
           slot?: number
           source?: string
           squad_player_id?: string
@@ -1283,6 +1432,7 @@ export type Database = {
           full_name: string
           id: string
           invite_code: string | null
+          language: string | null
           nationality: string | null
           role: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -1293,6 +1443,7 @@ export type Database = {
           full_name: string
           id?: string
           invite_code?: string | null
+          language?: string | null
           nationality?: string | null
           role: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -1303,6 +1454,7 @@ export type Database = {
           full_name?: string
           id?: string
           invite_code?: string | null
+          language?: string | null
           nationality?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           user_id?: string
@@ -1353,6 +1505,38 @@ export type Database = {
           },
         ]
       }
+      season_evaluations: {
+        Row: {
+          due_on: string
+          id: string
+          plan_id: string
+          published_at: string
+          published_by: string | null
+        }
+        Insert: {
+          due_on: string
+          id?: string
+          plan_id: string
+          published_at?: string
+          published_by?: string | null
+        }
+        Update: {
+          due_on?: string
+          id?: string
+          plan_id?: string
+          published_at?: string
+          published_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_evaluations_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "season_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       season_objectives: {
         Row: {
           created_at: string
@@ -1361,6 +1545,8 @@ export type Database = {
           place: number
           plan_id: string
           retired_at: string | null
+          shared_looks_like: string | null
+          shared_title: string | null
           status: string
           title: string
           updated_at: string
@@ -1372,6 +1558,8 @@ export type Database = {
           place: number
           plan_id: string
           retired_at?: string | null
+          shared_looks_like?: string | null
+          shared_title?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -1383,6 +1571,8 @@ export type Database = {
           place?: number
           plan_id?: string
           retired_at?: string | null
+          shared_looks_like?: string | null
+          shared_title?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -1397,15 +1587,70 @@ export type Database = {
           },
         ]
       }
+      season_plan_player_shares: {
+        Row: {
+          changed_at: string
+          squad_player_id: string
+        }
+        Insert: {
+          changed_at: string
+          squad_player_id: string
+        }
+        Update: {
+          changed_at?: string
+          squad_player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_plan_player_shares_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: true
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_plan_seen: {
+        Row: {
+          seen_at: string
+          squad_player_id: string
+          viewer_user_id: string
+        }
+        Insert: {
+          seen_at?: string
+          squad_player_id: string
+          viewer_user_id: string
+        }
+        Update: {
+          seen_at?: string
+          squad_player_id?: string
+          viewer_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_plan_seen_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       season_plans: {
         Row: {
           coach_user_id: string
           created_at: string
           ends_on: string | null
+          eval_day: number
+          eval_every: string
           id: string
           last_shared_at: string | null
           positions_known: string | null
           shared_at: string | null
+          shared_ends_on: string | null
+          shared_eval_day: number | null
+          shared_eval_every: string | null
+          shared_starts_on: string | null
           squad: string
           starts_on: string | null
           unshared_parts: string[]
@@ -1417,10 +1662,16 @@ export type Database = {
           coach_user_id?: string
           created_at?: string
           ends_on?: string | null
+          eval_day?: number
+          eval_every?: string
           id?: string
           last_shared_at?: string | null
           positions_known?: string | null
           shared_at?: string | null
+          shared_ends_on?: string | null
+          shared_eval_day?: number | null
+          shared_eval_every?: string | null
+          shared_starts_on?: string | null
           squad: string
           starts_on?: string | null
           unshared_parts?: string[]
@@ -1432,10 +1683,16 @@ export type Database = {
           coach_user_id?: string
           created_at?: string
           ends_on?: string | null
+          eval_day?: number
+          eval_every?: string
           id?: string
           last_shared_at?: string | null
           positions_known?: string | null
           shared_at?: string | null
+          shared_ends_on?: string | null
+          shared_eval_day?: number | null
+          shared_eval_every?: string | null
+          shared_starts_on?: string | null
           squad?: string
           starts_on?: string | null
           unshared_parts?: string[]
@@ -1728,6 +1985,7 @@ export type Database = {
           part_type: string | null
           players_kind: string | null
           trak_drill: string | null
+          trak_level: number | null
           area: string
           conditions: string
           direction: string
@@ -1749,6 +2007,7 @@ export type Database = {
           part_type?: string | null
           players_kind?: string | null
           trak_drill?: string | null
+          trak_level?: number | null
           area?: string
           conditions?: string
           direction?: string
@@ -1770,6 +2029,7 @@ export type Database = {
           part_type?: string | null
           players_kind?: string | null
           trak_drill?: string | null
+          trak_level?: number | null
           area?: string
           conditions?: string
           direction?: string
@@ -1861,6 +2121,10 @@ export type Database = {
           family_note: string | null
         }[]
       }
+      child_training_attendance: {
+        Args: { p_child: string }
+        Returns: { attended: number; total: number }[]
+      }
       coach_match_score_clash: {
         Args: {
           p_assists?: number
@@ -1905,6 +2169,11 @@ export type Database = {
       }
       revoke_my_calendar_link: { Args: never; Returns: boolean }
       feature_on: { Args: { p_feature: string }; Returns: boolean }
+      family_academy: {
+        Args: { p_child: string }
+        Returns: { logo_url: string | null; name: string }[]
+      }
+      family_feature_on: { Args: { p_feature: string }; Returns: boolean }
       game_plan_changes: {
         Args: { p_event_ids: string[] }
         Returns: { event_id: string; squad_player_id: string }[]
@@ -2060,6 +2329,10 @@ export type Database = {
         Returns: undefined
       }
       delete_formation: { Args: { p_id: string }; Returns: undefined }
+      load_default_formation: { Args: { p_event_id: string }; Returns: Json }
+      set_default_formation: { Args: { p_default: boolean; p_id: string }; Returns: undefined }
+      use_formation_for_matches: { Args: { p_event_ids: string[]; p_formation_id: string }; Returns: Json }
+      undo_formation_copy: { Args: { p_event_ids: string[]; p_formation_id: string }; Returns: Json }
       save_formation: {
         Args: {
           p_format: number
@@ -2087,6 +2360,48 @@ export type Database = {
         Args: { p_plan_id: string; p_talked?: boolean }
         Returns: string
       }
+      publish_evaluation: {
+        Args: { p_due_on: string; p_plan_id: string; p_players: Json }
+        Returns: Json
+      }
+      publish_evaluation_with_objectives: {
+        Args: { p_due_on: string; p_objectives: Json; p_plan_id: string; p_players: Json }
+        Returns: Json
+      }
+      resolve_stuck_objective: {
+        Args: { p_choice: string; p_player_objective_id: string; p_title?: string }
+        Returns: undefined
+      }
+      stuck_player_objectives: {
+        Args: never
+        Returns: { player_objective_id: string; squad_player_id: string }[]
+      }
+      evaluation_progress: {
+        Args: { p_assessments: string[]; p_child?: string }
+        Returns: { assessment_id: string; due_on: string; objectives: Json }[]
+      }
+      season_plan_for_player: {
+        Args: { p_child?: string }
+        Returns: {
+          also_plays: string[]
+          coach_name: string
+          ends_on: string | null
+          eval_day: number | null
+          eval_every: string | null
+          is_new: boolean
+          last_evaluation_on: string | null
+          objectives: Json
+          position: string | null
+          roles: string[]
+          season_objectives: Json
+          shared_at: string | null
+          squad: string
+          squad_player_id: string
+          starts_on: string | null
+          time_zone: string
+        }[]
+      }
+      mark_season_plan_seen: { Args: { p_child?: string }; Returns: undefined }
       watch_players: { Args: { p_squad_player_ids: string[] }; Returns: number }
       take_event_register: {
         Args: { p_event_id: string; p_present: string[] }

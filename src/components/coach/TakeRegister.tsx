@@ -4,6 +4,8 @@ import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { refusalWithNames, registerStart, type RegisterPlayer } from '@/lib/event-register'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
+import { i18n, useTranslation } from '@/lib/i18n'
+import { absenceReasonWord } from '@/lib/absence-reasons'
 
 /**
  * TRAK-138 (J8.15): the register of an event that went ahead. It opens
@@ -36,7 +38,6 @@ type Loaded = {
 }
 
 const font = { fontFamily: 'var(--t-font)' }
-const SAVE_FAILED = "Couldn't save the register. Check your connection and save again; your ticks are still here."
 
 export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = null, onSaved, wide = false }: TakeRegisterProps) {
   const [loaded, setLoaded] = useState<Loaded | null>(null)
@@ -45,6 +46,7 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
   const [present, setPresent] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { t } = useTranslation()
 
   useEffect(() => {
     let superseded = false
@@ -65,10 +67,10 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
         supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never)
           .then(({ data, error }) => (error || typeof data !== 'boolean' ? null : data))))
       const all: RegisterPlayer[] = rows.map((p, i) => ({
-        id: p.id, name: p.player_name ?? 'Player', ready: required[i] === false,
+        id: p.id, name: p.player_name ?? i18n.t('nav:player'), ready: required[i] === false,
         waitReason: required[i] === null ? "consent couldn't be checked" : 'waiting for a parent',
       }))
-      const familyReason = new Map((absences.data ?? []).map(a => [a.squad_player_id as string, (a.reason as string | null) ?? null]))
+      const familyReason = new Map((absences.data ?? []).map(a => [a.squad_player_id as string, absenceReasonWord(a.reason as string | null)]))
       const start = registerStart(all, familyReason.keys())
       // Taken before: reopen as saved. Otherwise the family's word decides.
       const ready = new Set(all.filter(p => p.ready).map(p => p.id))
@@ -104,31 +106,31 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
     if (rpcErr) {
       // A rule refusal carries a sentence for the coach; saving again gets the
       // same answer, so show it. Anything else is the connection.
-      setError(rpcErr.code === 'P0001' || rpcErr.code === '42501' ? refusalWithNames(rpcErr.message, names) : SAVE_FAILED)
+      setError(rpcErr.code === 'P0001' || rpcErr.code === '42501' ? refusalWithNames(rpcErr.message, names) : t('coachSchedule:registerSaveFailed'))
       return
     }
-    toast.success(`Register saved: ${present.size} present.`)
+    toast.success(t('coachSchedule:registerSaved', { count: present.size }))
     onSaved()
   }
 
   if (loadFailed) {
     return (
       <p role="alert" className="text-[12px] text-ink-2" style={font}>
-        Couldn't load the register.{' '}
-        <button type="button" onClick={() => setAttempt(n => n + 1)} className="underline text-brand">Retry</button>
+        {t('coachSchedule:couldntLoadRegister')}{' '}
+        <button type="button" onClick={() => setAttempt(n => n + 1)} className="underline text-brand">{t('common:retry')}</button>
       </p>
     )
   }
-  if (!loaded) return <LoadingSkeleton label="Loading your squad…" lines={1} avatar rows={4} />
+  if (!loaded) return <LoadingSkeleton label={t('coachSchedule:loadingSquad')} lines={1} avatar rows={4} />
 
   const absent = loaded.players.length - present.size
   return (
     <div className="space-y-3">
       {loaded.players.length === 0 ? (
-        <p className="text-[12px] text-ink-3" style={font}>No players to record yet.</p>
+        <p className="text-[12px] text-ink-3" style={font}>{t('coachSchedule:noPlayersToRecord')}</p>
       ) : (
         <>
-          <p className="text-[12px] text-ink-2" style={font}>{present.size} present, {absent} absent</p>
+          <p className="text-[12px] text-ink-2" style={font}>{t('coachSchedule:presentAbsent', { present: present.size, absent })}</p>
           {/* Dimos, 29 Oct: everywhere else the whole squad shows at once too, two names a row on a phone and three
               on a tablet, so the register sheet never scrolls. The tick and the tint say present; the button's name
               says it to a screen reader. */}
@@ -140,8 +142,8 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
               return (
                 <li key={p.id} className="min-w-0">
                   <button type="button" onClick={() => toggle(p.id)} aria-pressed={on}
-                    aria-label={`${p.name}: ${on ? 'present' : 'absent'}`}
-                    title={family ? (reason ? `Can't make it · ${reason}` : "Can't make it") : undefined}
+                    aria-label={t(on ? 'coachSchedule:playerPresent' : 'coachSchedule:playerAbsent', { name: p.name })}
+                    title={family ? (reason ? t('coachSchedule:cantMakeItWhy', { reason }) : t('coachSchedule:cantMakeIt')) : undefined}
                     className={`w-full h-full flex items-center text-left ${wide ? 'gap-3 rounded-[12px] px-3 py-2' : 'gap-2 rounded-[10px] px-2.5 py-1.5'}`}
                     style={{ background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))', border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}` }}>
                     <span className={`${wide ? 'w-5 h-5' : 'w-4 h-4'} rounded-full flex items-center justify-center flex-shrink-0`}
@@ -152,7 +154,7 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
                       <span className={`block truncate ${wide ? 'text-[13px]' : 'text-[12px] leading-tight'} ${on ? 'text-ink' : 'text-ink-3'}`} style={font}>{p.name}</span>
                       {family && (
                         <span className={`block truncate text-ink-3 ${wide ? 'text-[11px]' : 'text-[10px] leading-tight'}`} style={font}>
-                          {reason ? `Can't make it · ${reason}` : "Can't make it"}
+                          {reason ? t('coachSchedule:cantMakeItWhy', { reason }) : t('coachSchedule:cantMakeIt')}
                         </span>
                       )}
                     </span>
@@ -167,7 +169,7 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
       )}
       {loaded.notReady.length > 0 && (
         <p className="text-[11px] text-ink-3" style={font}>
-          Not recorded until a parent approves: {loaded.notReady.map(p => p.waitReason === 'waiting for a parent' ? p.name : `${p.name} (${p.waitReason})`).join(', ')}
+          {t('coachSchedule:notRecordedUntil', { names: loaded.notReady.map(p => p.waitReason === 'waiting for a parent' ? p.name : `${p.name} (${t('coachSchedule:consentUnchecked')})`).join(', ') })}
         </p>
       )}
       {error && <p role="alert" className="text-[12px] text-danger" style={font}>{error}</p>}
@@ -175,7 +177,7 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
         <button type="button" onClick={save} disabled={saving}
           className={`${wide ? 'w-full tablet:w-auto tablet:px-8' : 'w-full'} py-3 rounded-[12px] text-[14px] font-medium disabled:opacity-50`}
           style={{ background: 'rgb(var(--t-brand))', color: 'rgb(var(--t-on-brand))' }}>
-          {saving ? 'Saving…' : wide ? `Done: ${present.size} here` : 'Save register'}
+          {saving ? t('coachSchedule:savingDots') : wide ? t('coachSchedule:doneHere', { count: present.size }) : t('coachSchedule:saveRegister')}
         </button>
       )}
     </div>

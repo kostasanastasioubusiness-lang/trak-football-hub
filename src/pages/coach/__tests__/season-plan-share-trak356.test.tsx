@@ -67,6 +67,8 @@ beforeEach(() => {
     table('squad_players', [child('pat', 'Pat Synthetic', 'Defender'), child('quinn', 'Quinn Synthetic', 'Midfielder')]),
     rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
+    // TRAK-364: a shared plan's evaluations; none published.
+    table('season_evaluations', []),
     http.get(`${SUPABASE_URL}/rest/v1/season_plans`, () => HttpResponse.json([plan])),
     http.patch(`${SUPABASE_URL}/rest/v1/season_plans`, async ({ request }) => {
       const body = await request.json() as Partial<Plan>
@@ -129,14 +131,16 @@ const user = () => userEvent.setup()
 const TICK = 'I’ve talked objectives through with the players, face to face'
 
 describe('TRAK-356 Share', () => {
-  it('shares with zero objectives: no tick, the step says families see nothing yet, and the plan opens shared', async () => {
+  it('shares with zero objectives: no tick, no claim that players and families cannot see it, and the plan opens shared', async () => {
     renderApp('/coach/season-plan/share')
     expect(await screen.findByRole('heading', { name: 'What goes out' })).toBeInTheDocument()
-    expect(screen.getByText('Only you, for now. Players and families don’t see the season plan in the app yet.')).toBeInTheDocument()
+    expect(screen.queryByText(/don.t see the season plan/)).toBeNull()
     expect(screen.queryByRole('checkbox')).toBeNull()
     await user().click(screen.getByRole('button', { name: 'Share now' }))
     await waitFor(() => expect(shares).toEqual([{ p_plan_id: 'plan-1', p_talked: false }]))
     expect(await screen.findByText('Shared 6 Nov.')).toBeInTheDocument()
+    expect(screen.getByText('Edits wait here until you share them.')).toBeInTheDocument()
+    expect(screen.queryByText(/don.t see the season plan/)).toBeNull()
     expect(window.location.pathname).toBe('/coach/season-plan')
     expect(screen.queryByRole('navigation', { name: 'Season plan steps' })).toBeNull()
   }, 30_000)

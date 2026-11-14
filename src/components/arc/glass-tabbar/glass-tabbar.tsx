@@ -1,7 +1,7 @@
 // Arc Pro (uiarc.dev): licensed source, not covered by this repository's licence. See src/components/arc/PRO.md.
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, RefObject } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, useSpring, useTransform, useVelocity } from "motion/react";
 import type { AnimationPlaybackControls, MotionStyle, MotionValue } from "motion/react";
@@ -29,6 +29,8 @@ export interface GlassTabBarProps {
   /** Initial active tab when uncontrolled. Defaults to the first item. */
   defaultValue?: string;
   onValueChange?: (value: string) => void;
+  /** Trak (TRAK-440): the tab already selected is pressed again, such as from a page under it. */
+  onReselect?: (value: string) => void;
   /** A separate round glass tab beside the bar, such as search. Selecting it moves the selection out of the bar. */
   action?: GlassTabBarItem;
   /** Trak: any control in the round slot beside the bar instead of a tab, such as the "+" menu. It takes the bar's height. */
@@ -71,6 +73,33 @@ interface TabProps {
   onSelect: () => void;
 }
 
+/** TRAK-406: a label longer than its tab ("Προπόνηση" in Greek; German will have more) gets a smaller font, down to
+ *  9 px, instead of being cut to "Προπόνη…". A label that fits keeps the bar's size. Measured again when the tab's
+ *  width or the label changes, and once the font has loaded. */
+const SMALLEST_LABEL = 9;
+function useFittedLabel(text: ReactNode, slot: MotionValue<number>) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const fit = () => {
+      el.style.fontSize = "";
+      if (!el.clientWidth || el.scrollWidth <= el.clientWidth) return;
+      const size = parseFloat(getComputedStyle(el).fontSize);
+      el.style.fontSize = `${Math.max(SMALLEST_LABEL, Math.floor(size * el.clientWidth / el.scrollWidth * 10) / 10)}px`;
+    };
+    fit();
+    const stop = slot.on("change", fit);
+    // The label spans its tab, so its own size follows the tab's as the bar lays out.
+    const resized = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(fit);
+    resized?.observe(el);
+    let live = true;
+    void document.fonts?.ready.then(() => { if (live) fit(); });
+    return () => { live = false; stop(); resized?.disconnect(); };
+  }, [text, slot]);
+  return ref;
+}
+
 /** One tab. Its tint and magnification follow the lens position, so the colour crossfades with the glide instead of switching. */
 function Tab({ item, index, selected, focusable, slot, height, pos, lift, presence, compact, buttonRef, onSelect }: TabProps) {
   const near = useTransform(() => presence.get() * Math.max(0, 1 - Math.abs(pos.get() - index)));
@@ -81,6 +110,7 @@ function Tab({ item, index, selected, focusable, slot, height, pos, lift, presen
   const labelY = useTransform(compact, v => 5 * v);
   const labelScale = useTransform(compact, v => 1 - v * .12);
   const badge = item.badge !== undefined && item.badge !== "" && item.badge !== 0;
+  const label = useFittedLabel(item.label, slot);
 
   return <motion.button ref={buttonRef} type="button" role="tab" aria-selected={selected} tabIndex={focusable ? 0 : -1}
     className={styles.item} style={{ width: slot, height, color: tint }} data-active={selected || undefined} onClick={onSelect}>
@@ -88,12 +118,12 @@ function Tab({ item, index, selected, focusable, slot, height, pos, lift, presen
       {item.icon}
       {badge ? <span className={styles.badge} aria-hidden>{item.badge}</span> : null}
     </motion.span>
-    <motion.span className={styles.label} style={{ opacity: labelOpacity, y: labelY, scale: labelScale }}>{item.label}</motion.span>
+    <motion.span ref={label} className={styles.label} style={{ opacity: labelOpacity, y: labelY, scale: labelScale }}>{item.label}</motion.span>
     {badge ? <span className={styles.hidden}>, {item.badge} new</span> : null}
   </motion.button>;
 }
 
-export function GlassTabBar({ items, value: valueProp, defaultValue, onValueChange, action, actionNode, compact: compactProp, defaultCompact = false, onCompactChange, scrollRef, collapseOnScroll = true, label = "Tabs", className, style }: GlassTabBarProps) {
+export function GlassTabBar({ items, value: valueProp, defaultValue, onValueChange, onReselect, action, actionNode, compact: compactProp, defaultCompact = false, onCompactChange, scrollRef, collapseOnScroll = true, label = "Tabs", className, style }: GlassTabBarProps) {
   const reduced = !!useReducedMotion();
   const [innerValue, setInnerValue] = useState(defaultValue ?? items[0]?.value ?? "");
   const [innerCompact, setInnerCompact] = useState(defaultCompact);
@@ -200,7 +230,7 @@ export function GlassTabBar({ items, value: valueProp, defaultValue, onValueChan
 
   const select = (next: string) => {
     if (compact) setCompact(false);
-    if (next !== value) setValue(next);
+    if (next !== value) setValue(next); else onReselect?.(next);
   };
 
   // Drag the lens: past a few pixels it follows the pointer, and letting go lands it on the nearest tab.

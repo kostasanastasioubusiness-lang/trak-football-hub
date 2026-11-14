@@ -1,26 +1,26 @@
+import { useTranslation } from '@/lib/i18n'
+import { TRAINING_WORD } from '@/lib/training/words'
+import { shown as shownWord } from '@/lib/squad/trait-words'
 import { useLayoutEffect, useState, type ReactNode } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
-import { Check, Copy, History, Info, Plus, TrafficCone, X } from 'lucide-react'
+import { Check, Copy, History, Info, TrafficCone, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { localTodayISO, phoneEventTime } from '@/lib/event-time'
-import { LIBRARIES, SESSIONS, libraryPath } from '@/lib/library/library'
-import { ON_LIBRARY } from '@/lib/fixed-colours'
-import { searchDrills, splitTrainings, trainingMinutes, type Drill } from '@/lib/training/sessions'
-import { herePath, planPath, sessionSummary, type PlannerState } from '@/lib/training/plans'
+import { splitTrainings, trainingMinutes } from '@/lib/training/sessions'
+import { herePath, planPath, sessionSummary } from '@/lib/training/plans'
 import { registerProblem } from '@/lib/event-register'
 import { AGAIN, NOTE_MAX, againLabel, loopSteps, nextTraining, searchPast, trainingBadge, type Again, type Phase } from '@/lib/training/next'
 import { gameWhen } from '@/components/coach/games/useGames'
 import {
-  useDrafts, useDrills, useHere, useNotes, usePastTrainings, usePlannedTrainings, useRegisters, useSaveNotes, useTrainings, type Draft, type Notes, type Training,
+  useDrafts, useHere, useNotes, usePastTrainings, usePlannedTrainings, useRegisters, useSaveNotes, useTrainings, type Draft, type Notes, type Training,
 } from '@/components/coach/training/useTraining'
-import { DrillSheet } from '@/components/coach/training/DrillSheet'
 import { startedLocked } from '@/lib/coach-events'
-import type { MyDrill } from '@/lib/training/parts'
 import { NOTE_STEP } from '@/lib/event-edit'
 import { CopyTargetSheet, PastPlanSheet, type PlanToCopy } from '@/components/coach/training/PastPlanSheet'
 import { CoachTrail } from '@/components/coach/CoachTrail'
 import { PitchViewRoute, PlanEditorRoute, PlanRoute, WhosHereRoute } from './CoachTrainingPlan'
+import { AllDrills, ChangePractice, DrillPage, LibraryHome, MyDrills, PracticePage } from './DrillLibrary'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { LoadError, WIDE_COLUMN } from '@/components/trak'
 import { Badge } from '@/components/arc/badge/badge'
@@ -42,7 +42,8 @@ import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
    with their register taken) and opens each one's page. TRAK-310 (Kostas, 29 Oct): a training coming up has View plan
    and Edit plan, or Create plan, and New session is gone, since every training coming up has its own Create plan.
    TRAK-311 (Kostas, 29 Oct): View plan opens View, and a training last week has the same buttons. TRAK-339 (Training
-   redo 1/5, spec TRAK-338): Sessions is laid out like Matches, from the 2 Nov prototype; see below. */
+   redo 1/5, spec TRAK-338): Sessions is laid out like Matches, from the 2 Nov prototype; see below. TRAK-387 (Drill
+   Library 3/11): Drills is the new Library (DrillLibrary.tsx); the coach's own drills left it (Kostas, 8 Nov). */
 
 export const TRAINING_PATH = '/coach/training'
 const PAST_PATH = `${TRAINING_PATH}/past`
@@ -65,7 +66,14 @@ export default function CoachTraining() {
     <Routes>
       <Route index element={<SessionsView />} />
       <Route path="past" element={<PastTrainings />} />
-      <Route path="drills" element={<DrillsView />} />
+      {/* TRAK-387 (Drill Library 3/11): Drills is the new Library. */}
+      <Route path="drills" element={<Page view="drills"><LibraryHome /></Page>} />
+      <Route path="drills/mine" element={<MyDrills />} />
+      <Route path="drills/all" element={<AllDrills />} />
+      <Route path="drills/change" element={<ChangePractice />} />
+      <Route path="drills/kind/:kind" element={<PracticePage />} />
+      <Route path="drills/d/:drillId" element={<DrillPage />} />
+      <Route path="drills/*" element={<Navigate to={`${TRAINING_PATH}/drills`} replace />} />
       <Route path=":eventId" element={<PlanRoute />} />
       <Route path=":eventId/plan" element={<PlanEditorRoute />} />
       <Route path=":eventId/view" element={<PitchViewRoute />} />
@@ -77,22 +85,22 @@ export default function CoachTraining() {
   )
 }
 
-function Page({ view, action, children }: { view: 'sessions' | 'drills'; action?: ReactNode; children: ReactNode }) {
+function Page({ view, children }: { view: 'sessions' | 'drills'; children: ReactNode }) {
   const { profile } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   return (
     <div className="min-h-screen bg-ground pb-28">
       <div className={WIDE_COLUMN}>
         <header className="flex flex-wrap items-center gap-x-5 gap-y-3 pt-6 pb-4">
-          <CoachMenuButton name={profile?.full_name || 'Coach'} />
+          <CoachMenuButton name={profile?.full_name || t('nav:coach')} />
           {/* Kostas, 30 Oct: "training" is too repetitive, so the page has no visible title. */}
-          <h1 className="sr-only">Training</h1>
+          <h1 className="sr-only">{t('nav:training')}</h1>
           <div className="arc">
-            <SegmentedControl label="Training view" value={view}
-              options={[{ value: 'sessions', label: 'Sessions' }, { value: 'drills', label: 'Drills' }]}
+            <SegmentedControl label={t('coachTraining:trainingView')} value={view}
+              options={[{ value: 'sessions', label: t('coachTraining:tabSessions') }, { value: 'drills', label: t('nav:drills') }]}
               onValueChange={next => navigate(next === 'drills' ? `${TRAINING_PATH}/drills` : TRAINING_PATH)} />
           </div>
-          {action && <div className="arc ml-auto">{action}</div>}
         </header>
         {children}
       </div>
@@ -109,6 +117,7 @@ function Page({ view, action, children }: { view: 'sessions' | 'drills'; action?
 
 function SessionsView() {
   const { user } = useAuth()
+  const { t } = useTranslation()
   const coachSquad = useCoachSquad(user?.id)
   const navigate = useNavigate()
   const trainings = useTrainings()
@@ -137,25 +146,25 @@ function SessionsView() {
 
   return (
     <Page view="sessions">
-      {reads.some(r => r.error) ? <LoadError what="your trainings" onRetry={() => reads.forEach(r => void r.refetch())} retrying={reads.some(r => r.isFetching)} />
-        : reads.some(r => r.isPending) ? <LoadingSkeleton label="Loading your trainings…" rows={3} className="pt-6" />
+      {reads.some(r => r.error) ? <LoadError what={t('coachTraining:yourTrainingsWhat')} onRetry={() => reads.forEach(r => void r.refetch())} retrying={reads.some(r => r.isFetching)} />
+        : reads.some(r => r.isPending) ? <LoadingSkeleton label={t('coachTraining:loadingTrainings')} rows={3} className="pt-6" />
         : <div className="grid gap-6">
           {closed && <div role="status" className="arc flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface px-5 py-3.5">
             <Check aria-hidden size={18} className="text-brand" />
-            <p className="min-w-0 flex-1 text-[15px] text-ink"><span className="font-medium">{closed} is closed.</span>
-              <span className="text-ink-2"> It’s now in Past trainings.</span></p>
-            <Button size="sm" variant="secondary" onClick={() => navigate(PAST_PATH)}>Past trainings</Button>
-            <button type="button" aria-label="Close message" onClick={() => setClosed(null)}
+            <p className="min-w-0 flex-1 text-[15px] text-ink"><span className="font-medium">{t('coachTraining:closedMsg', { title: closed })}</span>
+              <span className="text-ink-2">{t('coachTraining:nowInPast')}</span></p>
+            <Button size="sm" variant="secondary" onClick={() => navigate(PAST_PATH)}>{t('coachTraining:pastTrainings')}</Button>
+            <button type="button" aria-label={t('coachTraining:closeMessage')} onClick={() => setClosed(null)}
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-3 hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><X aria-hidden size={16} /></button>
           </div>}
 
           {justSaved && <div role="status" className="arc flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface px-5 py-3.5">
             <Check aria-hidden size={18} className="text-brand" />
-            <p className="min-w-0 flex-1 text-[15px] text-ink"><span className="font-medium">Plan saved for {justSaved.title}, {gameWhen(justSaved).day}.</span>
-              {nextToPlan && <span className="text-ink-2"> Next to plan: {nextToPlan.title}, {gameWhen(nextToPlan).day}.</span>}</p>
+            <p className="min-w-0 flex-1 text-[15px] text-ink"><span className="font-medium">{t('coachTraining:planSavedFor', { title: justSaved.title, day: gameWhen(justSaved).day })}</span>
+              {nextToPlan && <span className="text-ink-2">{t('coachTraining:nextToPlan', { title: nextToPlan.title, day: gameWhen(nextToPlan).day })}</span>}</p>
             {nextToPlan && <Button size="sm" onClick={() => navigate(planPath(nextToPlan.id))}>
-              {drafts.data?.has(nextToPlan.id) ? 'Continue' : 'Plan'} {nextToPlan.title}</Button>}
-            <button type="button" aria-label="Close message" onClick={() => setSavedPlan(null)}
+              {t(drafts.data?.has(nextToPlan.id) ? 'coachTraining:continueNamed' : 'coachTraining:planNamed', { title: nextToPlan.title })}</Button>}
+            <button type="button" aria-label={t('coachTraining:closeMessage')} onClick={() => setSavedPlan(null)}
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-3 hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><X aria-hidden size={16} /></button>
           </div>}
 
@@ -165,15 +174,15 @@ function SessionsView() {
             sessionId={registers.data?.get(next.training.id) ?? null} onStart={() => setNow(Date.now())}
             onClosed={() => setClosed(next.training.title)} />
             : <div className="arc">
-              <EmptyState icon={<TrafficCone size={24} strokeWidth={1.5} />} title="No training coming up"
-                description="Add a training in Schedule. You’ll plan it here."
-                action={<Button onClick={() => navigate('/coach/schedule', { state: ADD_TRAINING })}>Add a training</Button>} />
+              <EmptyState icon={<TrafficCone size={24} strokeWidth={1.5} />} title={t('coachTraining:noTrainingComing')}
+                description={t('coachTraining:addInSchedule')}
+                action={<Button onClick={() => navigate('/coach/schedule', { state: ADD_TRAINING })}>{t('coachTraining:addTraining')}</Button>} />
             </div>}
           <OpenDrafts drafts={upcoming.filter(t => drafts.data?.has(t.id) && !planned.data?.has(t.id)).map(t => ({ training: t, draft: drafts.data!.get(t.id)! }))} />
           </div>
 
           {upcoming.length > 0 && <section aria-labelledby="upcoming" className="min-w-0">
-            <h2 id="upcoming" className="mb-2 text-lg font-medium text-ink">Upcoming trainings</h2>
+            <h2 id="upcoming" className="mb-2 text-lg font-medium text-ink">{t('coachTraining:upcomingTrainings')}</h2>
             <ul className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
               {(allUpcoming ? upcoming : upcoming.slice(0, UPCOMING_SHOWN)).map(training => {
                 const { day, time } = gameWhen(training)
@@ -184,21 +193,21 @@ function SessionsView() {
                     className="flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-4 transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                     <span className="grid min-w-0">
                       <span className="truncate text-base font-medium text-ink">{training.title}</span>
-                      <span className="truncate text-sm text-ink-3">{[isToday(training) ? 'Today' : day, time, everySquad ? training.squad : null].filter(Boolean).join(' · ')}</span>
+                      <span className="truncate text-sm text-ink-3">{[isToday(training) ? t('coachHome:today') : day, time, everySquad ? training.squad : null].filter(Boolean).join(' · ')}</span>
                     </span>
-                    <span className="mt-auto"><Badge tone={badge.tone} size="sm">{badge.label}</Badge></span>
+                    <span className="mt-auto"><Badge tone={badge.tone} size="sm">{shownWord(TRAINING_WORD, badge.label)}</Badge></span>
                   </Link>
                 </li>
               })}
             </ul>
             {upcoming.length > UPCOMING_SHOWN && <div className="arc mt-2"><Button variant="ghost" size="sm" onClick={() => setAllUpcoming(!allUpcoming)}>
-              {allUpcoming ? 'Show fewer' : `Show all ${upcoming.length}`}</Button></div>}
+              {allUpcoming ? t('coachTraining:showFewer') : t('coachTraining:showAll', { count: upcoming.length })}</Button></div>}
           </section>}
 
           <div className="arc flex flex-wrap items-center gap-3 border-t border-line pt-5">
-            <Button variant="secondary" onClick={() => navigate(PAST_PATH)}><History aria-hidden size={16} />Past trainings
+            <Button variant="secondary" onClick={() => navigate(PAST_PATH)}><History aria-hidden size={16} />{t('coachTraining:pastTrainings')}
               {past.data && <Badge size="sm">{pastInView.length}</Badge>}</Button>
-            <span className="text-sm text-ink-3">Look back at a session, or copy its plan.</span>
+            <span className="text-sm text-ink-3">{t('coachTraining:lookBack')}</span>
           </div>
         </div>}
     </Page>
@@ -211,17 +220,20 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
   training: Training; phase: Phase; planned: boolean; draft: Draft | undefined; sessionId: string | null; onStart: () => void; onClosed: () => void
 }) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const here = useHere(sessionId ? [sessionId] : [])
   const [copying, setCopying] = useState(false)
   const { day, time, academy } = gameWhen(training)
   const minutes = trainingMinutes(training)
   const count = sessionId ? here.data?.get(sessionId) ?? null : null
   const badge = trainingBadge({ phase, planned, here: count, draft: !!draft })
-  const stoppedAt = draft ? draft.parts[draft.step]?.name ?? 'Review' : null
+  const stoppedAt = draft ? draft.parts[draft.step]?.name ?? t('coachSchedule:stepReview') : null
   const current = phase === 'after' ? 3 : planned || phase === 'day' ? 2 : 1
   // A step the card has moved past is ticked only if it really happened; otherwise it says what's missing (live check,
   // 3 Nov: a training ended with no register showed Who's here ticked).
-  const steps = loopSteps({ current, planned, registered: !!sessionId })
+  const steps = loopSteps({ current, planned, registered: !!sessionId }).map(step => ({ ...step, label: shownWord(TRAINING_WORD, step.label),
+    ...('description' in step && step.description ? { description: shownWord(TRAINING_WORD, step.description) } : {}),
+    ...('error' in step && step.error ? { error: shownWord(TRAINING_WORD, step.error) } : {}) }))
   const message = training.family_note?.trim()
   const locked = startedLocked(training)
   // Who's here opens as the register does everywhere else: published, not cancelled, started.
@@ -235,14 +247,14 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
         <div className="grid min-w-0 gap-1">
           {/* Kostas, 30 Oct: no "Next training" heading; the name and badge lead the card. */}
           <h2 id="next-training" className="text-[22px] font-medium tracking-[-0.01em] text-ink break-words">{training.title}</h2>
-          <p className="text-sm text-ink-2">{[phase !== 'before' && phoneEventTime(training).date === localTodayISO() ? 'Today' : day, time,
-            training.venue, minutes ? `${minutes} min` : null].filter(Boolean).join(' · ')}</p>
+          <p className="text-sm text-ink-2">{[phase !== 'before' && phoneEventTime(training).date === localTodayISO() ? t('coachHome:today') : day, time,
+            training.venue, minutes ? t('coachHome:minutes', { count: minutes }) : null].filter(Boolean).join(' · ')}</p>
           {academy && <p className="text-sm text-ink-3">{academy}</p>}
         </div>
-        <Badge tone={badge.tone}>{badge.label}</Badge>
+        <Badge tone={badge.tone}>{shownWord(TRAINING_WORD, badge.label)}</Badge>
       </div>
 
-      <Stepper label="Where this training is" steps={steps} current={current} />
+      <Stepper label={t('coachTraining:whereTrainingIs')} steps={steps} current={current} />
 
       {phase === 'after' ? <NotesForm training={training} planned={planned} onReview={review} onClosed={onClosed} />
         : <>
@@ -250,29 +262,29 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
               the note, in Schedule, which alone can save it to this training and the ones after. */}
           {(message || !locked) && <p className="flex items-start gap-2 rounded-xl bg-raised px-4 py-3 text-sm text-ink-2">
             <Info aria-hidden size={16} className="mt-0.5 flex-none text-ink-3" />
-            <span className="min-w-0 flex-1 break-words"><span className="font-medium text-ink">Message to players{message && ':'}</span> {message}</span>
-            {!locked && <Link to={`/coach/schedule?edit=${training.id}&step=${NOTE_STEP}`} className={linkClass}>{message ? 'Edit' : 'Add a message'}</Link>}
+            <span className="min-w-0 flex-1 break-words"><span className="font-medium text-ink">{t('coachSchedule:messageToPlayers')}{message && ':'}</span> {message}</span>
+            {!locked && <Link to={`/coach/schedule?edit=${training.id}&step=${NOTE_STEP}`} className={linkClass}>{message ? t('coachSchedule:edit') : t('coachTraining:addMessage')}</Link>}
           </p>}
           <div className="flex flex-wrap items-center gap-3">
             {phase === 'day' ? <>
-              <Button size="lg" disabled={!!registerWhy && !sessionId} onClick={() => navigate(herePath(training.id))}>Who’s here</Button>
-              {planned ? <Button size="lg" variant="secondary" onClick={review}>Review plan</Button>
-                : <Button size="lg" variant="secondary" onClick={plan}>Plan session</Button>}
+              <Button size="lg" disabled={!!registerWhy && !sessionId} onClick={() => navigate(herePath(training.id))}>{t('coachTraining:loopHere')}</Button>
+              {planned ? <Button size="lg" variant="secondary" onClick={review}>{t('coachTraining:reviewPlan')}</Button>
+                : <Button size="lg" variant="secondary" onClick={plan}>{t('coachTraining:planSession')}</Button>}
             </> : planned ? <>
-              <Button size="lg" onClick={review}>Review plan</Button>
-              <Button variant="ghost" onClick={plan}>Edit plan</Button>
+              <Button size="lg" onClick={review}>{t('coachTraining:reviewPlan')}</Button>
+              <Button variant="ghost" onClick={plan}>{t('coachTraining:editPlan')}</Button>
             </> : draft ? <>
-              <Button size="lg" onClick={plan}>Continue plan</Button>
+              <Button size="lg" onClick={plan}>{t('coachTraining:continuePlan')}</Button>
             </> : <>
-              <Button size="lg" onClick={plan}>Plan session</Button>
-              <Button size="lg" variant="secondary" onClick={() => setCopying(true)}><Copy aria-hidden size={16} />Use a past plan</Button>
+              <Button size="lg" onClick={plan}>{t('coachTraining:planSession')}</Button>
+              <Button size="lg" variant="secondary" onClick={() => setCopying(true)}><Copy aria-hidden size={16} />{t('coachTraining:usePastPlan')}</Button>
             </>}
             <Countdown variant="compact" units={['days', 'hours', 'minutes']} target={training.starts_at}
-              label="Starts in" completeLabel="Started" onComplete={onStart} className="ml-auto" />
+              label={t('coachTraining:startsIn')} completeLabel={t('coachTraining:started')} onComplete={onStart} className="ml-auto" />
           </div>
           {/* Kostas, 3 Nov: the mockup is clean; a line only when a button is waiting for the training to start. */}
-          {phase === 'day' && registerWhy && !sessionId && <p className="text-sm text-ink-3">Who’s here opens when the training starts.</p>}
-          {stoppedAt && phase === 'before' && !planned && <p className="text-sm text-ink-3">You stopped at {stoppedAt}.</p>}
+          {phase === 'day' && registerWhy && !sessionId && <p className="text-sm text-ink-3">{t('coachTraining:hereOpens')}</p>}
+          {stoppedAt && phase === 'before' && !planned && <p className="text-sm text-ink-3">{t('coachTraining:stoppedAt', { step: stoppedAt })}</p>}
         </>}
 
       <PastPlanSheet open={copying} onOpenChange={setCopying} training={training} />
@@ -284,17 +296,18 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
  *  Only the coach sees a draft. */
 function OpenDrafts({ drafts }: { drafts: { training: Training; draft: Draft }[] }) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   return <section aria-labelledby="open-drafts" className="arc grid gap-2 rounded-2xl border border-line bg-surface p-5">
-    <h2 id="open-drafts" className="text-lg font-medium text-ink">Open drafts</h2>
-    <p className="text-sm text-ink-3">Only you see a draft.</p>
-    {drafts.length === 0 ? <p className="pt-1 text-sm text-ink-2">No drafts. Stop a plan half-way with Save as draft and it waits here.</p>
+    <h2 id="open-drafts" className="text-lg font-medium text-ink">{t('coachMatches:openDrafts')}</h2>
+    <p className="text-sm text-ink-3">{t('coachTraining:onlyYouDraft')}</p>
+    {drafts.length === 0 ? <p className="pt-1 text-sm text-ink-2">{t('coachTraining:noDraftsWaiting')}</p>
       : <ul className="mt-1 divide-y divide-line border-t border-line">
         {drafts.map(({ training, draft }) => <li key={training.id} className="flex items-center justify-between gap-3 py-3">
           <span className="grid min-w-0">
             <span className="truncate text-[15px] font-medium text-ink">{training.title}</span>
-            <span className="truncate text-sm text-ink-3">{gameWhen(training).day} · stopped at {draft.parts[draft.step]?.name ?? 'Review'}</span>
+            <span className="truncate text-sm text-ink-3">{t('coachTraining:stoppedAtLine', { day: gameWhen(training).day, step: draft.parts[draft.step]?.name ?? t('coachSchedule:stepReview') })}</span>
           </span>
-          <Button size="sm" variant="secondary" aria-label={`Continue ${training.title}`} onClick={() => navigate(planPath(training.id))}>Continue</Button>
+          <Button size="sm" variant="secondary" aria-label={t('coachTraining:continueNamed', { title: training.title })} onClick={() => navigate(planPath(training.id))}>{t('coachSchedule:continue')}</Button>
         </li>)}
       </ul>}
   </section>
@@ -304,6 +317,7 @@ function OpenDrafts({ drafts }: { drafts: { training: Training; draft: Draft }[]
  *  Skip and close closes it all the same. */
 function NotesForm({ training, planned, onReview, onClosed }: { training: Training; planned: boolean; onReview: () => void; onClosed: () => void }) {
   const save = useSaveNotes()
+  const { t } = useTranslation()
   const [again, setAgain] = useState<Again | null>(null)
   const [note, setNote] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
@@ -311,7 +325,7 @@ function NotesForm({ training, planned, onReview, onClosed }: { training: Traini
     setProblem(null)
     save.mutate({ eventId: training.id, ...notes }, {
       onSuccess: onClosed,
-      onError: () => setProblem('Couldn’t save. Check your connection and try again. Nothing you typed is lost.'),
+      onError: () => setProblem(t('coachTraining:couldntSaveNotes')),
     })
   }
   return <div className="grid gap-4">
@@ -319,18 +333,18 @@ function NotesForm({ training, planned, onReview, onClosed }: { training: Traini
     <div className="grid gap-3 rounded-2xl bg-ground p-4">
     <div className="grid justify-items-start gap-2">
       {/* The loop above already says Notes are optional. */}
-      <p aria-hidden="true" className="text-[15px] font-medium text-ink">Would you run this session again?</p>
-      <SegmentedControl label="Would you run this session again?" value={again ?? ''}
-        options={AGAIN.map(a => ({ value: a.value, label: a.label }))} onValueChange={value => setAgain(value as Again)} />
+      <p aria-hidden="true" className="text-[15px] font-medium text-ink">{t('coachTraining:runAgain')}</p>
+      <SegmentedControl label={t('coachTraining:runAgain')} value={again ?? ''}
+        options={AGAIN.map(a => ({ value: a.value, label: shownWord(TRAINING_WORD, a.label) }))} onValueChange={value => setAgain(value as Again)} />
     </div>
-    <Textarea label="A note for next time" rows={2} maxLength={NOTE_MAX} value={note} onChange={e => setNote(e.target.value)}
-      placeholder="For example: the rondo grids were too small for this group" />
+    <Textarea label={t('coachTraining:noteNextTime')} rows={2} maxLength={NOTE_MAX} value={note} onChange={e => setNote(e.target.value)}
+      placeholder={t('coachTraining:noteExample')} />
     </div>
     {problem && <p role="alert" className="text-[15px] text-danger">{problem}</p>}
     <div className="flex flex-wrap items-center gap-3">
-      <Button size="lg" loading={save.isPending} onClick={() => close({ again, note })}>Save and close</Button>
-      {planned && <Button size="lg" variant="secondary" onClick={onReview}>Review today’s plan</Button>}
-      <Button variant="ghost" disabled={save.isPending} onClick={() => close({ again: null, note: '' })}>Skip and close</Button>
+      <Button size="lg" loading={save.isPending} onClick={() => close({ again, note })}>{t('coachTraining:saveClose')}</Button>
+      {planned && <Button size="lg" variant="secondary" onClick={onReview}>{t('coachTraining:reviewToday')}</Button>}
+      <Button variant="ghost" disabled={save.isPending} onClick={() => close({ again: null, note: '' })}>{t('coachTraining:skipClose')}</Button>
     </div>
   </div>
 }
@@ -342,6 +356,7 @@ function NotesForm({ training, planned, onReview, onClosed }: { training: Traini
  *  front page). */
 function PastTrainings() {
   const { user } = useAuth()
+  const { t } = useTranslation()
   const coachSquad = useCoachSquad(user?.id)
   const navigate = useNavigate()
   const past = usePastTrainings()
@@ -359,40 +374,41 @@ function PastTrainings() {
     <div className="min-h-screen bg-ground pb-28">
       <div className={WIDE_COLUMN}>
         <header className="arc grid gap-3 pt-5 pb-4">
-          <CoachTrail current="Past trainings" />
-          <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Past trainings</h1>
-          <p className="text-sm text-ink-3">Look back at a session, or copy its plan into one coming up.</p>
+          <CoachTrail current={t('coachTraining:pastTrainings')} />
+          <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">{t('coachTraining:pastTrainings')}</h1>
+          <p className="text-sm text-ink-3">{t('coachTraining:pastSub')}</p>
         </header>
-        {past.error ? <LoadError what="your past trainings" onRetry={() => void past.refetch()} retrying={past.isFetching} />
-          : past.isPending ? <LoadingSkeleton label="Loading your past trainings…" lines={2} rows={4} className="pt-6" />
-          : inView.length === 0 ? <div className="arc"><EmptyState icon={<History size={24} strokeWidth={1.5} />} title="No past trainings yet"
-              description="Once a training is over, it’s kept here with its plan and your notes." /></div>
+        {past.error ? <LoadError what={t('coachTraining:pastWhat')} onRetry={() => void past.refetch()} retrying={past.isFetching} />
+          : past.isPending ? <LoadingSkeleton label={t('coachTraining:loadingPast')} lines={2} rows={4} className="pt-6" />
+          : inView.length === 0 ? <div className="arc"><EmptyState icon={<History size={24} strokeWidth={1.5} />} title={t('coachTraining:noPastYet')}
+              description={t('coachTraining:pastKept')} /></div>
           : <div className="grid gap-4">
             <div className="arc max-w-[560px]">
-              <SearchField label="Search past trainings" placeholder="Search by name, drill or note" value={query} onValueChange={setQuery} />
+              <SearchField label={t('coachTraining:searchPast')} placeholder={t('coachTraining:searchPastPh')} value={query} onValueChange={setQuery} />
             </div>
-            {shown.length === 0 ? <p className="text-[15px] text-ink-2">No past training matches “{query.trim()}”.</p>
-              : <ul aria-label="Past trainings" className="grid gap-3">
+            {shown.length === 0 ? <p className="text-[15px] text-ink-2">{t('coachTraining:noPastMatch', { query: query.trim() })}</p>
+              : <ul aria-label={t('coachTraining:pastTrainings')} className="grid gap-3">
                 {shown.map(training => {
                   const { day } = gameWhen(training)
                   const sessionId = registers.data?.get(training.id)
                   const count = sessionId ? here.data?.get(sessionId) : undefined
-                  const again = againLabel(training.notes?.again)
+                  const answer = againLabel(training.notes?.again)
+                  const again = answer ? shownWord(TRAINING_WORD, answer) : null
                   return <li key={training.id} className="arc flex flex-wrap items-start gap-x-6 gap-y-3 rounded-2xl border border-line bg-surface p-5">
                     <div className="grid min-w-0 flex-[1_1_16rem] gap-1.5">
-                      <p className="text-sm text-ink-3">{[day, everySquad ? training.squad : null, count != null ? `${count} here` : null].filter(Boolean).join(' · ')}</p>
+                      <p className="text-sm text-ink-3">{[day, everySquad ? training.squad : null, count != null ? t('coachTraining:hereCount', { count }) : null].filter(Boolean).join(' · ')}</p>
                       <p className="text-lg font-medium text-ink break-words">{training.title}</p>
-                      <p className="text-sm text-ink-2 break-words">{training.planned ? sessionSummary(training.practices) : 'No plan written'}</p>
+                      <p className="text-sm text-ink-2 break-words">{training.planned ? sessionSummary(training.practices) : t('coachTraining:noPlanWritten')}</p>
                       {(again || training.notes?.note) && <p className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
-                        {again && <Badge size="sm" tone={training.notes?.again === 'no' ? 'warning' : 'success'}>Run it again: {again}</Badge>}
+                        {again && <Badge size="sm" tone={training.notes?.again === 'no' ? 'warning' : 'success'}>{t('coachTraining:runItAgain', { answer: again })}</Badge>}
                         {training.notes?.note && <span className="break-words">“{training.notes.note}”</span>}
                       </p>}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button size="sm" variant="secondary" onClick={() => navigate(`${TRAINING_PATH}/${training.id}`)}
-                        aria-label={`View ${training.title}, ${day}`}>View</Button>
-                      {training.planned && training.practices.length > 0 && <Button size="sm" aria-label={`Use this plan: ${training.title}, ${day}`}
-                        onClick={() => setCopying({ title: training.title, day, practices: training.practices })}><Copy aria-hidden size={16} />Use this plan</Button>}
+                        aria-label={t('coachTraining:viewNamed', { title: training.title, day })}>{t('coachTraining:view')}</Button>
+                      {training.planned && training.practices.length > 0 && <Button size="sm" aria-label={t('coachTraining:useThisPlanNamed', { title: training.title, day })}
+                        onClick={() => setCopying({ title: training.title, day, practices: training.practices })}><Copy aria-hidden size={16} />{t('coachTraining:useThisPlan')}</Button>}
                     </div>
                   </li>
                 })}
@@ -401,76 +417,5 @@ function PastTrainings() {
       </div>
       <CopyTargetSheet plan={copying} trainings={coming} onClose={() => setCopying(null)} />
     </div>
-  )
-}
-
-/* ── Drills ─────────────────────────────────────────────────────────────── */
-
-function DrillsView() {
-  const drills = useDrills()
-  const navigate = useNavigate()
-  const trainings = useTrainings()
-  const planned = usePlannedTrainings()
-  // The next training not planned yet, of any squad; none while either read is pending or failed.
-  const next = trainings.data && planned.data
-    ? splitTrainings(trainings.data, Date.now()).comingUp.find(training => !planned.data.has(training.id)) : undefined
-  const nextDay = next ? gameWhen(next).day : null
-  const [query, setQuery] = useState('')
-  // The sheet: closed, a new drill, or one of the coach's drills to change.
-  const [sheet, setSheet] = useState<{ drill: (Drill & MyDrill) | null } | null>(null)
-  const shown = searchDrills(drills.data ?? [], query)
-
-  return (
-    <Page view="drills" action={<Button onClick={() => setSheet({ drill: null })}><Plus aria-hidden size={18} />New drill</Button>}>
-      <div className="arc max-w-[560px]">
-        <SearchField label="Search my drills" placeholder="Search my drills" value={query} onValueChange={setQuery} />
-      </div>
-
-      <section aria-labelledby="my-drills" className="mt-7">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 id="my-drills" className="text-lg font-medium text-ink">My drills</h2>
-          <p className="text-sm text-ink-3">Only you see these.</p>
-        </div>
-        {drills.error ? <div className="mt-3"><LoadError what="your drills" onRetry={() => void drills.refetch()} retrying={drills.isFetching} /></div>
-          : drills.isPending ? <LoadingSkeleton label="Loading your drills…" lines={2} rows={3} className="mt-3" />
-          : (drills.data ?? []).length === 0 ? <p className="mt-3 text-[15px] text-ink-2">No drills yet. Add one with New drill, and use it in any session.</p>
-          : shown.length === 0 ? <p className="mt-3 text-[15px] text-ink-2">No drill matches “{query.trim()}”.</p>
-          : <ul className="mt-3 grid gap-3 tablet:grid-cols-2 laptop:grid-cols-3">
-            {shown.map(drill => <li key={drill.id} className="flex h-full flex-col rounded-2xl border border-line bg-surface">
-              <button type="button" onClick={() => setSheet({ drill })} aria-label={`${drill.name}, ${drill.minutes} min. Edit`}
-                className="flex w-full flex-1 flex-col gap-1 rounded-2xl p-4 text-left transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                <span className="flex w-full items-baseline justify-between gap-3">
-                  <span className="min-w-0 break-words text-[15px] font-medium text-ink">{drill.name}</span>
-                  <span className="flex-none text-sm text-ink-3">{drill.minutes} min</span>
-                </span>
-                {drill.how && <span className="line-clamp-2 text-sm text-ink-2">{drill.how}</span>}
-              </button>
-              {next && <button type="button" aria-label={`Add ${drill.name} to ${nextDay}`}
-                onClick={() => navigate(planPath(next.id), { state: { addDrill: drill } satisfies PlannerState })}
-                className={`mx-4 mb-3 inline-flex min-h-11 items-center gap-1.5 self-start ${linkClass}`}>
-                <Plus aria-hidden size={16} />Add to {nextDay}</button>}
-            </li>)}
-          </ul>}
-      </section>
-
-      <section aria-labelledby="from-library" className="mt-9">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 id="from-library" className="text-lg font-medium text-ink">From the Library</h2>
-          <p className="text-sm text-ink-3">When you want ideas</p>
-        </div>
-        <ul className="mt-3 grid grid-cols-2 gap-2.5 tablet:grid-cols-4">
-          {LIBRARIES.map(library => <li key={library.key}>
-            <Link to={libraryPath(library.key)}
-              className="flex h-20 flex-col justify-end rounded-[10px] p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-              style={{ background: library.colour, color: ON_LIBRARY }}>
-              <span className="text-[15px] font-medium leading-tight">{library.label}</span>
-              <span className="text-[12px]">{SESSIONS.filter(s => s.library === library.name).length} sessions</span>
-            </Link>
-          </li>)}
-        </ul>
-      </section>
-
-      <DrillSheet open={!!sheet} drill={sheet?.drill ?? null} onOpenChange={open => { if (!open) setSheet(null) }} />
-    </Page>
   )
 }

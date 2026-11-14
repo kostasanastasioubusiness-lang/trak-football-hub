@@ -178,7 +178,8 @@ describe('TRAK-357 Squad › Formations', () => {
     expect(place(6)).toHaveAccessibleName(/^Synthetic Attacker 18, Midfielder, place 6\. Can also play here\./)
     expect(screen.queryByText(/out of position$/)).toBeNull()
     // A new shape: 5-4-1 has one place up front for three attackers, so two drop into the back line.
-    await user().click(screen.getByRole('combobox', { name: /Shape/ }))
+    // TRAK-453: format and shape are one control, the match line-up's.
+    await user().click(screen.getByRole('combobox', { name: 'Format and shape' }))
     await user().click(await screen.findByRole('option', { name: '5-4-1' }))
     expect(await screen.findByText('2 out of position')).toBeInTheDocument()
     await user().click(screen.getByRole('button', { name: 'Undo last change' }))
@@ -223,5 +224,14 @@ describe('TRAK-357 Squad › Formations', () => {
     const views = await screen.findByRole('radiogroup', { name: 'Squad view' }).catch(() => screen.findByRole('group', { name: 'Squad view' }))
     expect(within(views).queryByText('Formations')).toBeNull()
     expect(within(views).getByText('Attributes')).toBeInTheDocument()
+    // TRAK-359: and so does Availability.
+    expect(within(views).getByText('Availability')).toBeInTheDocument()
+  })
+
+  it('TRAK-359: where the season plan is on, Squad has no Availability tab', async () => {
+    renderApp('/coach/squad')
+    const views = await screen.findByRole('radiogroup', { name: 'Squad view' }).catch(() => screen.findByRole('group', { name: 'Squad view' }))
+    expect(within(views).getByText('Formations')).toBeInTheDocument()
+    expect(within(views).queryByText('Availability')).toBeNull()
   })
 })

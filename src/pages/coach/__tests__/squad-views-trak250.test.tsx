@@ -400,7 +400,8 @@ describe('TRAK-250: Attributes tab', { timeout: 20_000 }, () => {
     const focus = within(panel).getByRole('region', { name: 'Focus this week' })
     expect(within(focus).getByRole('heading', { name: 'Tactical' })).toBeInTheDocument()
     expect(focus).toHaveTextContent('Lowest average (5.5)')
-    expect(within(focus).getByRole('link', { name: 'Open Trainings →' })).toHaveAttribute('href', '/coach/trainings')
+    // TRAK-419: Training is on here, so the button opens Training › Drills (the one library), not the old Library.
+    expect(within(focus).getByRole('link', { name: 'Open Drills →' })).toHaveAttribute('href', '/coach/training/drills')
     expect(within(panel).getByText('How to read the range')).toBeInTheDocument()
     expect(within(panel).getByText(/Coach-only/)).toBeInTheDocument()
   })
@@ -623,7 +624,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
     renderApp('/coach/squad?tab=availability')
     const panel = await screen.findByRole('region', { name: 'Availability' })
     expect(await within(panel).findByText('No upcoming events')).toBeInTheDocument()
-    expect(within(panel).getByRole('link', { name: /schedule/i })).toHaveAttribute('href', '/coach/schedule')
+    expect(within(panel).getByRole('link', { name: /events/i })).toHaveAttribute('href', '/coach/schedule')
     expect(within(panel).queryByRole('region', { name: 'Confirmed' })).toBeNull()
   })
 

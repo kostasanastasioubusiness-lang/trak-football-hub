@@ -6,25 +6,23 @@ import { fromSaved, overTime, plannedMinutes, searchSessions, sessionSummary, so
 
 const saved = (position: number, name: string, over: Partial<SavedPractice> = {}): SavedPractice => ({
   position, name, minutes: 15, how: '', tell: '', area: '', numbers: '', direction: '', targets: '', conditions: '',
-  source: 'own', drill_id: null, library_session: null, part: '', part_type: null, trak_drill: null, players_kind: null, group_size: null, ...over,
+  source: 'own', drill_id: null, library_session: null, part: '', part_type: null, trak_drill: null, players_kind: null, group_size: null, trak_level: null, ...over,
 })
 
 describe('a saved plan’s practices', () => {
-  it('come back in order, never to be saved to My drills again', () => {
+  it('come back in order', () => {
     const practices = fromSaved([saved(2, 'Finishing 3v2'), saved(1, 'Rondos 4v1', { source: 'drill', drill_id: 'd-1' })])
     expect(practices.map(p => p.name)).toEqual(['Rondos 4v1', 'Finishing 3v2'])
-    expect(practices.every(p => !p.saveToDrills)).toBe(true)
     expect(practices[0]).toMatchObject({ source: 'drill', drill_id: 'd-1' })
     expect(practices[0]).not.toHaveProperty('position')
   })
 
   it('each says where it came from', () => {
-    expect(sourceLabel({ source: 'own', saveToDrills: false })).toBe('Written here')
-    expect(sourceLabel({ source: 'own', saveToDrills: true })).toBe('Your drill')
-    expect(sourceLabel({ source: 'drill', saveToDrills: false })).toBe('Your drill')
-    expect(sourceLabel({ source: 'trak', saveToDrills: false })).toBe('Trak drill')
-    expect(sourceLabel({ source: 'library', saveToDrills: false })).toBe('Library')
-    expect(sourceLabel({ source: 'library', saveToDrills: false, library_session: 'pressing-and-covering-session-pressing-duels' }))
+    expect(sourceLabel({ source: 'own' })).toBe('Written here')
+    expect(sourceLabel({ source: 'drill' })).toBe('Your drill')
+    expect(sourceLabel({ source: 'trak' })).toBe('Trak drill')
+    expect(sourceLabel({ source: 'library' })).toBe('Library')
+    expect(sourceLabel({ source: 'library', library_session: 'pressing-and-covering-session-pressing-duels' }))
       .toBe('Library · Defending')
   })
 })
@@ -36,7 +34,7 @@ describe('the minutes', () => {
   })
 
   it('a plan longer than the training says so plainly, and never blocks it (Kostas, 28 Oct)', () => {
-    expect(overTime(75, 60)).toBe('You set this training for 60 min. The plan runs 15 min over. You can keep it, or change the training\'s time in Schedule.')
+    expect(overTime(75, 60)).toBe('You set this training for 60 min. The plan runs 15 min over. You can keep it, or change the training\'s time in Events.')
     expect(overTime(60, 60)).toBeNull()
     expect(overTime(75, null)).toBeNull()
   })

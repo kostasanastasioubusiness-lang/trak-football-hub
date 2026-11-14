@@ -58,6 +58,8 @@ async function backend(context: BrowserContext, unexpected: string[]) {
     }
     if (path === '/rest/v1/season_objectives' && method === 'DELETE') { deletes.push(url.search); return route.fulfill({ status: 204, body: '' }) }
     if (path === '/rest/v1/player_objectives') return json(held)
+    if (path === '/rest/v1/objective_progress') return json([])
+    if (path === '/rest/v1/rpc/stuck_player_objectives') return json([])
     if (path === '/rest/v1/rpc/share_season_plan') {
       shares.push(req.postDataJSON())
       const now = new Date().toISOString()
@@ -85,7 +87,7 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     // Step 4: what goes out, and Share waits for the tick.
     await expect(page.getByRole('heading', { name: 'What goes out' })).toBeVisible()
     await expect(page.getByText('1 of 4 players has one or two')).toBeVisible()
-    await expect(page.getByText('Only you, for now. Players and families don’t see the season plan in the app yet.')).toBeVisible()
+    await expect(page.getByText(/don.t see the season plan/)).toHaveCount(0)
     const share = page.getByRole('button', { name: 'Share now' })
     await expect(share).toBeDisabled()
     await page.getByRole('checkbox', { name: 'I’ve talked objectives through with the players, face to face' }).click()

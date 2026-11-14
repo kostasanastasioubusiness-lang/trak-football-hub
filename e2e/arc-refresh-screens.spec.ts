@@ -1,5 +1,6 @@
 import { test, expect, type BrowserContext } from '@playwright/test'
 import { createRequire } from 'node:module'
+import { openNewEvent } from './new-event'
 
 const require = createRequire(import.meta.url)
 
@@ -53,7 +54,7 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
       updated_at: new Date(Date.now() - 3 * 3600_000).toISOString() }
     if (withMatch && path === '/rest/v1/coach_sessions' && url.searchParams.has('event_id')) return json([])
     if (withMatch && path === '/rest/v1/coach_calendar_events') return json([match])
-    if (withMatch && path === '/rest/v1/event_absences') return json([{ squad_player_id: 'sq-3', reason: 'School trip' }])
+    if (withMatch && path === '/rest/v1/event_absences') return json([{ squad_player_id: 'sq-3', reason: 'school' }])
     if (withMatch && path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(req.postDataJSON()?.p_squad_player_id === 'sq-5')
     if (path === '/rest/v1/coach_sessions') return json([{ id: 'session-1', coach_user_id: ids.coach, title: 'Finishing', session_type: 'training', session_date: day, venue: 'Synthetic pitch' }])
     if (path === '/rest/v1/coach_calendar_events') return json([])
@@ -73,6 +74,8 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     if (path === '/rest/v1/squad_player_also_plays' || path === '/rest/v1/squad_player_roles') return json([])
     // TRAK-354: so a player's page lists their objectives; there are none.
     if (path === '/rest/v1/player_objectives') return json([])
+    if (path === '/rest/v1/objective_progress') return json([])
+    if (path === '/rest/v1/rpc/stuck_player_objectives') return json([])
     if (path.startsWith('/rest/v1/rpc/')) return json([])
     if (path === '/rest/v1/session_attendance') return json(players.map(p => ({ session_id: 'session-1', squad_player_id: p.id, status: 'present' })))
     // TRAK-262: notification_settings is Home's Needs you switch (no row: on).
@@ -125,6 +128,8 @@ test.describe('TRAK-182 coach screens', () => {
     ['assess', '/coach/assess', 'Assessment'],
     // TRAK-368: the player's own page in Squad; the list behind it is hidden, so wait for the page's own section.
     ['player', '/coach/squad/player/sq-2', 'Season so far'],
+    // TRAK-418: the coach's own How Trak works, opened from Settings.
+    ['how-trak-works', '/coach/how-trak-works', 'Every week'],
   ] as const) {
     test(`coach ${name}`, async ({ page, context }, testInfo) => {
       const unexpected: string[] = [], errors: string[] = []
@@ -220,7 +225,7 @@ test.describe('TRAK-182 coach screens', () => {
     expect(listBox!.y).toBeGreaterThanOrEqual(0)
     await list.getByRole('option', { name: '5:00 PM' }).click()
     await form.getByRole('button', { name: 'Save draft' }).click()
-    await expect(page.getByText('Draft saved. Publish it from Schedule.')).toBeVisible()
+    await expect(page.getByText('Draft saved. Publish it from Events.')).toBeVisible()
     await page.waitForTimeout(300)
     await page.screenshot({ path: testInfo.outputPath('quick-add-4-check.png') })
     await expect(form).toHaveCount(0, { timeout: 3000 })
@@ -236,7 +241,7 @@ test.describe('TRAK-182 coach screens', () => {
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
     await coachBackend(context, unexpected)
     await page.goto('/coach/schedule')
-    await page.getByRole('button', { name: 'Add event' }).click()
+    await openNewEvent(page)
     const sheet = page.getByRole('dialog', { name: 'New event' })
     await sheet.getByRole('button', { name: 'Match' }).click()
     await sheet.getByLabel('Opponent').fill('Synthetic Rovers')
@@ -296,6 +301,57 @@ test.describe('TRAK-182 coach screens', () => {
 // TRAK-220 (20 Oct live run): menus and the expanded assessment card were
 // see-through on the light theme. Arc's tokens live on `.arc`; a panel Radix
 // portals to <body> has no `.arc` ancestor unless it carries the class itself.
+// TRAK-425 (Imad, 11 Nov): Assess player fills a laptop's page like the other coach pages, and its step strip goes forward
+// as well as back once a player and session are picked. Before that the form is locked, so the strip stays back-only.
+test.describe('TRAK-425 Assess player on a laptop', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 1440, height: 900 } })
+
+  test('fills the page, and the steps can be jumped ahead once a player is picked', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/assess')
+    const steps = page.getByRole('navigation', { name: 'Assessment steps' })
+    await expect(steps).toBeVisible()
+    // Not the old 640 px column: the page uses the room beside the side menu.
+    expect((await steps.boundingBox())!.width).toBeGreaterThan(800)
+    // Nothing picked yet: Review cannot be jumped to.
+    await expect(steps.getByRole('button', { name: /Review/ })).toBeDisabled()
+    await page.getByRole('combobox', { name: 'Player' }).selectOption({ label: 'Bukayo Saka' })
+    // A picked player shows once: the card (with Change) replaces the list.
+    await expect(page.getByRole('combobox', { name: 'Player' })).toHaveCount(0)
+    await expect(page.getByText('Bukayo Saka')).toHaveCount(1)
+    await page.getByRole('combobox', { name: 'Session' }).selectOption({ index: 1 })
+    await steps.getByRole('button', { name: /Review/ }).click()
+    await expect(page.getByRole('button', { name: 'Publish' }).or(page.getByRole('button', { name: 'Save' })).first()).toBeVisible()
+    await steps.getByRole('button', { name: /Ratings/ }).click()
+    await expect(page.getByRole('slider', { name: 'Work Rate' })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('coach-assess-laptop.png') })
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+})
+
+// TRAK-425: on a phone Assess has its own Back and Next bar, so the glass tab bar steps aside: one bar at the bottom, not two.
+test.describe('TRAK-425 Assess player on a phone', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 } })
+
+  test('has one bar at the bottom, and its sessions read like the rest of the app', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/assess')
+    await expect(page.getByRole('button', { name: 'Next' })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Coach' })).toHaveCount(0)
+    await page.getByRole('combobox', { name: 'Player' }).selectOption({ label: 'Bukayo Saka' })
+    const labels = await page.getByRole('combobox', { name: 'Session' }).locator('option').allTextContents()
+    expect(labels.slice(1).every(label => / · (Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} [A-Z][a-z]{2}/.test(label))).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('coach-assess-phone.png') })
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+})
+
 test.describe('TRAK-220 Arc panels opened over the page', () => {
   test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 } })
   // The alpha of an element's computed background colour (0 = see-through).
@@ -442,7 +498,7 @@ test.describe('TRAK-227 date and time pickers in the event form', () => {
     const unexpected: string[] = []
     await coachBackend(context, unexpected)
     await page.goto('/coach/schedule')
-    await page.getByRole('button', { name: 'Add event' }).click()
+    await openNewEvent(page)
     const sheet = page.getByRole('dialog', { name: 'New event' })
     await sheet.getByRole('button', { name: 'Next', exact: true }).click()
     // Fully inside every scroll area it sits in, and inside the screen.
@@ -591,3 +647,61 @@ test.describe('The "+" form\'s pickers on a phone', () => {
     expect(unexpected).toEqual([])
   })
 })
+
+// TRAK-420 (11 Nov review): on a phone the Log page squeezed the trail, "What are you logging?" and History onto one
+// line. The trail gets its own line, the title sits under it, and History touches neither. A laptop shows the trail in
+// its top bar, so the page itself shows only the title and History, on one line.
+test.describe('TRAK-420 Log page header', () => {
+  test.use({ timezoneId: 'Asia/Dubai' })
+  const overlap = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
+    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+
+  for (const [name, width, height] of [['phone', 390, 844], ['laptop', 1440, 900]] as const) {
+    test(`on a ${name}, the trail, the title and History do not touch`, async ({ page, context }, testInfo) => {
+      const unexpected: string[] = [], errors: string[] = []
+      page.on('pageerror', error => errors.push(error.message))
+      await page.setViewportSize({ width, height })
+      await coachBackend(context, unexpected)
+      // TRAK-426: the Log page is there only where Training or Matches is off; here Training is off.
+      await context.route('**/rest/v1/rpc/feature_on', route => route.fulfill({ contentType: 'application/json',
+        body: JSON.stringify(route.request().postDataJSON()?.p_feature !== 'training') }))
+      await page.goto('/coach/sessions')
+      const title = page.getByRole('heading', { name: 'What are you logging?' })
+      const history = page.getByRole('button', { name: 'History' })
+      await expect(title).toBeVisible()
+      const titleBox = (await title.boundingBox())!, historyBox = (await history.boundingBox())!
+      expect(overlap(titleBox, historyBox), 'title and History overlap').toBe(false)
+      if (name === 'phone') {
+        // On a phone the page's own trail is the only one.
+        const trail = page.getByRole('navigation', { name: 'Breadcrumb' })
+        await expect(trail).toBeVisible()
+        const trailBox = (await trail.boundingBox())!
+        // Its own line: the trail ends above the title and above History.
+        expect(trailBox.y + trailBox.height, 'the trail must sit above the title').toBeLessThanOrEqual(titleBox.y)
+        expect(trailBox.y + trailBox.height, 'the trail must sit above History').toBeLessThanOrEqual(historyBox.y)
+      }
+      await page.waitForTimeout(300)
+      await page.screenshot({ path: testInfo.outputPath(`coach-log-header-${name}.png`) })
+      expect(unexpected).toEqual([])
+      expect(errors).toEqual([])
+    })
+  }
+})
+
+// TRAK-415: below 1024 px the frame drew pages with no `.arc` around them, so a player's radar chart, band chip and
+// avatar lost Arc's colours and sizes. Any part from an Arc stylesheet must sit inside `.arc`.
+for (const width of [390, 820]) {
+  test(`TRAK-415 at ${width} px: a player's page keeps Arc's styling`, async ({ page, context }) => {
+    const unexpected: string[] = []
+    await page.setViewportSize({ width, height: 900 })
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/squad/player/sq-2')
+    await expect(page.getByRole('heading', { name: 'Bukayo Saka', level: 1 })).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    const outside = await page.evaluate(() => [...document.querySelectorAll('[class]')]
+      .filter(el => /(?:^|\s)_[A-Za-z]+_[a-z0-9]{4,6}_\d+/.test(el.getAttribute('class') ?? '') && !el.closest('.arc') && el.getBoundingClientRect().width > 0)
+      .map(el => `${el.getAttribute('class')} "${(el.textContent ?? '').trim().slice(0, 30)}"`))
+    expect(outside).toEqual([])
+    expect(unexpected).toEqual([])
+  })
+}
