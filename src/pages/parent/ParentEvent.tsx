@@ -6,6 +6,8 @@ import { MobileShell, NavBar } from '@/components/trak'
 import { ParentFamilyContent, ParentLoadError, ParentLoading } from '@/components/parent/ParentFamily'
 import { EventDetails } from '@/components/player/EventDetails'
 import { CantMakeIt } from '@/components/parent/CantMakeIt'
+import { SharedGamePlan } from '@/components/player/SharedGamePlan'
+import { SharedGameReview } from '@/components/player/SharedGameReview'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { fetchParentEvent } from '@/lib/parent-data'
 import { changesSinceSeen, markEventOpened } from '@/lib/player-events'
@@ -52,6 +54,12 @@ export default function ParentEvent() {
             : query.isPending ? <ParentLoading />
               : query.data ? <>
                 <EventDetails event={query.data} changes={changes?.key === `${childId}:${query.data.id}:${query.data.sequence}` ? changes.lines : []} />
+                {/* TRAK-289: once the coach publishes, After the game; the note stays the child's. */}
+                {selectedChild && <SharedGameReview event={query.data} childId={selectedChild.id}
+                  childName={selectedChild.name.split(/\s+/)[0] || selectedChild.name} as="parent" />}
+                {/* TRAK-286: the child's job in the shared plan, and that there's a note, never the note. */}
+                {selectedChild && <SharedGamePlan event={query.data} childId={selectedChild.id}
+                  childName={selectedChild.name.split(/\s+/)[0] || selectedChild.name} as="parent" />}
                 {selectedChild && <CantMakeIt key={selectedChild.id} event={query.data} child={selectedChild} />}
               </>
                 : <p className="text-sm text-muted-foreground">This event isn't available for {selectedChild?.name}.</p>}

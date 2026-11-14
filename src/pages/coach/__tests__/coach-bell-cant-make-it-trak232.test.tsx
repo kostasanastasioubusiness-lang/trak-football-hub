@@ -35,8 +35,12 @@ function fixtures(id: string) {
   COACH = { id } // the app's query cache outlives a test
   signInAs(COACH)
   server.use(
+    // TRAK-355: who the coach is watching; no one.
+    table('player_watches', []),
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Angelos Basinas', invite_code: 'ABCD' }]),
     table('coach_details', []),
+    // TRAK-261: no row means the coach's "Can't make it" switch is on.
+    table('notification_settings', []),
     table('coach_calendar_events', EVENTS),
     table('coach_sessions', []),
     table('session_attendance', []),
@@ -46,6 +50,10 @@ function fixtures(id: string) {
     ]),
     http.get(`${SUPABASE_URL}/rest/v1/event_absences`, () => HttpResponse.json(absences)),
     rpc('feature_on', () => true),
+    // TRAK-286: no game plan, shared or not.
+    table('game_plans', []),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
     rpc('coach_squad_player_consent_required', () => false),
   )
 }
@@ -70,6 +78,17 @@ describe("TRAK-232: the coach's bell says who can't make it", { timeout: 20_000 
     expect(within(panel).getByText('vs PAOK U16, Sun 25 Oct')).toBeInTheDocument()
     expect(within(panel).getAllByText('Training, Sat 24 Oct')).toHaveLength(2)
     expect(within(panel).queryByText(/fever/)).toBeNull()
+  })
+
+  // TRAK-261: the coach's "Can't make it" switch in Settings.
+  it('shows none while the coach has turned the alerts off', async () => {
+    absences = [absence('ev-sat', 'sp-1'), absence('ev-sat', 'sp-2')]
+    fixtures('coach-232-off')
+    server.use(table('notification_settings', [{ user_id: COACH.id, event_reminders: true, cant_make_it_alerts: false, needs_you: true }]))
+    renderApp('/coach/home')
+    const panel = await openBell()
+    await waitFor(() => expect(within(panel).queryByText(/can't make it/)).toBeNull())
+    expect(screen.queryByRole('button', { name: /unread/ })).toBeNull()
   })
 
   it("leaves out past and cancelled events: the register covers what's passed", async () => {

@@ -1,4 +1,5 @@
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { COACH_HOW_PATH } from '@/lib/coach-places'
 import { ArrowLeft } from 'lucide-react'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { useAuth } from '@/contexts/AuthContext'
@@ -29,6 +30,8 @@ export default function HowTrakWorks() {
   const location = useLocation()
   const { profile } = useAuth()
   const role = profile?.role === 'coach' ? 'coach' : profile?.role === 'parent' ? 'parent' : 'player'
+  // TRAK-418: a coach has a page of their own; an old link or bookmark lands there.
+  if (role === 'coach') return <Navigate to={COACH_HOW_PATH} replace />
 
   return (
     <MobileShell>
@@ -47,7 +50,7 @@ export default function HowTrakWorks() {
           <ArrowLeft size={14} />
         </button>
         <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>
-          How TRAK works
+          How Trak works
         </span>
       </div>
 

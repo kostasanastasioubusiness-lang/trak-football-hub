@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react'
+import { CoachTrail } from '@/components/coach/CoachTrail'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, MetadataLabel, NavBar } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
+import { useFeature } from '@/components/trak/parked'
 import { matchRating } from '@/lib/match-rating'
 import { trackEvent } from '@/lib/telemetry'
 import { validateMatchInput, teamGoalsViolation, teamAssistsViolation, MATCH_LIMITS } from '@/lib/match-input-rules'
@@ -18,6 +20,7 @@ import { SessionChip as Chip } from '@/components/coach/SessionChip'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Button } from '@/components/arc/button/button'
 import { useCoachSquad } from '@/lib/coach-squad'
+import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 
 type SquadPlayer = {
   id: string
@@ -28,7 +31,8 @@ type SquadPlayer = {
   age: number | null
 }
 
-type Competition = 'League' | 'Cup' | 'Friendly'
+// TRAK-438: the coach's three words everywhere (no "Cup").
+type Competition = 'League' | 'Tournament' | 'Friendly'
 type Venue      = 'Home' | 'Away'
 type CardType   = 'None' | 'Yellow' | 'Red'
 
@@ -89,6 +93,8 @@ export default function CoachAddSession() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  // TRAK-288: where Games is on, a match is evaluated on its game page, never logged here.
+  const games = useFeature('games')
   // TRAK-182 part 8: the quick-add hands over a played match (opponent,
   // venue, score, date) and the log opens on Squad.
   const [quick] = useState(() => (location.state as { quickMatch?: {
@@ -271,9 +277,9 @@ export default function CoachAddSession() {
   // A squad still loading is not an empty one (TRAK-72). Coaches don't add
   // players: the academy roster decides the squad (#164).
   const rosterEmpty = squad.length === 0 && notReady.length === 0 && !rosterFailed
-  const rosterEmptyText = rosterLoading
-    ? 'Loading your squad…'
-    : 'No squad yet. Players appear here once your academy adds them.'
+  const rosterEmptyText = 'No squad yet. Players appear here once your academy adds them.'
+  // TRAK-335: while the roster loads, Arc's skeleton of player rows in its place.
+  const rosterLoadingSkeleton = (className: string) => <LoadingSkeleton label="Loading your squad…" lines={1} avatar rows={3} className={className} />
 
   // Under each player list: why nobody is offered, or who is left out and why.
   const rosterNote = rosterFailed ? (
@@ -509,7 +515,7 @@ export default function CoachAddSession() {
       .single()
 
       if (error?.code === '23505' && eventId) {
-        toast.error('This match is already logged from its event. Nothing was saved; open it from Schedule to see it.', { duration: 12000 })
+        toast.error('This match is already logged from its event. Nothing was saved; open it from Events to see it.', { duration: 12000 })
         setSaving(false)
         return
       }
@@ -673,17 +679,12 @@ export default function CoachAddSession() {
   // ── UI ────────────────────────────────────────────────────────────────────────
   return (
     <MobileShell width="read">
+      {/* TRAK-288: an old link or Back that would open the match log goes to the match's evaluation, or to Games. */}
+      {games && type === 'match' && <Navigate replace to={eventId ? `/coach/matches/${eventId}?tab=evaluation` : '/coach/matches'} />}
       {/* Topbar */}
       <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
-        <button onClick={() => navigate(-1)} aria-label="Back"
-          className="w-[34px] h-[34px] bg-raised border border-line rounded-[10px] flex items-center justify-center">
-          <ChevronLeft size={14} className="text-ink" />
-        </button>
-        <span className="text-[16px] font-medium text-ink"
-          style={{ fontFamily: 'var(--t-font)' }}>
-          Full Session
-        </span>
-        <div className="w-[34px]" />
+        {/* TRAK-334: the trail, in place of Back; its last crumb is the page's name. */}
+        <CoachTrail current="Full session" />
       </div>
 
       <div className="pt-5 pb-32 space-y-5">
@@ -696,7 +697,7 @@ export default function CoachAddSession() {
         {step === 0 && <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="TYPE" />
           <div className="flex gap-2 mt-3">
-            {(['training', 'match', 'other'] as const).map(t => (
+            {(games ? ['training', 'other'] as const : ['training', 'match', 'other'] as const).map(t => (
               <Chip key={t} active={type === t} onClick={() => setType(t)}>
                 {t.charAt(0).toUpperCase() + t.slice(1)}
               </Chip>
@@ -758,7 +759,7 @@ export default function CoachAddSession() {
               <div>
                 <MetadataLabel text="COMPETITION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
-                  {(['League', 'Cup', 'Friendly'] as const).map(c => (
+                  {(['League', 'Tournament', 'Friendly'] as const).map(c => (
                     <Chip key={c} active={competition === c} onClick={() => setCompetition(c)}>{c}</Chip>
                   ))}
                 </div>
@@ -805,11 +806,11 @@ export default function CoachAddSession() {
                 </div>
               </div>
 
-              {rosterEmpty ? (
+              {rosterEmpty ? (rosterLoading ? rosterLoadingSkeleton('px-4 pb-4') : (
                 <p role="status" className="px-4 pb-4 text-[12px] text-ink-3">
                   {rosterEmptyText}
                 </p>
-              ) : (
+              )) : (
                 <div className="divide-y divide-line">
                   {squad.map(p => {
                     const d = details[p.id] ?? DEFAULT_DETAIL
@@ -1127,9 +1128,9 @@ export default function CoachAddSession() {
                     style={{ fontFamily: 'var(--t-font-mono)' }}>NONE</button>
                 </div>
               </div>
-              {rosterEmpty ? (
+              {rosterEmpty ? (rosterLoading ? rosterLoadingSkeleton('py-2') : (
                 <p role="status" className="text-[12px] text-ink-3 py-2">{rosterEmptyText}</p>
-              ) : (
+              )) : (
                 <div className="grid grid-cols-2 tablet:grid-cols-3 gap-2">
                   {squad.map(p => {
                     const on = attended.has(p.id)
@@ -1194,9 +1195,9 @@ export default function CoachAddSession() {
                     style={{ fontFamily: 'var(--t-font-mono)' }}>NONE</button>
                 </div>
               </div>
-              {rosterEmpty ? (
+              {rosterEmpty ? (rosterLoading ? rosterLoadingSkeleton('py-2') : (
                 <p role="status" className="text-[12px] text-ink-3 py-2">{rosterEmptyText}</p>
-              ) : (
+              )) : (
                 <div className="grid grid-cols-2 tablet:grid-cols-3 gap-2">
                   {squad.map(p => {
                     const on = attended.has(p.id)
@@ -1246,7 +1247,7 @@ export default function CoachAddSession() {
         {step === review && (rosterFailed || rosterLoading) && (
           <div className="rounded-[18px] border border-line bg-surface">
             {rosterFailed ? rosterNote : (
-              <p role="status" className="text-[12px] text-ink-2 px-4 py-3" style={{ fontFamily: 'var(--t-font)' }}>Loading your squad…</p>
+              <LoadingSkeleton label="Loading your squad…" lines={1} avatar rows={2} className="px-4 py-3" />
             )}
           </div>
         )}

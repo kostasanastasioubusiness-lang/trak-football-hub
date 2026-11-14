@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { CoachTrail } from '@/components/coach/CoachTrail'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -16,6 +16,7 @@ import {
   TRAINING_DURATIONS, TRAINING_INTENSITIES,
   parseTrainingNotes, parseTrainingTitle, trainingNotes, trainingTitle,
 } from '@/lib/session-form'
+import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 
 /* J4 (TRAK-102): open a saved session and correct it. A coach who missed the
    note or an attendance tick used to have to log a second session, which the
@@ -227,14 +228,9 @@ export default function CoachSessionEdit() {
 
   const header = (
     <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
-      <button onClick={goBack} aria-label="Back"
-        className="w-[34px] h-[34px] bg-raised border border-line rounded-[10px] flex items-center justify-center">
-        <ChevronLeft size={14} className="text-ink" />
-      </button>
-      <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>
-        {isMatch ? 'Edit match' : 'Edit session'}
-      </span>
-      <div className="w-[34px]" />
+      {/* TRAK-334: the trail, in place of Back; its last crumb is the page's name. Opened from a link, it sits under
+          the sessions list, where Back went. */}
+      <CoachTrail current={isMatch ? 'Edit match' : 'Edit session'} parents={[{ label: 'Sessions', href: '/coach/sessions/list' }]} />
     </div>
   )
 
@@ -248,7 +244,7 @@ export default function CoachSessionEdit() {
           ) : status === 'missing' ? (
             <p role="status" className="text-[13px] text-ink-2">This session isn't available. It may have been deleted.</p>
           ) : (
-            <p role="status" className="text-[13px] text-ink-3">Loading the session…</p>
+            <LoadingSkeleton label="Loading the session…" lines={4} rows={2} />
           )}
         </div>
       </MobileShell>
