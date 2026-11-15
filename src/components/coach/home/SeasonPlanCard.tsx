@@ -43,10 +43,14 @@ function remember(coachId: string, squad: string, open: boolean) {
   try { localStorage.setItem(storeKey(coachId, squad), open ? 'open' : 'folded') } catch { /* storage unavailable: kept for this visit */ }
 }
 
-export function SeasonPlanCard({ coachId, squads, squad, everySquad, onPick, className }: {
+export function SeasonPlanCard({ coachId, squads, squadsReady, squadsFailed, onRetry, squad, everySquad, onPick, className }: {
   coachId: string
   /** The coach's squads, and the one in view: none under All. */
   squads: string[]
+  /** TRAK-416: false until the squads are known, so no squads yet is not mistaken for still loading. */
+  squadsReady: boolean
+  squadsFailed: boolean
+  onRetry: () => void
   squad: string | null
   everySquad: boolean
   /** Under All, opening a squad's plan picks that squad first. */
@@ -62,7 +66,11 @@ export function SeasonPlanCard({ coachId, squads, squad, everySquad, onPick, cla
     </section>
   }
   const only = squad ?? squads[0] ?? null
-  if (!only) return <LoadingSkeleton label="Loading your season plan…" lines={2} className={className} />
+  if (!only) {
+    // A coach with no players has no squad to plan yet: nothing to show, not a skeleton that never ends.
+    if (squadsFailed) return <section aria-label="Season plan" className={`${card} ${className ?? ''}`}><LoadError what="your season plan" onRetry={onRetry} /></section>
+    return squadsReady ? null : <LoadingSkeleton label="Loading your season plan…" lines={2} className={className} />
+  }
   return <SquadPlanCard coachId={coachId} squad={only} onOpen={() => undefined} className={className} />
 }
 
@@ -80,7 +88,7 @@ function SquadPlanCard({ coachId, squad, onOpen, className }: { coachId: string;
   }
   const plan = season.plan
   if (!plan) {
-    return <section aria-labelledby={`season-plan-${squad}`} className={`${card} flex items-center gap-4 ${className ?? ''}`}>
+    return <section aria-labelledby={`season-plan-${squad}`} className={`${card} !flex items-center gap-4 ${className ?? ''}`}>
       <div className="grid min-w-0 flex-1 gap-0.5">
         <h2 id={`season-plan-${squad}`} className="text-base font-medium text-ink">{squad} season plan</h2>
         <p className="truncate text-sm text-ink-3">Not started</p>
@@ -239,7 +247,7 @@ function SeasonObjectives({ objectives, matches, plans }: {
 
   return <div className="grid gap-3">
     <h3 className="text-sm font-medium text-ink-2">Season objectives</h3>
-    {objectives.length === 0 ? <p className="text-sm text-ink-3">None picked.</p> : <>
+    {objectives.length === 0 ? <p className="text-sm text-ink-3">None selected.</p> : <>
       {measured && <DonutChart label="Times each season objective worked" totalLabel="Times it worked" legend={false}
         data={objectives.map(o => ({ key: o.id, label: o.title, value: measures.get(o.id)?.worked ?? 0 }))}
         activeKey={selected} onActiveChange={setSelected} size={168} thickness={20} emptyLabel="Nothing worked yet" />}

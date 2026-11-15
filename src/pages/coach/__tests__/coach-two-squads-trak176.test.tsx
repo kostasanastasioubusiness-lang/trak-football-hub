@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeEach } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -16,6 +16,10 @@ import type { StripEvent } from '@/components/trak/WeekStrip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { localTodayISO, toInstant } from '@/lib/event-time'
+import { listOptions } from '@/test/arc-select'
+
+// TRAK-426: the event sheet asks whether the old log has retired; rendered on its own here, without the signed-in frame.
+vi.mock('@/components/coach/old-log', () => ({ useOldLogRetired: () => ({ retired: false, known: true }) }))
 
 /**
  * TRAK-176 (Imad, 14 Oct): the pilot coach runs U14 and U16 with one login.
@@ -45,7 +49,8 @@ function coachReads(players: typeof TWO) {
     table('session_attendance', []),
     table('event_absences', []),
     rpc('coach_squad_player_consent_required', () => false),
-    rpc('feature_on', () => true),
+    // TRAK-426: Training off, so the old log (Sessions, Full session) is still there for these checks.
+    rpc('feature_on', ({ p_feature }) => p_feature !== 'training'),
     // TRAK-286: no game plan, shared or not.
     table('game_plans', []),
     table('game_shares', []),
@@ -182,8 +187,8 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
     localStorage.setItem(`trak:coach-squad-all:${COACH.id}`, '0')
     renderApp('/coach/assess')
-    const picker = await screen.findByRole('combobox', { name: 'Player' })
-    await waitFor(() => expect(within(picker).getAllByRole('option').map(o => o.textContent)).toEqual(['Select player...', 'Bo Lind']))
+    await screen.findByRole('combobox', { name: 'Player' })
+    await waitFor(async () => expect(await listOptions('Player')).toEqual(['Bo Lind']))
   })
 
   it('Schedule opens on All, naming each squad; a squad tapped lists its events and whole-roster ones (Imad, 24 Oct)', async () => {

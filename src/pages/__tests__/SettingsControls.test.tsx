@@ -85,7 +85,9 @@ describe('settings controls reflect supported behavior', () => {
     expect(screen.queryByRole('button', { name: 'Anyone with link' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Send reset email' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Change profile photo' })).not.toBeInTheDocument()
-    expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument()
+    // TRAK-460: only a coach has a picture to add (their own); G7 keeps every other role off photos.
+    if (role === 'coach') expect(document.querySelector('input[type="file"]')).toBeInTheDocument()
+    else expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Delete my account' })).toBeEnabled()
 
@@ -98,6 +100,8 @@ describe('settings controls reflect supported behavior', () => {
       expect(screen.getByRole('heading', { name: 'Family' })).toBeInTheDocument()
       expect(screen.getByRole('heading', { name: 'Consent' })).toBeInTheDocument()
     }
+    // TRAK-459: no section has a line under its title, Consent included (Imad, 15 Nov).
+    expect(document.querySelectorAll('section > header > p')).toHaveLength(0)
     expect(localStorage.getItem('trak.settings.v1')).toBe(legacy)
   })
 

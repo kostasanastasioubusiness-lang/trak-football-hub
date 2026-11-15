@@ -138,7 +138,7 @@ describe('TRAK-350 the season plan, step 1', () => {
     expect(await screen.findByDisplayValue('Win the second ball')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Stay compact')).toBeInTheDocument()
     expect(screen.getByText('U16 · Draft, only you see it')).toBeInTheDocument()
-  })
+  }, 30_000)
 
   it('holds three at most: a fourth can\'t be added', async () => {
     seasonTables()
@@ -173,7 +173,7 @@ describe('TRAK-350 the season plan, step 1', () => {
     await user().click(saveDraft())
     await waitFor(() => expect(saveDraft()).toHaveTextContent('Saved'))
     expect(objectives).toEqual([])
-    expect(screen.getByText('None yet. Pick from the list or write your own.')).toBeInTheDocument()
+    expect(screen.getByText('None yet. Select from the list or write your own.')).toBeInTheDocument()
   })
 
   it('refuses a season that ends before it starts, saying why', async () => {

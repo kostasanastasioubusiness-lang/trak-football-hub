@@ -64,6 +64,9 @@ INSERT INTO public.profiles(user_id,role,full_name) VALUES
  (pg_temp.g288id(20),'player','Theodoros Zagorakis'),(pg_temp.g288id(21),'player','Angelos Charisteas'),
  (pg_temp.g288id(22),'player','Giorgos Karagounis'),(pg_temp.g288id(30),'parent','Traianos Dellas'),(pg_temp.g288id(31),'parent','Michalis Kapsis');
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES(pg_temp.g288id(100),pg_temp.g288id(1),'Evaluation Academy','G288N1');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.coach_details(user_id,organization_id) VALUES(pg_temp.g288id(10),pg_temp.g288id(100)),(pg_temp.g288id(11),pg_temp.g288id(100));
 INSERT INTO public.player_details(user_id,date_of_birth) SELECT pg_temp.g288id(n), current_date - interval '14 years' FROM unnest(ARRAY[20,21,22]) n;
 INSERT INTO public.player_parent_links(player_user_id,parent_user_id) VALUES(pg_temp.g288id(20),pg_temp.g288id(30)),(pg_temp.g288id(21),pg_temp.g288id(31));
@@ -145,6 +148,32 @@ SELECT pg_temp.g288check((SELECT count(*) FROM public.game_evaluation_players WH
   AND (SELECT jsonb_array_length(goals)=1 FROM public.game_evaluations WHERE event_id=pg_temp.g288id(500)),
   '4 a refused save changes nothing');
 
+-- ── 4b. TRAK-447: an own goal credits nobody, and says so ──────────────────
+SELECT pg_temp.g288check(pg_temp.g288runs(pg_temp.g288save(500,2,1,
+    jsonb_build_array(jsonb_build_object('scorer',NULL,'assist',NULL,'own',true),pg_temp.g288goal(40)),
+    jsonb_build_array(pg_temp.g288p(40,true),pg_temp.g288p(41,false)))),
+  '4b an own goal saves beside a goal with a scorer, and the score still adds up');
+SELECT pg_temp.g288check((SELECT goals->0->>'own'='true' AND goals->0->>'scorer' IS NULL AND goals->0->>'assist' IS NULL
+    AND goals->1->>'scorer'=pg_temp.g288id(40)::text FROM public.game_evaluations WHERE event_id=pg_temp.g288id(500)),
+  '4b it is kept as an own goal, not as a goal with no scorer recorded');
+SELECT pg_temp.g288check(pg_temp.g288refused(pg_temp.g288save(500,2,1,
+    jsonb_build_array(jsonb_build_object('scorer',pg_temp.g288id(40),'assist',NULL,'own',true)),
+    jsonb_build_array(pg_temp.g288p(40,true))),'23514'),
+  '4b an own goal has no scorer');
+SELECT pg_temp.g288check(pg_temp.g288refused(pg_temp.g288save(500,2,1,
+    jsonb_build_array(jsonb_build_object('scorer',NULL,'assist',pg_temp.g288id(40),'own',true)),
+    jsonb_build_array(pg_temp.g288p(40,true))),'23514'),
+  '4b and no assist');
+SELECT pg_temp.g288check(pg_temp.g288refused(pg_temp.g288save(500,2,1,
+    jsonb_build_array(jsonb_build_object('scorer',NULL,'assist',NULL,'own','yes')),
+    jsonb_build_array(pg_temp.g288p(40,true))),'23514'),
+  '4b the flag is true or false, nothing else');
+-- Put the draft back as section 2 saved it, so what follows reads what it always did.
+SELECT pg_temp.g288check(pg_temp.g288runs(pg_temp.g288save(500,2,1,jsonb_build_array(pg_temp.g288goal(40)),
+    jsonb_build_array(pg_temp.g288p(40,true,'{"note":"  You did your job.  "}'),pg_temp.g288p(41,false)),
+    'A set piece and a counter.',ARRAY['worked',NULL])),
+  '4b the draft is back as it was');
+
 -- ── 5. Only the coach reads it, and nobody writes it but the save ─────────
 SELECT pg_temp.g288check((SELECT count(*) FROM public.game_evaluations)=1 AND (SELECT count(*) FROM public.game_evaluation_players)=2
   AND (SELECT count(*) FROM public.game_evaluation_notes)=1,
@@ -212,7 +241,7 @@ RESET ROLE;
 DO $$ DECLARE failures text; total integer;
 BEGIN
  SELECT count(*) INTO total FROM pg_temp.g288_results;
- IF total <> 33 THEN RAISE EXCEPTION 'Games evaluation: % checks ran; expected 33', total; END IF;
+ IF total <> 39 THEN RAISE EXCEPTION 'Games evaluation: % checks ran; expected 39', total; END IF;
  SELECT string_agg(label, E'\n') INTO failures FROM pg_temp.g288_results WHERE NOT ok;
  IF failures IS NOT NULL THEN RAISE EXCEPTION 'Games evaluation checks failed:%', E'\n' || failures; END IF;
  RAISE NOTICE 'Games evaluation: % of % passed', total, total;

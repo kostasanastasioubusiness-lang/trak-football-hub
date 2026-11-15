@@ -11,7 +11,7 @@ import { RadioGroup } from '@/components/arc/radio-group/radio-group'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { Select } from '@/components/arc/select/select'
 
-/* TRAK-289 (Games 7/8): the evaluation's Publish step (TRAK-282). "Publish to N players and families" waits for every
+/* TRAK-289 (Games 7/8): the evaluation's Publish step (TRAK-282). Publish ("Publish to N players and families" until TRAK-446) waits for every
    "Did the plan work?" answer, and for the competition and home or away when the match has none (Imad, 29 Oct). In the
    app only: no email, no push. TRAK-375 (Imad, 5 Nov): one Evaluation review card, Game plan review's kind: the gauge,
    each part with its Edit, and Publish in the card. No preview or "Who sees what" here; the published page keeps the
@@ -38,7 +38,7 @@ export function PublishStep({ eventId, form, listed, goals, askCompetition, askH
   const { t } = useTranslation()
   const summary = publishSummary(form, listed)
   const answered = form.planWorked.slice(0, goals).filter(answer => answer != null).length
-  const unscored = form.goals.filter(goal => !goal.scorer).length
+  const unscored = form.goals.filter(goal => !goal.scorer && !goal.own).length
   const outcome = t(form.ourScore > form.theirScore ? 'coachMatches:resultWon' : form.ourScore === form.theirScore ? 'coachMatches:resultDrew' : 'coachMatches:resultLost', { our: form.ourScore, their: form.theirScore })
   const rows: ReviewRow[] = [
     { id: 'result', label: t('coachMatches:evStepResult'), status: unscored ? 'watch' : 'good', onEdit: () => onStep(0),
@@ -67,7 +67,7 @@ export function PublishStep({ eventId, form, listed, goals, askCompetition, askH
         <div className="flex flex-wrap items-center gap-3">
           {blocked && <span className="text-sm text-ink-3">{blocked}</span>}
           <span className="ml-auto"><Button disabled={!!blocked} loading={publishing} onClick={() => onPublish(choices)}>
-            {t('coachMatches:publishTo', { count: summary.players })}</Button></span>
+            {t('coachHome:publish')}</Button></span>
         </div>
         {problem && <p role="alert" className="text-sm text-danger">{problem}</p>}
       </PlanReview>

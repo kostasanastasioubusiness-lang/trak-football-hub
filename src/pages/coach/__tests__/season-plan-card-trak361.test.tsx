@@ -160,7 +160,7 @@ describe('TRAK-361 the Season plan card', () => {
     await user().click(fold(u14))
     expect(fold(u14)).toHaveAttribute('aria-expanded', 'true')
     expect(fold(u16)).toHaveAttribute('aria-expanded', 'false')
-    expect(await within(u14).findByText('None picked.')).toBeInTheDocument()
+    expect(await within(u14).findByText('None selected.')).toBeInTheDocument()
     expect(within(u16).queryByText('Stay compact')).toBeNull()
     // Opening U14's plan picks U14 first.
     await user().click(within(u14).getByRole('button', { name: 'View plan' }))
@@ -176,7 +176,7 @@ describe('TRAK-361 the Season plan card', () => {
     await user().click(await screen.findByRole('button', { name: 'Set up' }))
     await waitFor(() => expect(window.location.pathname).toMatch(/^\/coach\/season-plan/))
     expect(await screen.findByText(/^U14 · /)).toBeInTheDocument()
-    expect(screen.queryByText('Pick one squad in the menu to plan its season.')).toBeNull()
+    expect(screen.queryByText('Select one squad in the menu to plan its season.')).toBeNull()
   }, 30_000)
 
   it('shows a skeleton first, never "Not started" for a plan it hasn’t read', async () => {
@@ -187,6 +187,25 @@ describe('TRAK-361 the Season plan card', () => {
     expect(screen.queryByText('Not started')).toBeNull()
     release()
     expect(await within(await cardOf('U16')).findByText(/^Shared 1 Nov/)).toBeInTheDocument()
+  }, 30_000)
+
+  // TRAK-416: a coach with no players has no squad to plan; the skeleton must not wait for one forever.
+  it('shows no loading bars for a coach with no players', async () => {
+    let release = () => {}
+    const held = new Promise<void>(resolve => { release = resolve })
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/squad_players`, async () => { await held; return HttpResponse.json([]) }))
+    renderApp('/coach/home')
+    expect(await screen.findByLabelText('Loading your season plan…')).toBeInTheDocument()
+    release()
+    await waitFor(() => expect(screen.queryByLabelText('Loading your season plan…')).toBeNull())
+    expect(screen.queryByText('Not started')).toBeNull()
+  }, 30_000)
+
+  it('says so, with Retry, when the squads cannot be read', async () => {
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/squad_players`, () => HttpResponse.json({ message: 'offline' }, { status: 500 })))
+    renderApp('/coach/home')
+    expect(await screen.findByText(/couldn.t load your season plan/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Loading your season plan…')).toBeNull()
   }, 30_000)
 })
 

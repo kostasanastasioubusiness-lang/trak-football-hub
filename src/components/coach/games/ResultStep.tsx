@@ -15,6 +15,7 @@ import { OnlyYou } from './OnlyYou'
    with the Scouting lock. */
 
 const NONE = 'none'
+const OWN = 'own'
 const card = 'grid min-w-0 content-start gap-4 rounded-2xl border border-line bg-surface p-5'
 type Listed = { id: string; name: string }
 
@@ -49,10 +50,13 @@ export function ResultStep({ eventId, form, onFormChange, starters, bench, goals
               {/* One above the other: side by side, half a laptop's width cut the names short. */}
               <fieldset className="grid gap-3">
                 <legend className="mb-2 text-sm font-medium text-ink">{t('coachMatches:goalN', { n: index + 1 })}</legend>
-                <Select label={t('coachMatches:scoredBy')} value={goal.scorer ?? NONE} onValueChange={value => setGoal(index, { scorer: pick(value), ...(value === goal.assist && { assist: null }) })}
-                  options={[{ value: NONE, label: t('coachMatches:notRecorded') }, ...played.map(p => ({ value: p.id, label: p.name }))]} />
-                <Select label={t('coachMatches:assist')} value={goal.assist ?? NONE} onValueChange={value => setGoal(index, { assist: pick(value) })}
-                  options={[{ value: NONE, label: t('coachMatches:noAssist') }, ...played.filter(p => p.id !== goal.scorer).map(p => ({ value: p.id, label: p.name }))]} />
+                {/* TRAK-447: an own goal credits nobody, so it has no scorer and no assist to pick. */}
+                <Select label={t('coachMatches:scoredBy')} value={goal.own ? OWN : goal.scorer ?? NONE}
+                  onValueChange={value => setGoal(index, value === OWN ? { scorer: null, assist: null, own: true }
+                    : { scorer: pick(value), own: false, ...(value === goal.assist && { assist: null }) })}
+                  options={[{ value: NONE, label: t('coachMatches:notRecorded') }, { value: OWN, label: t('coachMatches:ownGoal') }, ...played.map(p => ({ value: p.id, label: p.name }))]} />
+                {!goal.own && <Select label={t('coachMatches:assist')} value={goal.assist ?? NONE} onValueChange={value => setGoal(index, { assist: pick(value) })}
+                  options={[{ value: NONE, label: t('coachMatches:noAssist') }, ...played.filter(p => p.id !== goal.scorer).map(p => ({ value: p.id, label: p.name }))]} />}
               </fieldset>
             </li>)}
           </ol>}
@@ -75,10 +79,7 @@ export function ResultStep({ eventId, form, onFormChange, starters, bench, goals
       </div>
 
       <section aria-labelledby="evaluation-played" className={card}>
-        <div>
-          <h2 id="evaluation-played" className="text-lg font-medium text-ink">{t('coachMatches:whoPlayed')}</h2>
-          <p className="mt-1 text-sm text-ink-3">{starters.length ? t('coachMatches:untickHint') : t('coachMatches:tickEveryone')}</p>
-        </div>
+        <h2 id="evaluation-played" className="text-lg font-medium text-ink">{t('coachMatches:whoPlayed')}</h2>
         {starters.length + bench.length === 0 ? <p className="text-sm text-ink-2">{t('coachMatches:nobodyRecordable')}</p> : <>
           {starters.length > 0 && <fieldset className="grid gap-2">
             <legend className="mb-2 text-sm font-medium text-ink">{t('coachMatches:started')}</legend>

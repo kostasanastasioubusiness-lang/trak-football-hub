@@ -135,7 +135,9 @@ describe('TRAK-290: Share at…', { timeout: 30_000 }, () => {
     expect(calls[2].body).toEqual({ p_event_id: 'g1', p_talked: true, p_at: '2026-11-05T19:30' })
     const scheduled = await screen.findByRole('region', { name: 'Scheduled' })
     expect(within(scheduled).getByText('Shares Thu 19:30')).toBeInTheDocument()
-    expect(screen.getAllByText('Shares Thu 19:30')).toHaveLength(2) // the header's badge too
+    // TRAK-448: beside the title it reads "Plan scheduled"; the time is in this card only.
+    expect(screen.getAllByText('Shares Thu 19:30')).toHaveLength(1)
+    expect(within(screen.getByRole('heading', { level: 1 }).parentElement!).getByText('Plan scheduled')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Share plan' })).toBeNull()
   })
 
@@ -185,7 +187,7 @@ describe('TRAK-290: Share at…', { timeout: 30_000 }, () => {
     const user = userEvent.setup()
     store()
     server.use(http.post(`${SUPABASE_URL}/rest/v1/rpc/schedule_game_plan`, () =>
-      HttpResponse.json({ code: 'P0001', message: 'Pick a time before kick-off' }, { status: 400 })))
+      HttpResponse.json({ code: 'P0001', message: 'Select a time before kick-off' }, { status: 400 })))
     shareStep()
     await screen.findByRole('region', { name: 'Game plan review' })
     await user.click(screen.getByRole('checkbox', { name: /talked selection through/ }))
@@ -194,7 +196,7 @@ describe('TRAK-290: Share at…', { timeout: 30_000 }, () => {
     await pickDate(user, 'Day', '2026-11-07')
     await pickTime(user, 'Time', '11:00')
     await user.click(screen.getByRole('button', { name: 'Schedule for Sat 11:00' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Pick a time before kick-off')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Select a time before kick-off')
     expect(screen.getByRole('button', { name: 'Schedule for Sat 11:00' })).toBeEnabled()
   })
 })

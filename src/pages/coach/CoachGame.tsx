@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { CalendarDays, Check, ClipboardCheck, Clock, MapPin, Pencil, Save, Share, Users } from 'lucide-react'
+import { CalendarDays, Check, ClipboardCheck, Clock, MapPin, Save, Share, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
@@ -15,7 +15,7 @@ import { SAVE_FAILED, failed, pastProblem, type EditSheet } from '@/lib/event-ed
 import { useCoachSquad } from '@/lib/coach-squad'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { blankRepeat, clashMessage, formProblem, formToRow, lockedMessage, rowToForm, savedVenues, startedLocked, type EventRow } from '@/lib/coach-events'
-import { fullTime, gameStatus, type GameTab } from '@/lib/games/loop'
+import { STATE, fullTime, gameState, type GameTab } from '@/lib/games/loop'
 import { formToPlan, planToForm, type PlanForm } from '@/lib/games/plan'
 import { planParts } from '@/lib/games/share'
 import { withReported } from '@/lib/games/lineup'
@@ -32,6 +32,7 @@ import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { PageHeader, PageHeaderPanel, type PageHeaderAction, type PageHeaderTab } from '@/components/arc/blocks/page-header/page-header'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
+import { EditIcon } from '@/components/trak/IconAction'
 
 /* TRAK-283 (Games 1/8): a game's page. Its header says where it is in the loop; Logistics, Game plan and
    Evaluation are peer panels of the one game, and the panel lives in the URL (?tab=). TRAK-284 to
@@ -104,9 +105,10 @@ function Game({ row, plan, players, sharedAt, evaluation }: { row: EventRow; pla
   const cancelled = row.status === 'cancelled'
   // TRAK-286: who a share would change now. Only asked once the plan is shared; a failed read shows no changes.
   const changes = useGamePlanChanges([row.id], !!sharedAt && !cancelled).data?.get(row.id) ?? []
-  const state = gameStatus({ ...row, ends_at: row.ends_at ?? null }, now,
+  // TRAK-448: beside the title a scheduled plan reads "Plan scheduled"; when it goes out is in Review & share only.
+  const state = STATE[gameState({ ...row, ends_at: row.ends_at ?? null }, now,
     { drafted: !!plan.data, shared: !!sharedAt, sharedAt: sharedAt ?? undefined, changes: changes.length,
-      evaluated: !!evaluation.data?.evaluation, published: !!evaluation.data?.evaluation?.published_at })
+      evaluated: !!evaluation.data?.evaluation, published: !!evaluation.data?.evaluation?.published_at })]
   // The plan as typed, and its step, live here, above the tabs: a panel that isn't shown unmounts. Until the coach
   // types, it is the saved plan, so a retried read still fills the form. Needs you's "Share changes" opens Review & share.
   const [typed, setTyped] = useState<PlanForm | null>(null)
@@ -285,7 +287,7 @@ function Logistics({ row, squad, onEdit, publish }: {
       <div className="flex flex-wrap items-center gap-3">
         <Badge tone={row.published ? 'success' : 'neutral'}>{row.published ? t('coachMatches:sharedBadge') : t('coachHome:stateDraft')}</Badge>
         {!row.published && <Button loading={publish.isPending} onClick={() => publish.mutate()}>{t('coachHome:publish')}</Button>}
-        {onEdit && <Button variant="secondary" size="sm" onClick={onEdit}><Pencil size={14} aria-hidden="true" />{t('coachSchedule:edit')}</Button>}
+        {onEdit && <EditIcon label={t('coachSchedule:editEvent')} onClick={onEdit} />}
       </div>
       <EventSummary form={rowToForm(row)} repeat={null} noteProblem={null} squad={squad} />
     </div>

@@ -62,6 +62,8 @@ remains hidden; the pilot uses `/coach/assess`. Existing AI handlers return
   Auth user ID. Resolve the player's squad rows before querying assessments.
 - Coach match logging uses `log_match_for_player`; direct inserts do not
   substitute for its consent and assignment checks.
+- Wording (TRAK-454, 11 Nov walk-through): write "e.g." (Greek "π.χ."), never "For example"; and "select",
+  never "pick" ("Select a date", "None selected"), in English and Greek.
 - Follow the existing mobile shell and design tokens. Use `BANDS` for band
   wording and colors; keep player-visible messages separate from private notes.
 - The roster owns the child's name. A child email is optional. Use the existing
@@ -83,9 +85,13 @@ Use Node 22.15+ within 22.x and the npm version in `package.json`.
 Install with `npm ci --legacy-peer-deps`; start with `npm run dev`.
 See README for setup and `package.json` for optional checks.
 
-`package.json` lists optional local commands. `.github/workflows/ci.yml` runs
-the complete required suite once for the final non-draft PR candidate. Reuse
-that result rather than running a separate author/reviewer/verification suite.
+`package.json` lists optional local commands. For the final non-draft PR
+candidate `.github/workflows/ci.yml` only builds the app and checks the built
+bundle for credentials; it runs no lint, type, unit, use-case, database or
+browser test. Run the test for the behaviour you changed yourself: a green
+gate does not cover it. `archive/ci-full-gate-2026-11-15/` is a frozen copy of
+the earlier full gate and its Playwright files, kept for restoring; edit the
+live files, never the copy.
 Workflow actions must run on Node 24: `ci-action-runtimes.test.ts` lists each
 action's first such major, and Dependabot opens a weekly grouped PR for newer
 ones, reviewed like any other change.

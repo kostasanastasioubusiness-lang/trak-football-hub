@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import { useNavigate, useLocation, useMatch, useSearchParams } from 'react-router-dom'
 import { Users } from 'lucide-react'
+import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { GlassSegmented } from '@/components/arc/glass-segmented/glass-segmented'
 import { NavBar, WIDE_COLUMN } from '@/components/trak'
 import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
@@ -11,9 +12,8 @@ import { AvailabilityTab } from '@/components/coach/squad/AvailabilityTab'
 import { FormationsTab } from '@/components/coach/squad/formations/FormationsTab'
 import { useFeatureState } from '@/components/trak/parked'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
-import { useAuth } from '@/contexts/AuthContext'
-import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { useTranslation } from '@/lib/i18n'
+import { PageTop } from '@/components/coach/PageTop'
 
 /* TRAK-250: Squad is a full-width coach workspace with views of the same
    roster. The view lives in the URL (?tab=), so a view can be linked and a
@@ -40,7 +40,6 @@ const SEASON_PLAN_TABS = [
 export default function CoachSquadPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { profile } = useAuth()
   const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
   const seasonPlan = useFeatureState('season_plan')
@@ -69,16 +68,14 @@ export default function CoachSquadPage() {
     <div className="min-h-screen bg-ground pb-24">
       <div className={WIDE_COLUMN}>
         {/* TRAK-351: a player's page has the screen to itself. Not `hidden`: the header's flex would show it anyway. */}
-        {openId == null && <header className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-6 pb-4">
-          {/* TRAK-376 (Imad, 5 Nov): on a phone the avatar opens the side menu, where the squad picker is. */}
-          <CoachMenuButton name={profile?.full_name || t('nav:coach')} />
-          <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">{t('nav:squad')}</h1>
+        {/* TRAK-376 (Imad, 5 Nov): on a phone the avatar opens the side menu, where the squad picker is. TRAK-422: PageTop. */}
+        {openId == null && <PageTop title={t('nav:squad')}>
           {/* On a phone the views take the full width, under the title; on a coach's tablet or laptop they sit in the header. */}
-          <div className="arc order-last w-full tablet:order-none tablet:w-[440px]">
+          <div className="arc w-full tablet:w-[440px]">
             <GlassSegmented label={t('coachSquad:squadView')} value={active} onValueChange={choose} fullWidth
               options={tabs.map(tab => ({ value: tab.id, label: t(tab.label) }))} />
           </div>
-        </header>}
+        </PageTop>}
 
         <section aria-label={t(tabs.find(tab => tab.id === active)!.label)} className="pb-8">
           {/* TRAK-368: a player's page stays up when only the assessments failed, and says so there. */}
@@ -99,15 +96,9 @@ export default function CoachSquadPage() {
 function PreparingSquad() {
   const { t } = useTranslation()
   return (
-    <div className="flex flex-col items-center text-center pt-14 px-6">
-      <div
-        className="w-14 h-14 rounded-[16px] flex items-center justify-center mb-4"
-        style={{ background: 'rgb(var(--t-brand) / 0.08)', border: '1px solid rgb(var(--t-brand) / 0.15)' }}
-      >
-        <Users size={22} className="text-brand" strokeWidth={1.5} />
-      </div>
-      <p className="text-[15px] text-ink-2 font-medium mb-1">{t('coachSquad:preparingTitle')}</p>
-      <p className="text-[12px] text-ink-3 leading-relaxed mb-5">{t('coachSquad:preparingBody')}</p>
+    // TRAK-432: the same Arc empty state as Matches and Training.
+    <div className="arc pt-10 px-6">
+      <EmptyState icon={<Users size={24} strokeWidth={1.5} />} title={t('coachSquad:preparingTitle')} description={t('coachSquad:preparingBody')} />
     </div>
   )
 }

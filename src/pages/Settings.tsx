@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
@@ -10,7 +10,6 @@ import { RouteGuard } from '@/components/layout/RouteGuard'
 import { assertSettingsAccount, getSettingsAccount } from '@/lib/settings-account'
 import { supabase } from '@/integrations/supabase/client'
 import { isTechnicalChildAddress, childUsername } from '@/lib/child-login'
-import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { WIDE_COLUMN } from '@/components/trak/MobileShell'
 import { CalendarSettings } from '@/components/trak/AddToCalendar'
 import { OwnConsentSettings } from '@/components/player/OwnConsentCard'
@@ -20,6 +19,9 @@ import { ParentChildCredentials } from '@/components/parent/ParentChildCredentia
 import { ParentConsentWithdrawal } from '@/components/parent/ParentConsentWithdrawal'
 import { RosterConsentWithdrawals } from '@/components/parent/ApprovedAwaitingSignup'
 import { Avatar } from '@/components/arc/avatar/avatar'
+import { AVATAR_BUCKET } from '@/lib/avatar-url'
+import { PHOTO_TYPES, photoProblem } from '@/lib/profile-photo'
+import { OWN_AVATAR_KEY, useOwnAvatarUrl } from '@/hooks/use-own-avatar-url'
 import { PlayerFace } from '@/components/trak/PlayerFace'
 import { Button } from '@/components/arc/button/button'
 import { Input } from '@/components/arc/input/input'
@@ -27,6 +29,7 @@ import { SettingsPage, SettingsRow, SettingsRows, type SettingsSection } from '@
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { i18n, isLanguage, LANGUAGES, showLanguage, useLanguage, useTranslation } from '@/lib/i18n'
 import { COACH_HOW_PATH } from '@/lib/coach-places'
+import { PageTop } from '@/components/coach/PageTop'
 
 // TRAK-406: the messages are words in settings.json, read when shown, so they are in the language showing.
 const nameSchema = z
@@ -42,13 +45,16 @@ export default function Settings() {
   </RouteGuard>
 }
 
-type Operation = 'name' | 'player' | 'delete' | 'password' | 'signout'
+type Operation = 'name' | 'player' | 'delete' | 'password' | 'signout' | 'photo'
 
 function AccountSettings({ userId }: { userId: string }) {
   const navigate = useNavigate()
   const { user, profile, signOut, refreshProfile } = useAuth()
   const { t } = useTranslation()
   const role = profile?.role
+  const queryClient = useQueryClient()
+  const photo = useOwnAvatarUrl() // TRAK-460: a coach's own photo, or null
+  const photoInput = useRef<HTMLInputElement>(null)
   const childLogin = isTechnicalChildAddress(user?.email)
   const mounted = useRef(false)
   useLayoutEffect(() => {
@@ -146,6 +152,51 @@ function AccountSettings({ userId }: { userId: string }) {
     finally { finish() }
   }
 
+  /* TRAK-460: a coach adds, changes or removes their picture. The database lets a coach store only an object named by their
+     own user id and set profile.avatar_url to it (20261113150000); a file that is not an image or is over 5 MB is refused
+     here first, with a plain message, and by the bucket if it ever got past. */
+  const choosePhoto = async (file: File | undefined) => {
+    if (photoInput.current) photoInput.current.value = ''
+    if (!file || role !== 'coach') return
+    const problem = photoProblem(file)
+    if (problem) { toast.error(t(problem === 'type' ? 'settings:photoBadType' : 'settings:photoTooBig')); return }
+    if (!begin('photo')) return
+    try {
+      const { client } = await getSettingsAccount(userId, isCurrent)
+      const up = await client.storage.from(AVATAR_BUCKET).upload(userId, file, { upsert: true, contentType: file.type, cacheControl: '3600' })
+      if (up.error) throw up.error
+      const { data, error } = await client.from('profiles').update({ avatar_url: userId })
+        .eq('user_id', userId).select('user_id, avatar_url').maybeSingle()
+      if (error) throw error
+      if (!data || data.avatar_url !== userId) throw new Error('Photo save was not confirmed')
+      await assertSettingsAccount(userId, isCurrent)
+      await refreshProfile()
+      await queryClient.invalidateQueries({ queryKey: [OWN_AVATAR_KEY] })
+      if (isCurrent()) toast.success(t('settings:photoSaved'))
+    } catch { if (isCurrent()) toast.error(t('settings:photoError')) }
+    finally { finish() }
+  }
+
+  /** The object goes first: a failed removal leaves the picture and says so, never a profile that names a file still stored. */
+  const removeStoredPhoto = async (client: Awaited<ReturnType<typeof getSettingsAccount>>['client']) => {
+    const { error } = await client.storage.from(AVATAR_BUCKET).remove([userId])
+    if (error) throw error
+  }
+  const removePhoto = async () => {
+    if (role !== 'coach' || !begin('photo')) return
+    try {
+      const { client } = await getSettingsAccount(userId, isCurrent)
+      await removeStoredPhoto(client)
+      const { error } = await client.from('profiles').update({ avatar_url: null }).eq('user_id', userId)
+      if (error) throw error
+      await assertSettingsAccount(userId, isCurrent)
+      await refreshProfile()
+      await queryClient.invalidateQueries({ queryKey: [OWN_AVATAR_KEY] })
+      if (isCurrent()) toast.success(t('settings:photoRemoved'))
+    } catch { if (isCurrent()) toast.error(t('settings:photoError')) }
+    finally { finish() }
+  }
+
   const changePassword = async () => {
     if (childLogin) {toast.info(t('settings:childPassword'));return}
     if (!user?.email || !begin('password')) return
@@ -167,6 +218,11 @@ function AccountSettings({ userId }: { userId: string }) {
     if (operation.current || !window.confirm(t('settings:deleteConfirm', { approvals })) || !begin('delete')) return
     try {
       const { client } = await getSettingsAccount(userId, isCurrent)
+      // TRAK-460: delete_my_account cannot reach storage, so a coach's picture is removed first. If that fails the account
+      // stays, with a message, rather than leaving a photo behind with nobody left to remove it.
+      if (role === 'coach' && profile?.avatar_url) {
+        try { await removeStoredPhoto(client) } catch { if (isCurrent()) toast.error(t('settings:photoRemoveBeforeDelete')); return }
+      }
       const { error } = await client.rpc('delete_my_account')
       if (error) throw error
       await assertSettingsAccount(userId, isCurrent)
@@ -185,7 +241,7 @@ function AccountSettings({ userId }: { userId: string }) {
     finally { finish() }
   }
 
-  const wide = useSideMenuScreen()
+  const titleId = useId()
   const consent = useQuery({
     queryKey: ['settings', userId, 'own-consent'],
     enabled: role === 'player',
@@ -199,14 +255,21 @@ function AccountSettings({ userId }: { userId: string }) {
   const sections: SettingsSection[] = [
     {
       id: 'profile', label: t('settings:profile'), icon: UserRound, pending: nameChanged ? 1 : 0,
-      description: t('settings:profileDescription'),
       content: <>
         <div className="mb-4 flex items-center gap-4">
-          {role === 'player' ? <PlayerFace name={displayName || '?'} size="xl" /> : <Avatar name={displayName || '?'} size="xl" />}
+          {role === 'player' ? <PlayerFace name={displayName || '?'} size="xl" /> : <Avatar name={displayName || '?'} src={photo ?? undefined} size="xl" />}
           <div className="grid min-w-0 gap-0.5">
             <strong className="truncate text-sm font-medium text-ink">{displayName || '—'}</strong>
             <span className="truncate text-sm text-ink-3">{subtitle}</span>
-            <small className="text-xs text-ink-3">{t('settings:photosSoon')}</small>
+            {role === 'coach'
+              ? <div className="arc mt-1 flex flex-wrap gap-2">
+                  <input ref={photoInput} type="file" accept={PHOTO_TYPES.join(',')} className="sr-only" tabIndex={-1} aria-hidden="true"
+                    onChange={event => void choosePhoto(event.target.files?.[0])} />
+                  <Button size="sm" variant="secondary" loading={pending === 'photo'} disabled={!!pending}
+                    onClick={() => photoInput.current?.click()}>{t(profile?.avatar_url ? 'settings:photoChange' : 'settings:photoAdd')}</Button>
+                  {profile?.avatar_url ? <Button size="sm" variant="secondary" disabled={!!pending} onClick={() => void removePhoto()}>{t('settings:photoRemove')}</Button> : null}
+                </div>
+              : <small className="text-xs text-ink-3">{t('settings:photosSoon')}</small>}
           </div>
         </div>
         <SettingsRows>
@@ -226,7 +289,7 @@ function AccountSettings({ userId }: { userId: string }) {
     },
     // TRAK-72 item 11: a coach's club, age group and role come from the academy (Trak sets up staff, TRAK-12).
     ...(role === 'coach' ? [{
-      id: 'club', label: t('settings:club'), icon: Building2, description: t('settings:clubDescription'),
+      id: 'club', label: t('settings:club'), icon: Building2,
       content: roleData === 'loading' ? <p role="status" className="text-sm text-ink-3">{t('settings:loadingProfile')}</p>
         : roleData === 'error' ? <div role="alert" className="text-sm text-ink-3">
             <p>{t('settings:profileLoadError')}</p>
@@ -240,56 +303,56 @@ function AccountSettings({ userId }: { userId: string }) {
     }] : []),
     // TRAK-406: everyone picks the language Trak shows them; it is saved on their account.
     {
-      id: 'language', label: t('settings:language'), icon: Languages, description: t('settings:languageDescription'),
+      id: 'language', label: t('settings:language'), icon: Languages,
       content: <LanguageChoice userId={userId} />,
     },
     // TRAK-261 (Imad, 22 Oct): a parent's linked children and consent are here too, as on their Profile tab.
     ...(role === 'parent' ? [{
-      id: 'family', label: t('settings:family'), icon: Users, description: t('settings:familyDescription'),
+      id: 'family', label: t('settings:family'), icon: Users,
       content: <div className="grid gap-3">
         <ParentFamilyContent><ParentConnections /></ParentFamilyContent>
         <ParentChildCredentials key={userId} />
       </div>,
     }, {
-      id: 'consent', label: 'Consent', icon: ShieldCheck, description: "What your children's coaches may record, approved or withdrawn.",
+      id: 'consent', label: 'Consent', icon: ShieldCheck,
       content: <ParentConsent />,
     }] : []),
     // TRAK-406: the two consent sections stay in English until counsel says whether consent wording must be in Greek
     // (TRAK-22); the same goes for the consent screen.
     // TRAK-177: a 15–17 player at a consent-age-15 academy, who agreed for themselves, withdraws here.
     ...(role === 'player' && decidesOwnConsent(consent.data) ? [{
-      id: 'consent', label: 'Consent', icon: ShieldCheck, description: 'You agreed for yourself. You can withdraw it here.',
+      id: 'consent', label: 'Consent', icon: ShieldCheck,
       content: <OwnConsentSettings Section={Bare} />,
     }] : []),
     // TRAK-136 (J8.13): the reminder 2 days before each event goes to guardians and to players with their own
     // email; a child's username login never gets email. TRAK-261: a coach's two in-app switches.
     ...(role === 'coach' ? [{
-      id: 'notifications', label: t('settings:notifications'), icon: Bell, description: t('settings:notificationsCoachDescription'),
+      id: 'notifications', label: t('settings:notifications'), icon: Bell,
       content: <SettingsRows>
         <NotificationSwitch userId={userId} column="cant_make_it_alerts" words="cantMakeIt" />
         <NotificationSwitch userId={userId} column="needs_you" words="needsYou" />
       </SettingsRows>,
     }] : (role === 'parent' || (role === 'player' && !childLogin)) ? [{
-      id: 'notifications', label: t('settings:notifications'), icon: Bell, description: t('settings:notificationsEmailDescription'),
+      id: 'notifications', label: t('settings:notifications'), icon: Bell,
       content: <EventReminders userId={userId} />,
     }] : []),
     // TRAK-133 (J8.10): add Trak to a phone calendar, see when it last synced, get a new link.
     ...((role === 'player' || role === 'parent') ? [{
-      id: 'calendar', label: t('settings:calendar'), icon: CalendarDays, description: t('settings:calendarDescription'),
+      id: 'calendar', label: t('settings:calendar'), icon: CalendarDays,
       content: <CalendarSettings />,
     }] : []),
     ...(role === 'club' ? [{
-      id: 'access', label: t('settings:access'), icon: ShieldCheck, description: t('settings:accessDescription'),
+      id: 'access', label: t('settings:access'), icon: ShieldCheck,
       content: <p className="text-sm text-ink-2">{t('settings:accessText')}</p>,
     }] : []),
     // TRAK-261 (Imad, 22 Oct): Arc's Billing becomes How Trak works, for everyone.
     {
-      id: 'how', label: t('settings:howTrakWorks'), icon: BookOpen, description: t('settings:howDescription'),
+      id: 'how', label: t('settings:howTrakWorks'), icon: BookOpen,
       // TRAK-418: a coach reads a page written for a coach; players and parents keep theirs.
       content: <Link to={role === 'coach' ? COACH_HOW_PATH : '/how-it-works'} className="text-sm font-medium text-brand">{t('settings:howLink')}</Link>,
     },
     {
-      id: 'account', label: t('settings:account'), icon: KeyRound, description: t('settings:accountDescription'),
+      id: 'account', label: t('settings:account'), icon: KeyRound,
       content: <SettingsRows>
         <SettingsRow label={t('settings:password')}>
           <Button type="button" variant="secondary" size="sm" onClick={changePassword} disabled={!!pending}>{childLogin ? t('settings:askGuardian') : t('settings:sendResetEmail')}</Button>
@@ -308,16 +371,19 @@ function AccountSettings({ userId }: { userId: string }) {
     <div className="min-h-screen" style={{ background: 'rgb(var(--t-ground))', fontFamily: 'var(--t-font)' }}>
       {/* TRAK-307: a coach's Settings is a page in their menu, so it takes the menu pages' one column (a phone's is the
           phone column, as for everyone). */}
-      <div className={`${role === 'coach' ? WIDE_COLUMN : 'mx-auto trak-read px-5'} pt-5 pb-12`}>
-        {/* A phone's way back; a coach's laptop has the frame's side menu and top bar (TRAK-259). */}
-        {!(role === 'coach' && wide) && <div className="relative flex items-center justify-center mb-4 h-10">
+      <div className={`${role === 'coach' ? WIDE_COLUMN : 'mx-auto trak-read px-5 pt-5'} pb-12`}>
+        {/* TRAK-422 (Kostas, 13 Nov): a coach's Settings has the one coach page title, with the avatar that opens the
+            menu on a phone, like every page in the menu. */}
+        {role === 'coach' && <PageTop title={t('settings:title')} titleId={titleId} />}
+        {/* A player's or parent's phone: their way back (TRAK-259). */}
+        {role !== 'coach' && <div className="relative flex items-center justify-center mb-4 h-10">
           <button onClick={() => navigate(-1)} aria-label={t('common:back')}
             className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-ink">
             <ArrowLeft size={16} />
           </button>
           <span aria-hidden="true" className="text-[17px] text-ink">{t('settings:title')}</span>
         </div>}
-        <SettingsPage title={t('settings:title')} sections={sections} bar={named ? {
+        <SettingsPage title={t('settings:title')} titleId={role === 'coach' ? titleId : undefined} sections={sections} bar={named ? {
           state: pending === 'name' ? 'saving' : nameChanged ? 'edit' : justSaved ? 'saved' : null,
           count: nameChanged ? 1 : 0,
           onSave: () => { void saveName() },

@@ -222,9 +222,9 @@ describe('TRAK-340: Your session', { timeout: 30_000 }, () => {
     for (let i = 0; i < 6; i++) await user.click(screen.getByRole('button', { name: /^Next: / }))
     await screen.findByRole('heading', { name: 'Review' })
     await user.click(screen.getByRole('button', { name: 'Save the plan' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Pick a drill for Pressing game, or remove the part.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Select a drill for Pressing game, or remove the part.')
     expect(saves).toHaveLength(0)
-    await user.click(screen.getByRole('button', { name: 'Pick a drill for Pressing game' }))
+    await user.click(screen.getByRole('button', { name: 'Select a drill for Pressing game' }))
     expect(await part('Pressing game')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Back to Review/ })).toBeInTheDocument()
   })
@@ -245,16 +245,16 @@ describe('TRAK-340: drills', { timeout: 30_000 }, () => {
     expect(within(sheet).getAllByRole('heading', { level: 3 }).map(h => h.textContent))
       .toEqual(['Passing', 'Pressing movement', 'Follow and copy', 'Repetition', 'Individual', 'Goalkeeping', 'Get ready', 'Skill practices', 'Game related practices'])
     expect(within(sheet).getByText('The rest of the Drill Library')).toBeInTheDocument()
-    expect(within(sheet).getAllByRole('button', { name: /^Pick / })).toHaveLength(LIBRARY.length - 1)
+    expect(within(sheet).getAllByRole('button', { name: /^Select / })).toHaveLength(LIBRARY.length - 1)
     expect(within(sheet).queryByRole('button', { name: 'My drills' })).toBeNull()
     await user.type(within(sheet).getByRole('searchbox', { name: 'Search drills' }), 'gate')
-    await user.click(await within(sheet).findByRole('button', { name: 'Pick Pass through the gate' }))
+    await user.click(await within(sheet).findByRole('button', { name: 'Select Pass through the gate' }))
     expect(within(await part('Passing & movement')).getByRole('button', { name: /^Pass through the gate/, pressed: true })).toBeInTheDocument()
     // A drill of another kind can fill the part too.
     await user.click(within(await part('Passing & movement')).getByRole('button', { name: /^Find another drill/ }))
     const again = await screen.findByRole('dialog', { name: 'Find another drill for Passing & movement' })
     await user.type(within(again).getByRole('searchbox', { name: 'Search drills' }), 'four corners')
-    await user.click(await within(again).findByRole('button', { name: 'Pick Four corners' }))
+    await user.click(await within(again).findByRole('button', { name: 'Select Four corners' }))
     expect(within(await part('Passing & movement')).getByRole('button', { name: /^Four corners/, pressed: true })).toBeInTheDocument()
   })
 })
@@ -319,6 +319,14 @@ describe('TRAK-340: drafts and a saved plan', { timeout: 30_000 }, () => {
     await user.click(screen.getByRole('button', { name: 'Back' }))
   })
 
+  it('with no draft, Open drafts says so in Matches\u2019 words and explains nothing (Imad, 15 Nov)', async () => {
+    database([training('soon', onTheMinute(Date.now() + DAY), { title: 'Pressing triggers' })])
+    renderApp('/coach/training')
+    const box = await screen.findByRole('region', { name: 'Open drafts' }, { timeout: 5000 })
+    expect(within(box).getByText('No drafts open.')).toBeInTheDocument()
+    expect(box).not.toHaveTextContent(/Only you see|waits here/)
+  })
+
   it('with a draft, the Next training card says so and Continue plan carries on where the coach stopped', async () => {
     const user = userEvent.setup()
     const parts = partsFromShape(standardShape(), 15, usageOf([]))
@@ -330,6 +338,8 @@ describe('TRAK-340: drafts and a saved plan', { timeout: 30_000 }, () => {
     expect(within(card).getByText('You stopped at Rondo.')).toBeInTheDocument()
     // Kostas, 3 Nov: Open drafts sits beside the card, as the mockup.
     expect(within(screen.getByRole('region', { name: 'Open drafts' })).getByText(/stopped at Rondo/)).toBeInTheDocument()
+    // Imad, 15 Nov: no helper line under the box's title (TRAK-442's rule).
+    expect(screen.getByRole('region', { name: 'Open drafts' })).not.toHaveTextContent(/Only you see/)
     await user.click(within(card).getByRole('button', { name: 'Continue plan' }))
     expect(await part('Rondo')).toBeInTheDocument()
   })
@@ -373,7 +383,7 @@ describe('TRAK-340: drafts and a saved plan', { timeout: 30_000 }, () => {
     cleanup()
     database([])
     renderApp('/coach/training/someone-elses/plan')
-    expect(await screen.findByText('This training isn’t on your schedule.')).toBeInTheDocument()
+    expect(await screen.findByText('This training isn’t in your events.')).toBeInTheDocument()
   })
 })
 

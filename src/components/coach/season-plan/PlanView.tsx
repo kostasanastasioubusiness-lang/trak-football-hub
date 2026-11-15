@@ -23,6 +23,7 @@ import { useWatchList, useWatchPlayers } from './useWatching'
 import { WatchBadge } from './WatchFirst'
 import { useSquadEvaluations } from './useEvaluation'
 import { nextDateLine, rhythmOf, rhythmText } from '@/lib/evaluation'
+import { EditIcon } from '@/components/trak/IconAction'
 
 /* TRAK-356 (Season plan 8/18, spec TRAK-348): View plan. Once shared, the set-up never comes back: the plan reads part
    by part, each with its Edit, one screen each (Tarek, 1 Nov). Edits save straight away and wait under "Not shared
@@ -99,7 +100,8 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
   const watchAction = (id: string) => ({ label: watchOf.has(id) ? 'Keep watching' as const : 'Watch first' as const, pending: watch.isPending,
     onWatch: () => watch.mutate([id], { onSuccess: () => setOpenId(null), onError: () => setProblem(WATCH_FAILED) }) })
 
-  const edit = (label: string, onClick: () => void) => <Button variant="ghost" size="sm" aria-label={label} onClick={onClick}>Edit</Button>
+  // TRAK-455: a pencil, its full name read out.
+  const edit = (label: string, onClick: () => void) => <EditIcon label={label} onClick={onClick} />
   const row = (player: Player) => {
     const held = objectives.of(player.id)
     const gone = objectives.removedOf(player.id)
@@ -132,7 +134,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
       {changes.length
         ? <Alert tone="warning" title={`Not shared yet: ${changesText(changes)}.`}>They wait here until you share the changes.</Alert>
         : <Alert tone="success" title={`Shared ${shared ? shortDate(shared) : ''}.`}>
-          Players and families don’t see the season plan in the app yet. Edits wait here until you share them.
+          Edits wait here until you share them.
         </Alert>}
 
       <div className="grid items-start gap-5 laptop:grid-cols-2">

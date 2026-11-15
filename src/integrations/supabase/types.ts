@@ -975,6 +975,33 @@ export type Database = {
         }
         Relationships: []
       }
+      game_lineup_for_players: {
+        Row: {
+          event_id: string
+          formation: string | null
+          name: string
+          role: string
+          slot: number | null
+          squad_player_id: string
+        }
+        Insert: {
+          event_id: string
+          formation?: string | null
+          name: string
+          role: string
+          slot?: number | null
+          squad_player_id: string
+        }
+        Update: {
+          event_id?: string
+          formation?: string | null
+          name?: string
+          role?: string
+          slot?: number | null
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
       game_plan_players: {
         Row: {
           context: string[]
@@ -2121,6 +2148,10 @@ export type Database = {
           family_note: string | null
         }[]
       }
+      child_training_attendance: {
+        Args: { p_child: string }
+        Returns: { attended: number; total: number }[]
+      }
       coach_match_score_clash: {
         Args: {
           p_assists?: number
@@ -2165,6 +2196,11 @@ export type Database = {
       }
       revoke_my_calendar_link: { Args: never; Returns: boolean }
       feature_on: { Args: { p_feature: string }; Returns: boolean }
+      family_academy: {
+        Args: { p_child: string }
+        Returns: { logo_url: string | null; name: string }[]
+      }
+      family_feature_on: { Args: { p_feature: string }; Returns: boolean }
       game_plan_changes: {
         Args: { p_event_ids: string[] }
         Returns: { event_id: string; squad_player_id: string }[]
@@ -2323,6 +2359,7 @@ export type Database = {
       load_default_formation: { Args: { p_event_id: string }; Returns: Json }
       set_default_formation: { Args: { p_default: boolean; p_id: string }; Returns: undefined }
       use_formation_for_matches: { Args: { p_event_ids: string[]; p_formation_id: string }; Returns: Json }
+      undo_formation_copy: { Args: { p_event_ids: string[]; p_formation_id: string }; Returns: Json }
       save_formation: {
         Args: {
           p_format: number
@@ -2365,6 +2402,10 @@ export type Database = {
       stuck_player_objectives: {
         Args: never
         Returns: { player_objective_id: string; squad_player_id: string }[]
+      }
+      evaluation_progress: {
+        Args: { p_assessments: string[]; p_child?: string }
+        Returns: { assessment_id: string; due_on: string; objectives: Json }[]
       }
       season_plan_for_player: {
         Args: { p_child?: string }
