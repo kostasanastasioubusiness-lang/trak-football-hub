@@ -1,13 +1,9 @@
 import { useState } from 'react'
-import type { UseQueryResult } from '@tanstack/react-query'
-import type { Scorer } from '@/lib/games/scorers'
 import { Link, useNavigate } from 'react-router-dom'
-import { format } from 'date-fns'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
-import { actionLink, type GameAction, type GameState, type PlanProgress, gameState, gameStatus, orderGames } from '@/lib/games/loop'
-import { gameTitle, gameWhen, useGameEvaluations, useGamePlanChanges, useGamePlans, useGameShares, useGames, useScorers, type Game } from '@/components/coach/games/useGames'
-import { seasonStart } from '@/lib/games/scorers'
+import { type GameState, type PlanProgress, gameState, gameStatus, orderGames } from '@/lib/games/loop'
+import { gameTitle, gameWhen, useGameEvaluations, useGamePlanChanges, useGamePlans, useGameShares, useGames, type Game } from '@/components/coach/games/useGames'
 import { matchResult } from '@/lib/games/results'
 import { LoadError, WIDE_COLUMN } from '@/components/trak'
 import { PitchIcon } from '@/components/icons/PitchIcon'
@@ -18,8 +14,7 @@ import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area'
 import { MatchAction } from '@/components/coach/games/MatchAction'
 import { MorphBlock, SkeletonMorph } from '@/components/arc/skeleton-morph/skeleton-morph'
-import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
-import { dateLocale, i18n, useTranslation } from '@/lib/i18n'
+import { i18n, useTranslation } from '@/lib/i18n'
 import { COMPETITION_WORD, MATCH_WORD } from '@/lib/games/match-words'
 import { shown } from '@/lib/squad/trait-words'
 import { PageTop } from '@/components/coach/PageTop'
@@ -27,8 +22,8 @@ import { PageTop } from '@/components/coach/PageTop'
 /* TRAK-283 (Games 1/8): Games home. The next game with where it is in its loop and its one next action, the open
    drafts, and every match of the squad in view. Cards follow Home's Needs you pattern (Imad, 27 Oct). TRAK-320 (Imad,
    30 Oct): a published match moves to Previous matches, newest first, with its result, and opens on its evaluation.
-   TRAK-321: the season's top scorers and assists for the squad in view, from those evaluations. TRAK-322 (Imad, 30 Oct):
-   compact, and the screen used: on a laptop the match rows and the scorers sit side by side in TRAK-307's one column. */
+   Makis, 24 Nov (#769): one full-width column, with no Open drafts or Top scorers panel. A draft still shows on its
+   match's card. */
 
 /** Schedule's quick hand-over (TRAK-182 part 8): New event, on its first step, with Match picked. */
 const ADD_MATCH = { quickEvent: { kind: 'match' } }
@@ -57,24 +52,12 @@ export default function CoachGames() {
   const { next, games: ordered } = orderGames(inView, now)
   // TRAK-286: edits since sharing, for shared matches still to kick off. A failed read shows them as shared.
   const changes = useGamePlanChanges(ordered.filter(game => shares.data?.has(game.id) && now < Date.parse(game.starts_at)).map(game => game.id))
-  const open = (game: Game, action: Omit<GameAction, 'label'>) => navigate(actionLink(game.id, action))
   const progress = (game: Game): PlanProgress => ({ drafted: plans.data?.has(game.id), shared: shares.data?.has(game.id), sharedAt: shares.data?.get(game.id),
     changes: changes.data?.get(game.id)?.length, evaluated: evaluations.data?.has(game.id), published: !!evaluations.data?.get(game.id)?.publishedAt })
   const stateOf = (game: Game) => gameStatus(game, now, progress(game))
-  // TRAK-284: a plan draft stays open until it's shared (TRAK-286) or its match kicks off and locks it (TRAK-287).
-  // TRAK-288: an evaluation draft stays open until it's published (TRAK-289).
-  const drafts = [
-    ...ordered.filter(game => plans.data?.has(game.id) && !shares.data?.has(game.id) && now < Date.parse(game.starts_at))
-      .map(game => ({ game, what: t('coachHome:gamePlan'), saved: plans.data!.get(game.id)!, tab: 'plan' as const })),
-    ...ordered.flatMap(game => {
-      const evaluation = evaluations.data?.get(game.id)
-      return evaluation && !evaluation.publishedAt ? [{ game, what: t('nav:evaluation'), saved: evaluation.savedAt, tab: 'evaluation' as const }] : []
-    }),
-  ]
 
   const published = (game: Game) => !!evaluations.data?.get(game.id)?.publishedAt
   const previous = ordered.filter(published)
-  const scorers = useScorers(previous.filter(game => Date.parse(game.starts_at) >= seasonStart(now)).map(game => game.id))
   const loading = games.isPending || plans.isPending || shares.isPending || evaluations.isPending
 
   return (
@@ -94,34 +77,16 @@ export default function CoachGames() {
             </div>
           ) : <SkeletonMorph loading={loading} stagger={0} loadingLabel={t('coachSquad:fmMatchesLoading')}>
             {/* TRAK-461: while the matches load, each part of the page is a placeholder of its shape that grows into it. */}
-            <div className="grid gap-6 laptop:gap-8 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-              <MorphBlock height={196} radius={16} className="grid min-w-0" style={FILL}>{!loading && (next ? <NextGame game={next} state={stateOf(next)} step={gameState(next, now, progress(next))} onKickOff={() => setNow(Date.now())} /> : (
-                <section aria-labelledby="next-game" className="h-full rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-                  <h2 id="next-game" className="text-lg font-medium text-ink">{t('coachMatches:nextMatch')}</h2>
-                  <p className="mt-2 text-sm text-ink-2">{t('coachMatches:noMatchComing')}</p>
-                  <Link to="/coach/schedule" state={ADD_MATCH}
-                    className="mt-3 inline-block rounded text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{t('coachMatches:addMatch')}</Link>
-                </section>
-              ))}</MorphBlock>
-              {/* TRAK-284: plan drafts. TRAK-288: evaluation drafts. */}
-              <MorphBlock height={196} radius={16} className="grid min-w-0" style={FILL}>{!loading &&
-              <section aria-labelledby="open-drafts" className="arc h-full rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-                <h2 id="open-drafts" className="text-lg font-medium text-ink">{t('coachMatches:openDrafts')}</h2>
-                {drafts.length === 0 ? <p className="mt-4 text-sm text-ink-2">{t('coachMatches:noDrafts')}</p> : <ul className="mt-3 divide-y divide-line">
-                  {drafts.map(({ game, what, saved, tab }) => <li key={`${tab}:${game.id}`} className="flex items-center justify-between gap-3 py-3">
-                    <span className="grid min-w-0">
-                      <span className="truncate text-base font-medium text-ink">{gameTitle(game)}</span>
-                      <span className="truncate text-sm text-ink-3">{t('coachMatches:savedAt', { what, when: format(new Date(saved), 'EEE d MMM, HH:mm', { locale: dateLocale() }) })}</span>
-                    </span>
-                    <Button variant="secondary" size="sm" aria-label={t(tab === 'plan' ? 'coachMatches:openPlanOf' : 'coachMatches:openEvaluationOf', { title: gameTitle(game) })}
-                      onClick={() => open(game, { tab })}>{t('coachMatches:open')}</Button>
-                  </li>)}
-                </ul>}
-              </section>}</MorphBlock>
-            </div>
+            <MorphBlock height={196} radius={16} className="grid min-w-0" style={FILL}>{!loading && (next ? <NextGame game={next} state={stateOf(next)} step={gameState(next, now, progress(next))} onKickOff={() => setNow(Date.now())} /> : (
+              <section aria-labelledby="next-game" className="h-full rounded-2xl border border-line bg-surface p-5 laptop:p-6">
+                <h2 id="next-game" className="text-lg font-medium text-ink">{t('coachMatches:nextMatch')}</h2>
+                <p className="mt-2 text-sm text-ink-2">{t('coachMatches:noMatchComing')}</p>
+                <Link to="/coach/schedule" state={ADD_MATCH}
+                  className="mt-3 inline-block rounded text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{t('coachMatches:addMatch')}</Link>
+              </section>
+            ))}</MorphBlock>
 
-            <div className={`mt-6 grid gap-6 ${previous.length ? 'laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] laptop:items-start' : ''}`}>
-            <div className="grid min-w-0 gap-6">
+            <div className="mt-6 grid gap-6">
             <div className="min-w-0">
               <MorphBlock lines={1} lineHeight={28} width={140} className="mb-2"><h2 className="text-lg font-medium text-ink">{t('coachMatches:yourMatches')}</h2></MorphBlock>
               <MorphBlock height={112} radius={16} style={FILL}>{!loading &&
@@ -147,8 +112,6 @@ export default function CoachGames() {
               </div>}</MorphBlock>
             </div>
             {previous.length > 0 && <PreviousMatches games={previous} results={evaluations.data!} squads={everySquad} />}
-            </div>
-            {previous.length > 0 && <TopScorers scorers={scorers} />}
             </div>
           </SkeletonMorph>}
       </div>
@@ -214,43 +177,5 @@ function PreviousMatches({ games, results, squads }: {
         </ScrollArea>
       </div>
     </div>
-  )
-}
-
-const SHOWN = 10
-
-/** TRAK-321: who scored and assisted most this season, in the squad in view: goals, then assists. */
-function TopScorers({ scorers }: { scorers: UseQueryResult<Scorer[]> }) {
-  const [all, setAll] = useState(false)
-  const { t } = useTranslation()
-  const rows = scorers.data ?? []
-  const cell = 'py-1.5 pl-2 text-right tabular-nums'
-  return (
-    <section aria-labelledby="top-scorers" className="arc min-w-0 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-      <h2 id="top-scorers" className="text-lg font-medium text-ink">{t('coachMatches:topScorers')}</h2>
-      {scorers.error ? <div className="mt-3"><LoadError what={t('coachMatches:scorersWhat')} onRetry={() => void scorers.refetch()} retrying={scorers.isFetching} /></div>
-        : scorers.isPending ? <LoadingSkeleton label={t('coachMatches:loadingScorers')} lines={1} avatar rows={3} className="mt-3" />
-        : rows.length === 0 ? <p className="mt-3 text-sm text-ink-2">{t('coachMatches:noGoalsYet')}</p>
-        : <>
-            <table className="mt-3 w-full table-fixed text-sm">
-              <thead><tr className="border-b border-line text-ink-3">
-                <th scope="col" className="py-2 text-left font-normal">{t('nav:player')}</th>
-                <th scope="col" className="w-14 py-2 pl-2 text-right font-normal">{t('coachMatches:colGoals')}</th>
-                <th scope="col" className="w-14 py-2 pl-2 text-right font-normal">{t('coachMatches:colAssists')}</th>
-                <th scope="col" className="w-14 py-2 pl-2 text-right font-normal">{t('coachMatches:colPlayed')}</th>
-              </tr></thead>
-              <tbody className="divide-y divide-line">
-                {(all ? rows : rows.slice(0, SHOWN)).map((row, i) => <tr key={row.id}>
-                  <th scope="row" className="truncate py-1.5 text-left font-normal text-ink" title={row.name}><span className="mr-2 inline-block w-5 text-ink-3 tabular-nums">{i + 1}</span>{row.name}</th>
-                  <td className={`${cell} font-medium text-ink`}>{row.goals}</td>
-                  <td className={`${cell} text-ink-2`}>{row.assists}</td>
-                  <td className={`${cell} text-ink-3`}>{row.played}</td>
-                </tr>)}
-              </tbody>
-            </table>
-            {rows.length > SHOWN && <div className="mt-2"><Button variant="ghost" size="sm" onClick={() => setAll(!all)}>
-              {all ? t('coachMatches:showTop', { count: SHOWN }) : t('coachMatches:showAll', { count: rows.length })}</Button></div>}
-          </>}
-    </section>
   )
 }

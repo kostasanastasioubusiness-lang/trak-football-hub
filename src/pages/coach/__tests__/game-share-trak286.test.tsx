@@ -251,13 +251,12 @@ describe('TRAK-286: Needs you and Games home follow the share', { timeout: 30_00
     await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/matches/g1?tab=plan&step=share'))
   })
 
-  it('Games home: a shared plan leaves Open drafts; the next game offers Share changes', async () => {
+  // Makis, 24 Nov (#769): no Open drafts box on Games home.
+  it('Games home: the next game offers Share changes', async () => {
     const user = userEvent.setup()
     games({ g1: ['charisteas'] })
     renderApp('/coach/matches')
-    const drafts = await screen.findByRole('region', { name: 'Open drafts' })
-    expect(within(drafts).getAllByRole('listitem').map(item => item.textContent)).toEqual([expect.stringContaining('vs Harbour Town')])
-    const next = screen.getByRole('region', { name: 'Next match' })
+    const next = await screen.findByRole('region', { name: 'Next match' })
     expect(await within(next).findByText('Changes not shared')).toBeInTheDocument()
     const strip = screen.getByRole('region', { name: 'Your matches' })
     expect(within(within(strip).getByRole('link', { name: /Riverside Rovers/ })).getByText('Plan shared')).toBeInTheDocument()

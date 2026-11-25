@@ -171,8 +171,8 @@ function SessionsView() {
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-3 hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><X aria-hidden size={16} /></button>
           </div>}
 
-          {/* Kostas, 3 Nov: as the mockup, the Next training card and Open drafts side by side on a laptop. */}
-          <div className="grid gap-6 laptop:gap-8 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] laptop:items-start">
+          {/* Makis, 24 Nov (#768): one full-width column, with no Open drafts box. A draft still shows on its training's
+              card and on the Next training card. */}
           {next ? <NextTraining key={next.training.id} draft={drafts.data?.get(next.training.id)} training={next.training} phase={next.phase} planned={!!planned.data?.has(next.training.id)}
             sessionId={registers.data?.get(next.training.id) ?? null} onStart={() => setNow(Date.now())}
             onClosed={() => setClosed(next.training.title)} />
@@ -181,8 +181,6 @@ function SessionsView() {
                 description={t('coachTraining:addInSchedule')}
                 action={<Button onClick={() => navigate('/coach/schedule', { state: ADD_TRAINING })}>{t('coachTraining:addTraining')}</Button>} />
             </div>}
-          <OpenDrafts drafts={upcoming.filter(t => drafts.data?.has(t.id) && !planned.data?.has(t.id)).map(t => ({ training: t, draft: drafts.data!.get(t.id)! }))} />
-          </div>
 
           {upcoming.length > 0 && <section aria-labelledby="upcoming" className="min-w-0">
             <h2 id="upcoming" className="mb-2 text-lg font-medium text-ink">{t('coachTraining:upcomingTrainings')}</h2>
@@ -296,26 +294,6 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
       <PastPlanSheet open={copying} onOpenChange={setCopying} training={training} />
     </section>
   )
-}
-
-/** Open drafts (the mockup's card beside the Next training): plans the coach kept for later, with where they stopped.
- *  Only the coach sees a draft. */
-function OpenDrafts({ drafts }: { drafts: { training: Training; draft: Draft }[] }) {
-  const navigate = useNavigate()
-  const { t } = useTranslation()
-  return <section aria-labelledby="open-drafts" className="arc grid gap-2 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-    <h2 id="open-drafts" className="text-lg font-medium text-ink">{t('coachMatches:openDrafts')}</h2>
-    {drafts.length === 0 ? <p className="pt-1 text-sm text-ink-2">{t('coachMatches:noDrafts')}</p>
-      : <ul className="mt-1 divide-y divide-line border-t border-line">
-        {drafts.map(({ training, draft }) => <li key={training.id} className="flex items-center justify-between gap-3 py-3">
-          <span className="grid min-w-0">
-            <span className="truncate text-[15px] font-medium text-ink">{training.title}</span>
-            <span className="truncate text-sm text-ink-3">{t('coachTraining:stoppedAtLine', { day: gameWhen(training).day, step: draft.parts[draft.step]?.name ?? t('coachMatches:reviewShare') })}</span>
-          </span>
-          <Button size="sm" variant="secondary" aria-label={t('coachTraining:continueNamed', { title: training.title })} onClick={() => navigate(planPath(training.id))}>{t('coachSchedule:continue')}</Button>
-        </li>)}
-      </ul>}
-  </section>
 }
 
 /* ── Past trainings ─────────────────────────────────────────────────────── */
